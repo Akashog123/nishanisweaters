@@ -1,4 +1,7 @@
+import { Link } from "react-router-dom";
+
 interface ProductCardProps {
+  id: string;
   image: string;
   hoverImage?: string;
   name: string;
@@ -6,9 +9,9 @@ interface ProductCardProps {
   originalPrice?: string;
 }
 
-const ProductCard = ({ image, hoverImage, name, price, originalPrice }: ProductCardProps) => {
+const ProductCard = ({ id, image, hoverImage, name, price, originalPrice }: ProductCardProps) => {
   return (
-    <div className="group cursor-pointer">
+    <Link to={`/product/${id}`} className="group cursor-pointer">
       <div className="relative overflow-hidden bg-secondary mb-4 aspect-[3/4]">
         <img
           src={image}
@@ -32,7 +35,7 @@ const ProductCard = ({ image, hoverImage, name, price, originalPrice }: ProductC
           </span>
         )}
       </div>
-    </div>
+    </Link>
   );
 };
 
