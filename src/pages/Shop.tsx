@@ -15,9 +15,9 @@ const Shop = () => {
   };
 
   const categoryFilters: Record<string, (product: any) => boolean> = {
-    "new-arrival": () => true, // Show all products for new arrivals
-    "mens": (product) => ["block-zipper-hoodie", "oversized-block-tshirt", "minimal-sweatpants"].includes(product.id),
-    "womens": (product) => ["electric-blue-hoodie"].includes(product.id),
+    "new-arrival": (product) => product.category === "new-arrival",
+    "mens": (product) => product.gender === "men",
+    "womens": (product) => product.gender === "women",
   };
 
   const filteredProducts = category && categoryFilters[category]

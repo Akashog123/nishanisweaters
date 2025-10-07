@@ -12,6 +12,8 @@ export interface Product {
   description: string;
   sizes: string[];
   colors: string[];
+  category: 'new-arrival' | 'mens' | 'womens';
+  gender: 'men' | 'women' | 'unisex';
 }
 
 export const products: Product[] = [
@@ -24,6 +26,8 @@ export const products: Product[] = [
     description: "Cozy up in the Blockhaus Zipper Hoodie. Featuring a smooth zip closure and ultra-soft fabric, this hoodie is designed for laid-back days and chill vibes.",
     sizes: ["S", "M", "L", "XL"],
     colors: ["Black/White", "Blue", "Olive"],
+    category: "new-arrival",
+    gender: "men",
   },
   {
     id: "oversized-block-tshirt",
@@ -33,6 +37,8 @@ export const products: Product[] = [
     description: "Make a bold statement with the Oversized Block T-Shirt. Featuring geometric block prints and a relaxed fit, this tee brings street style to your everyday wardrobe.",
     sizes: ["S", "M", "L", "XL"],
     colors: ["White", "Black", "Grey"],
+    category: "new-arrival",
+    gender: "men",
   },
   {
     id: "minimal-sweatpants",
@@ -43,6 +49,8 @@ export const products: Product[] = [
     description: "Comfort meets style with the Minimal Sweatpants. Crafted from premium cotton blend with a subtle block logo, these sweatpants are perfect for lounging or street wear.",
     sizes: ["S", "M", "L", "XL"],
     colors: ["Grey", "Black", "Navy"],
+    category: "new-arrival",
+    gender: "men",
   },
   {
     id: "electric-blue-hoodie",
@@ -52,6 +60,8 @@ export const products: Product[] = [
     description: "Stand out with the Electric Blue Hoodie. This vibrant oversized hoodie features premium fabric and a bold color that defines modern streetwear aesthetics.",
     sizes: ["S", "M", "L", "XL"],
     colors: ["Electric Blue", "Black", "White"],
+    category: "new-arrival",
+    gender: "women",
   },
 ];
 
