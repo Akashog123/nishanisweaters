@@ -5,12 +5,10 @@ import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
 import CartDrawer from "@/components/CartDrawer";
 import SearchBar from "@/components/SearchBar";
-import { useScroll } from "@/hooks/use-scroll";
 
 const Header = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const { totalItems } = useCart();
-  const { scrollDirection, isAtTop } = useScroll();
 
   const navLinks = [
     { name: "NEW ARRIVAL", href: "/shop/new-arrival" },
@@ -19,14 +17,8 @@ const Header = () => {
     { name: "ABOUT US", href: "#about" },
   ];
 
-  const isVisible = scrollDirection === "up" || isAtTop;
-
   return (
-    <header
-      className={`sticky top-0 z-50 bg-background border-b border-border transition-transform duration-300 ${
-        isVisible ? "translate-y-0" : "-translate-y-full"
-      }`}
-    >
+    <header className="sticky top-0 z-50 bg-background border-b border-border">
       <div className="container mx-auto px-4 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}

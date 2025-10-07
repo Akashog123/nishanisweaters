@@ -1,16 +1,31 @@
 import { ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import heroImage from "@/assets/hero-blockhaus.jpg";
 
 const HeroSection = () => {
+  const [scrollY, setScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const parallaxOffset = scrollY * 0.5;
+
   return (
-    <section className="relative min-h-[80vh] lg:min-h-screen flex items-center">
+    <section className="relative min-h-[80vh] lg:min-h-screen flex items-center overflow-hidden">
       {/* Background Image */}
       <div className="absolute inset-0">
         <img
           src={heroImage}
           alt="BLOCKHAUS Fashion Collection"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover transition-transform duration-100 ease-out"
+          style={{ transform: `translateY(${parallaxOffset}px)` }}
         />
         <div className="absolute inset-0 bg-black/20" />
       </div>
