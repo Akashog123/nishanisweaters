@@ -9,10 +9,12 @@ import Footer from "@/components/Footer";
 import ProductGallery from "@/components/ProductGallery";
 import ProductCard from "@/components/ProductCard";
 import { getProductById, products } from "@/data/products";
+import { useCart } from "@/context/CartContext";
 
 const ProductDetail = () => {
   const { productId } = useParams<{ productId: string }>();
   const product = getProductById(productId || "");
+  const { addToCart } = useCart();
 
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
@@ -40,6 +42,16 @@ const ProductDetail = () => {
       toast.error("Please select size and color");
       return;
     }
+    addToCart({
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      originalPrice: product.originalPrice,
+      image: product.images[0],
+      size: selectedSize,
+      color: selectedColor,
+      quantity: quantity,
+    });
     toast.success(`Added ${product.name} to cart!`);
   };
 
