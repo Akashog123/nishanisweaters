@@ -1,22 +1,23 @@
-import AnnouncementBanner from "@/components/AnnouncementBanner";
-import Header from "@/components/Header";
+import Layout from "@/components/Layout";
 import HeroSection from "@/components/HeroSection";
 import NewArrivals from "@/components/NewArrivals";
-import NewsletterSignup from "@/components/NewsletterSignup";
-import Footer from "@/components/Footer";
+import WinterWear from "@/components/WinterWear";
+import BestSeller from "@/components/BestSeller";
+import Testimonials from "@/components/Testimonials";
+import CategorySplit from "@/components/CategorySplit";
+import Features from "@/components/Features";
 
 const Index = () => {
   return (
-    <div className="min-h-screen">
-      <AnnouncementBanner />
-      <Header />
-      <main>
-        <HeroSection />
-        <NewArrivals />
-        <NewsletterSignup />
-      </main>
-      <Footer />
-    </div>
+    <Layout>
+      <HeroSection />
+      <NewArrivals />
+      <WinterWear />
+      <BestSeller />
+      <Testimonials />
+      <CategorySplit />
+      <Features />
+    </Layout>
   );
 };
 

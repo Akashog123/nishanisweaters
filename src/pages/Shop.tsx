@@ -1,12 +1,19 @@
+import { useState } from "react";
 import { useParams } from "react-router-dom";
-import AnnouncementBanner from "@/components/AnnouncementBanner";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import Layout from "@/components/Layout";
+import PageContainer from "@/components/PageContainer";
 import ProductCard from "@/components/ProductCard";
-import { products } from "@/data/products";
+import ProductSkeleton from "@/components/ProductSkeleton";
+import { ProductFilters, FilterState } from "@/components/ProductFilters";
 
 const Shop = () => {
   const { category } = useParams<{ category: string }>();
+  const [filters, setFilters] = useState<FilterState>({
+    sizes: [],
+    colors: [],
+  });
 
   const categoryTitles: Record<string, string> = {
     "new-arrival": "NEW ARRIVAL",
@@ -14,42 +21,134 @@ const Shop = () => {
     "womens": "WOMEN'S COLLECTION",
   };
 
-  const categoryFilters: Record<string, (product: any) => boolean> = {
-    "new-arrival": (product) => product.category === "new-arrival",
-    "mens": (product) => product.gender === "men",
-    "womens": (product) => product.gender === "women",
+  // Map URL categories to Convex query parameters
+  const getCategoryFilter = () => {
+    if (!category) return {};
+
+    switch (category) {
+      case "new-arrival":
+        return { newArrival: true };
+      case "mens":
+        return { category: "men" };
+      case "womens":
+        return { category: "women" };
+      default:
+        return { category };
+    }
   };
 
-  const filteredProducts = category && categoryFilters[category]
-    ? products.filter(categoryFilters[category])
-    : products;
+  // Get the category string for filter options
+  const getCategoryString = () => {
+    if (!category) return undefined;
+    switch (category) {
+      case "mens":
+        return "men";
+      case "womens":
+        return "women";
+      default:
+        return undefined;
+    }
+  };
+
+  const categoryFilter = getCategoryFilter();
+
+  // Build query arguments with filters
+  const queryArgs = {
+    ...categoryFilter,
+    sizes: filters.sizes.length > 0 ? filters.sizes : undefined,
+    colors: filters.colors.length > 0 ? filters.colors : undefined,
+    minPrice: filters.minPrice,
+    maxPrice: filters.maxPrice,
+    sortBy: filters.sortBy,
+  };
+
+  const productsResult = useQuery(api.products.listProducts, queryArgs);
+  const filterOptions = useQuery(api.products.getFilterOptions, {
+    category: getCategoryString(),
+  });
 
   const title = category ? categoryTitles[category] || "SHOP" : "SHOP";
+  const products = productsResult?.products;
+
+  // Loading state
+  if (products === undefined) {
+    return (
+      <Layout>
+        <PageContainer className="py-12 lg:py-20">
+          <h1 className="text-4xl lg:text-6xl font-bold mb-8 text-center">{title}</h1>
+
+          <ProductFilters
+            filterOptions={filterOptions}
+            filters={filters}
+            onFiltersChange={setFilters}
+            productCount={0}
+          />
+
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-8">
+            <ProductSkeleton count={6} />
+          </div>
+        </PageContainer>
+      </Layout>
+    );
+  }
+
+  // Empty state
+  if (products.length === 0) {
+    return (
+      <Layout>
+        <PageContainer className="py-12 lg:py-20">
+          <h1 className="text-4xl lg:text-6xl font-bold mb-8 text-center">{title}</h1>
+
+          <ProductFilters
+            filterOptions={filterOptions}
+            filters={filters}
+            onFiltersChange={setFilters}
+            productCount={0}
+          />
+
+          <div className="text-center py-20">
+            <p className="text-xl text-muted-foreground mb-4">No products found matching your filters.</p>
+            {(filters.sizes.length > 0 || filters.colors.length > 0 || filters.minPrice !== undefined) && (
+              <button
+                onClick={() => setFilters({ sizes: [], colors: [] })}
+                className="text-primary underline hover:no-underline"
+              >
+                Clear all filters
+              </button>
+            )}
+          </div>
+        </PageContainer>
+      </Layout>
+    );
+  }
 
   return (
-    <div className="min-h-screen">
-      <AnnouncementBanner />
-      <Header />
-      
-      <main className="container mx-auto px-4 lg:px-8 py-12 lg:py-20">
-        <h1 className="text-4xl lg:text-6xl font-bold mb-12 text-center">{title}</h1>
-        
+    <Layout>
+      <PageContainer className="py-12 lg:py-20">
+        <h1 className="text-4xl lg:text-6xl font-bold mb-8 text-center">{title}</h1>
+
+        <ProductFilters
+          filterOptions={filterOptions}
+          filters={filters}
+          onFiltersChange={setFilters}
+          productCount={products.length}
+        />
+
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-8">
-          {filteredProducts.map((product) => (
+          {products.map((product) => (
             <ProductCard
-              key={product.id}
-              id={product.id}
-              image={product.images[0]}
+              key={product._id}
+              id={product.slug}
+              image={product.images[0]?.url || "/placeholder.jpg"}
+              hoverImage={product.images[1]?.url}
               name={product.name}
-              price={product.price}
-              originalPrice={product.originalPrice}
+              price={product.retailPrice.toFixed(2)}
+              originalPrice={product.compareAtPrice?.toFixed(2)}
             />
           ))}
         </div>
-      </main>
-
-      <Footer />
-    </div>
+      </PageContainer>
+    </Layout>
   );
 };
 
