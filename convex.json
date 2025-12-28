@@ -1,0 +1,9 @@
+{
+  "node": {
+    "externalPackages": [
+      "resend",
+      "svix",
+      "razorpay"
+    ]
+  }
+}
