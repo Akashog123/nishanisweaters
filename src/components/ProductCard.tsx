@@ -1,3 +1,4 @@
+import React, { memo, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 
 interface ProductCardProps {
@@ -9,19 +10,38 @@ interface ProductCardProps {
   originalPrice?: string;
 }
 
-const ProductCard = ({ id, image, hoverImage, name, price, originalPrice }: ProductCardProps) => {
+const ProductCard = memo(({ id, image, hoverImage, name, price, originalPrice }: ProductCardProps) => {
+  const [hoverImageLoaded, setHoverImageLoaded] = useState(false);
+
+  // Prefetch hover image on mouse enter for smoother UX
+  const handleMouseEnter = useCallback(() => {
+    if (hoverImage && !hoverImageLoaded) {
+      const img = new Image();
+      img.src = hoverImage;
+      img.onload = () => setHoverImageLoaded(true);
+    }
+  }, [hoverImage, hoverImageLoaded]);
+
   return (
-    <Link to={`/product/${id}`} className="group cursor-pointer">
+    <Link
+      to={`/product/${id}`}
+      className="group cursor-pointer"
+      onMouseEnter={handleMouseEnter}
+    >
       <div className="relative overflow-hidden bg-secondary mb-4 aspect-[3/4]">
         <img
           src={image}
           alt={name}
+          loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-0"
         />
         {hoverImage && (
           <img
             src={hoverImage}
             alt={`${name} alternate view`}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
           />
         )}
@@ -37,6 +57,8 @@ const ProductCard = ({ id, image, hoverImage, name, price, originalPrice }: Prod
       </div>
     </Link>
   );
-};
+});
+
+ProductCard.displayName = "ProductCard";
 
 export default ProductCard;
