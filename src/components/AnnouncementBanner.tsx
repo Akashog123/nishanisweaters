@@ -1,7 +1,7 @@
 import { Plus } from "lucide-react";
 
 const AnnouncementBanner = () => {
-  const announcements = Array(20).fill("BLACK FRIDAY SALE 50% OFF");
+  const announcements = Array(20).fill("DIWALI SALE 50% OFF");
 
   return (
     <div className="bg-primary text-primary-foreground overflow-hidden py-2">

@@ -1,32 +1,23 @@
-import { Link } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import ProductCard from "./ProductCard";
 import ProductSkeleton from "./ProductSkeleton";
-import { Button } from "@/components/ui/button";
 
-const NewArrivals = () => {
-  // Fetch new arrival products with a limit of 4
-  const products = useQuery(api.products.listProducts, { newArrival: true, limit: 4 });
+const BestSeller = () => {
+  // Fetch bestseller products with a limit of 3
+  const products = useQuery(api.products.getBestsellerProducts, { limit: 3 });
 
   return (
-    <section id="new-arrival" className="py-16 lg:py-24 bg-background">
+    <section className="py-16 lg:py-24 bg-background">
       <div className="container mx-auto px-4 lg:px-8">
-        <div className="flex items-center justify-between mb-12">
-          <h2 className="text-3xl lg:text-4xl font-bold">NEW ARRIVAL</h2>
-          <Link to="/shop/new-arrival">
-            <Button variant="outline" className="border-2 font-medium">
-              Browse All
-            </Button>
-          </Link>
-        </div>
+        <h2 className="text-3xl lg:text-4xl font-bold mb-12">BEST SELLER</h2>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           {products === undefined ? (
-            <ProductSkeleton count={4} />
+            <ProductSkeleton count={3} />
           ) : products.length === 0 ? (
             <div className="col-span-full text-center py-12">
-              <p className="text-muted-foreground">No new arrivals at the moment.</p>
+              <p className="text-muted-foreground">No bestsellers at the moment.</p>
             </div>
           ) : (
             products.map((product) => (
@@ -47,4 +38,4 @@ const NewArrivals = () => {
   );
 };
 
-export default NewArrivals;
+export default BestSeller;
