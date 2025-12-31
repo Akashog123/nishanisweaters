@@ -1,38 +1,19 @@
 import { Id } from "../../../../convex/_generated/dataModel";
+import { ProductVariant, ProductImage, ProductVideo } from "@/types";
 
-export interface ProductVariant {
-  sku: string;
-  size: string;
-  color: string;
-  stockQuantity: number;
-  lowStockThreshold: number;
-}
-
-export interface ProductImage {
-  url: string;
-  storageId?: string;
-  alt: string;
-  order: number;
-}
-
-export interface ProductVideo {
-  youtubeId: string;
-  title?: string;
-  thumbnail: string;
-  order: number;
-}
+// Re-export central types for convenience
+export type { ProductVariant, ProductImage, ProductVideo };
 
 export interface Product {
   _id: Id<"products">;
   name: string;
   slug: string;
   description: string;
-  shortDescription: string;
+  shortDescription?: string; // Optional to match Convex return type
   category: string;
   retailPrice: number;
-  wholesalePriceTier1: number;
-  wholesalePriceTier2: number;
-  wholesalePriceTier3: number;
+  wholesalePrice?: number;
+  minOrderQuantity?: number;
   images: ProductImage[];
   videos?: ProductVideo[];
   variants: ProductVariant[];
@@ -50,9 +31,8 @@ export interface ProductFormData {
   shortDescription: string;
   category: string;
   retailPrice: number;
-  wholesalePriceTier1: number;
-  wholesalePriceTier2: number;
-  wholesalePriceTier3: number;
+  wholesalePrice: number;
+  minOrderQuantity: number;
   featured: boolean;
   bestseller: boolean;
   newArrival: boolean;
@@ -65,13 +45,12 @@ export const initialFormData: ProductFormData = {
   shortDescription: "",
   category: "mens",
   retailPrice: 0,
-  wholesalePriceTier1: 0,
-  wholesalePriceTier2: 0,
-  wholesalePriceTier3: 0,
+  wholesalePrice: 0,
+  minOrderQuantity: 1,
   featured: false,
   bestseller: false,
   newArrival: true,
 };
 
-export type StockFilterType = "all" | "in" | "low" | "out";
-export type CategoryFilterType = "all" | "mens" | "womens" | "winter" | "accessories";
+export type StockFilterType = "all" | "in_stock" | "low_stock" | "out_of_stock";
+export type CategoryFilterType = "all" | "mens" | "womens" | "kids" | "winter" | "accessories";

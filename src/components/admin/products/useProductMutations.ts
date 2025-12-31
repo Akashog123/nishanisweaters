@@ -26,9 +26,7 @@ export function useProductMutations() {
             shortDescription: data.shortDescription,
             category: data.category,
             retailPrice: data.retailPrice,
-            wholesalePriceTier1: data.wholesalePriceTier1,
-            wholesalePriceTier2: data.wholesalePriceTier2,
-            wholesalePriceTier3: data.wholesalePriceTier3,
+            wholesalePrice: data.wholesalePrice || undefined,
             featured: data.featured,
             bestseller: data.bestseller,
             newArrival: data.newArrival,
@@ -42,9 +40,7 @@ export function useProductMutations() {
             shortDescription: data.shortDescription,
             category: data.category,
             retailPrice: data.retailPrice,
-            wholesalePriceTier1: data.wholesalePriceTier1,
-            wholesalePriceTier2: data.wholesalePriceTier2,
-            wholesalePriceTier3: data.wholesalePriceTier3,
+            wholesalePrice: data.wholesalePrice || undefined,
             images: [{ url: "/placeholder.svg", alt: data.name, order: 0 }],
             variants: [
               {
@@ -59,6 +55,7 @@ export function useProductMutations() {
             featured: data.featured,
             bestseller: data.bestseller,
             newArrival: data.newArrival,
+            minOrderQuantity: data.minOrderQuantity || undefined,
           });
           toast.success("Product created successfully");
         }

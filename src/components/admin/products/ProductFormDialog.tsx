@@ -113,14 +113,6 @@ export function ProductFormDialog({
                   videos={product.videos || []}
                 />
               )}
-              <div className="flex justify-end mt-6 pt-4 border-t">
-                <Button
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                >
-                  Close
-                </Button>
-              </div>
             </TabsContent>
           </Tabs>
         ) : (
@@ -228,6 +220,7 @@ function ProductDetailsForm({
             <SelectContent>
               <SelectItem value="mens">Mens</SelectItem>
               <SelectItem value="womens">Womens</SelectItem>
+              <SelectItem value="kids">Kids</SelectItem>
               <SelectItem value="winter">Winter</SelectItem>
               <SelectItem value="accessories">Accessories</SelectItem>
             </SelectContent>
@@ -251,50 +244,35 @@ function ProductDetailsForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="wholesalePriceTier1">Wholesale Tier 1</Label>
+          <Label htmlFor="wholesalePrice">Wholesale Price (INR)</Label>
           <Input
-            id="wholesalePriceTier1"
+            id="wholesalePrice"
             type="number"
-            value={formData.wholesalePriceTier1}
+            value={formData.wholesalePrice}
             onChange={(e) =>
               setFormData({
                 ...formData,
-                wholesalePriceTier1: parseFloat(e.target.value) || 0,
-              })
-            }
-            placeholder="1999"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="wholesalePriceTier2">Wholesale Tier 2</Label>
-          <Input
-            id="wholesalePriceTier2"
-            type="number"
-            value={formData.wholesalePriceTier2}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                wholesalePriceTier2: parseFloat(e.target.value) || 0,
+                wholesalePrice: parseFloat(e.target.value) || 0,
               })
             }
             placeholder="1799"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="wholesalePriceTier3">Wholesale Tier 3</Label>
+          <Label htmlFor="minOrderQuantity">Min. Order Qty (Wholesale)</Label>
           <Input
-            id="wholesalePriceTier3"
+            id="minOrderQuantity"
             type="number"
-            value={formData.wholesalePriceTier3}
+            value={formData.minOrderQuantity}
             onChange={(e) =>
               setFormData({
                 ...formData,
-                wholesalePriceTier3: parseFloat(e.target.value) || 0,
+                minOrderQuantity: parseInt(e.target.value) || 1,
               })
             }
-            placeholder="1599"
+            placeholder="10"
           />
         </div>
       </div>

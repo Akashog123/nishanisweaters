@@ -28,6 +28,11 @@ interface ProductsTableProps {
   onPageChange: (page: number) => void;
   onEdit: (product: Product) => void;
   onDelete: (productId: Id<"products">) => void;
+  // New cursor-based pagination props (optional for backwards compatibility)
+  canGoNext?: boolean;
+  canGoPrevious?: boolean;
+  onNextPage?: () => void;
+  onPreviousPage?: () => void;
 }
 
 export function ProductsTable({
@@ -39,13 +44,26 @@ export function ProductsTable({
   onPageChange,
   onEdit,
   onDelete,
+  // Cursor-based pagination props
+  canGoNext,
+  canGoPrevious,
+  onNextPage,
+  onPreviousPage,
 }: ProductsTableProps) {
+  // Determine if using cursor-based or offset-based pagination
+  const useCursorPagination = onNextPage !== undefined && onPreviousPage !== undefined;
+
+  // For cursor-based pagination, show pagination controls if there's content
+  const showPagination = useCursorPagination
+    ? (canGoNext || canGoPrevious || currentPage > 1)
+    : totalPages > 1;
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Product List</CardTitle>
         <CardDescription>
-          {totalCount} products found
+          Page {currentPage} • {products.length} products on this page
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -87,32 +105,59 @@ export function ProductsTable({
           </TableBody>
         </Table>
 
-        {totalPages > 1 && (
+        {showPagination && (
           <div className="flex items-center justify-between mt-4">
             <p className="text-sm text-muted-foreground">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-              {Math.min(currentPage * itemsPerPage, totalCount)}{" "}
-              of {totalCount} products
+              Page {currentPage}
+              {!useCursorPagination && ` of ${totalPages}`}
+              {useCursorPagination && !canGoNext && " (last page)"}
             </p>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onPageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onPageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+              {useCursorPagination ? (
+                // Cursor-based pagination controls
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onPreviousPage}
+                    disabled={!canGoPrevious}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onNextPage}
+                    disabled={!canGoNext}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </>
+              ) : (
+                // Traditional offset-based pagination controls
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onPageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onPageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         )}

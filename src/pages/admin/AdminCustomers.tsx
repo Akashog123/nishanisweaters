@@ -53,7 +53,6 @@ import {
   Building2,
   Shield,
   ShoppingBag,
-  Crown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate, formatDateTime } from "@/lib/formatting";
@@ -81,26 +80,6 @@ const RoleBadge = ({ role }: { role: string }) => {
   );
 };
 
-// Wholesale Tier Badge
-const TierBadge = ({ tier }: { tier?: string }) => {
-  if (!tier) return null;
-
-  const tierConfig: Record<string, { label: string; className: string }> = {
-    tier1: { label: "Tier 1", className: "bg-amber-100 text-amber-800 border-amber-300" },
-    tier2: { label: "Tier 2", className: "bg-gray-100 text-gray-800 border-gray-300" },
-    tier3: { label: "Tier 3", className: "bg-orange-100 text-orange-800 border-orange-300" },
-  };
-
-  const config = tierConfig[tier] || { label: tier, className: "" };
-
-  return (
-    <Badge variant="outline" className={`flex items-center gap-1 ${config.className}`}>
-      <Crown className="h-3 w-3" />
-      {config.label}
-    </Badge>
-  );
-};
-
 // Shipping address type
 interface ShippingAddress {
   id: string;
@@ -120,16 +99,13 @@ const CustomerDetailsDialog = ({
   open,
   onOpenChange,
   onUpdateRole,
-  onAssignTier,
 }: {
   customer: Doc<"users"> | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdateRole: (userId: Id<"users">, role: string) => void;
-  onAssignTier: (userId: Id<"users">, tier: string) => void;
 }) => {
   const [selectedRole, setSelectedRole] = useState(customer?.role || "customer");
-  const [selectedTier, setSelectedTier] = useState(customer?.wholesaleTier || "tier1");
   const [isUpdating, setIsUpdating] = useState(false);
 
   if (!customer) return null;
@@ -141,18 +117,6 @@ const CustomerDetailsDialog = ({
       onOpenChange(false);
     } catch (error) {
       logger.error("Error updating role", error);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const handleTierAssign = async () => {
-    setIsUpdating(true);
-    try {
-      await onAssignTier(customer._id, selectedTier);
-      onOpenChange(false);
-    } catch (error) {
-      logger.error("Error assigning tier", error);
     } finally {
       setIsUpdating(false);
     }
@@ -294,54 +258,31 @@ const CustomerDetailsDialog = ({
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-2 pt-2">
-                  <Label>Current Tier:</Label>
-                  <TierBadge tier={customer.wholesaleTier} />
-                </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Role & Tier Management */}
+          {/* Role Management */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Shield className="h-4 w-4" />
-                Role & Access Management
+                Role Management
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>User Role</Label>
-                  <Select value={selectedRole} onValueChange={setSelectedRole}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="customer">Customer</SelectItem>
-                      <SelectItem value="wholesale">Wholesale</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Wholesale Tier</Label>
-                  <Select
-                    value={selectedTier}
-                    onValueChange={setSelectedTier}
-                    disabled={selectedRole !== "wholesale"}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select tier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="tier1">Tier 1 (Basic)</SelectItem>
-                      <SelectItem value="tier2">Tier 2 (Standard)</SelectItem>
-                      <SelectItem value="tier3">Tier 3 (Premium)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label>User Role</Label>
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="customer">Customer</SelectItem>
+                    <SelectItem value="wholesale">Wholesale</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
@@ -351,11 +292,6 @@ const CustomerDetailsDialog = ({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          {selectedRole === "wholesale" && selectedTier !== customer.wholesaleTier && (
-            <Button variant="secondary" onClick={handleTierAssign} disabled={isUpdating}>
-              {isUpdating ? "Updating..." : "Assign Tier"}
-            </Button>
-          )}
           {selectedRole !== customer.role && (
             <Button onClick={handleRoleUpdate} disabled={isUpdating}>
               {isUpdating ? "Updating..." : "Update Role"}
@@ -371,18 +307,18 @@ const AdminCustomers = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Doc<"users"> | null>(null);
   const itemsPerPage = 10;
 
   // Fetch users
-  const allUsers = useQuery(api.users.listUsers, {});
+  const usersResult = useQuery(api.users.listUsers, {});
+  const allUsers = usersResult?.users ?? [];
 
   // Mutations
   const updateUserRole = useMutation(api.users.updateUserRole);
-  const assignWholesaleTier = useMutation(api.users.assignWholesaleTier);
 
   // Filter users
-  const filteredUsers = (allUsers || []).filter((user) => {
+  const filteredUsers = allUsers.filter((user) => {
     const fullName = `${user.firstName || ""} ${user.lastName || ""}`.toLowerCase();
     const matchesSearch =
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -415,26 +351,12 @@ const AdminCustomers = () => {
     }
   };
 
-  // Handle tier assignment
-  const handleAssignTier = async (userId: Id<"users">, tier: string) => {
-    try {
-      await assignWholesaleTier({
-        userId,
-        tier: tier as "tier1" | "tier2" | "tier3",
-      });
-      toast.success("Wholesale tier assigned successfully");
-    } catch (error) {
-      toast.error("Failed to assign wholesale tier");
-      throw error;
-    }
-  };
-
   // Count users by role
   const roleCounts = {
-    all: allUsers?.length || 0,
-    customer: allUsers?.filter((u) => u.role === "customer").length || 0,
-    wholesale: allUsers?.filter((u) => u.role === "wholesale").length || 0,
-    admin: allUsers?.filter((u) => u.role === "admin").length || 0,
+    all: allUsers.length,
+    customer: allUsers.filter((u) => u.role === "customer").length,
+    wholesale: allUsers.filter((u) => u.role === "wholesale").length,
+    admin: allUsers.filter((u) => u.role === "admin").length,
   };
 
   return (
@@ -566,7 +488,6 @@ const AdminCustomers = () => {
                   <TableHead>User</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Tier</TableHead>
                   <TableHead>Company</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -601,9 +522,6 @@ const AdminCustomers = () => {
                       <RoleBadge role={user.role} />
                     </TableCell>
                     <TableCell>
-                      <TierBadge tier={user.wholesaleTier} />
-                    </TableCell>
-                    <TableCell>
                       <div className="truncate max-w-[150px]">
                         {user.companyName || "-"}
                       </div>
@@ -625,7 +543,7 @@ const AdminCustomers = () => {
                 {paginatedUsers.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={7}
+                      colSpan={6}
                       className="text-center py-8 text-muted-foreground"
                     >
                       <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -678,7 +596,6 @@ const AdminCustomers = () => {
             if (!open) setSelectedCustomer(null);
           }}
           onUpdateRole={handleUpdateRole}
-          onAssignTier={handleAssignTier}
         />
       </div>
     </AdminLayout>

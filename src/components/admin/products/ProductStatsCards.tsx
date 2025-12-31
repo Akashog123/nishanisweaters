@@ -1,14 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Product } from "./types";
-import { calculateProductStats } from "./utils";
 
-interface ProductStatsCardsProps {
-  products: Product[];
+// Stats can be provided directly from the server query (preferred)
+// or calculated from products array (legacy fallback)
+interface ProductStats {
+  totalCount: number;
+  activeCount: number;
+  inStockCount: number;
   lowStockCount: number;
+  outOfStockCount: number;
 }
 
-export function ProductStatsCards({ products, lowStockCount }: ProductStatsCardsProps) {
-  const stats = calculateProductStats(products);
+interface ProductStatsCardsProps {
+  stats: ProductStats;
+}
+
+export function ProductStatsCards({ stats }: ProductStatsCardsProps) {
 
   return (
     <div className="grid gap-4 md:grid-cols-4">
@@ -19,7 +25,7 @@ export function ProductStatsCards({ products, lowStockCount }: ProductStatsCards
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.total}</div>
+          <div className="text-2xl font-bold">{stats.totalCount}</div>
         </CardContent>
       </Card>
       <Card>
@@ -30,7 +36,7 @@ export function ProductStatsCards({ products, lowStockCount }: ProductStatsCards
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-green-600">
-            {stats.inStock}
+            {stats.inStockCount}
           </div>
         </CardContent>
       </Card>
@@ -42,7 +48,7 @@ export function ProductStatsCards({ products, lowStockCount }: ProductStatsCards
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-amber-600">
-            {lowStockCount}
+            {stats.lowStockCount}
           </div>
         </CardContent>
       </Card>
@@ -54,7 +60,7 @@ export function ProductStatsCards({ products, lowStockCount }: ProductStatsCards
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-red-600">
-            {stats.outOfStock}
+            {stats.outOfStockCount}
           </div>
         </CardContent>
       </Card>

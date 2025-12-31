@@ -61,6 +61,24 @@ import {
 
 type ContentType = "banner" | "announcement" | "text_block" | "image" | "video";
 
+/**
+ * Type for creating new CMS content - matches the createContent mutation args
+ */
+interface CreateContentInput {
+  key: string;
+  type: ContentType;
+  title?: string;
+  content?: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  ctaText?: string;
+  ctaLink?: string;
+  isActive: boolean;
+  displayOrder?: number;
+  startsAt?: number;
+  endsAt?: number;
+}
+
 interface CMSContent {
   _id: Id<"cmsContent">;
   key: string;
@@ -338,7 +356,25 @@ export default function AdminCMS() {
         });
         toast.success("Content updated successfully");
       } else {
-        await createContent(data as any);
+        // Validate required fields for creation
+        if (!data.key || !data.type || data.isActive === undefined) {
+          throw new Error("Missing required fields: key, type, and isActive are required");
+        }
+        const createInput: CreateContentInput = {
+          key: data.key,
+          type: data.type,
+          isActive: data.isActive,
+          title: data.title,
+          content: data.content,
+          imageUrl: data.imageUrl,
+          videoUrl: data.videoUrl,
+          ctaText: data.ctaText,
+          ctaLink: data.ctaLink,
+          displayOrder: data.displayOrder,
+          startsAt: data.startsAt,
+          endsAt: data.endsAt,
+        };
+        await createContent(createInput);
         toast.success("Content created successfully");
       }
       setIsFormOpen(false);

@@ -479,13 +479,16 @@ const AdminWholesale = () => {
   const itemsPerPage = 10;
 
   // Fetch applications
-  const allApplications = useQuery(api.wholesaleApplications.listApplications, {});
+  const applicationsResult = useQuery(api.wholesaleApplications.listApplications, {});
 
   // Mutations
   const reviewApplication = useMutation(api.wholesaleApplications.reviewApplication);
 
+  // Extract applications array from paginated result
+  const allApplications = applicationsResult?.applications ?? [];
+
   // Filter applications
-  const filteredApplications = (allApplications || []).filter((app) => {
+  const filteredApplications = allApplications.filter((app) => {
     const matchesSearch = app.companyName
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
@@ -530,12 +533,11 @@ const AdminWholesale = () => {
 
   // Count applications by status
   const statusCounts = {
-    all: allApplications?.length || 0,
-    pending: allApplications?.filter((a) => a.status === "pending").length || 0,
-    under_review:
-      allApplications?.filter((a) => a.status === "under_review").length || 0,
-    approved: allApplications?.filter((a) => a.status === "approved").length || 0,
-    rejected: allApplications?.filter((a) => a.status === "rejected").length || 0,
+    all: allApplications.length,
+    pending: allApplications.filter((a) => a.status === "pending").length,
+    under_review: allApplications.filter((a) => a.status === "under_review").length,
+    approved: allApplications.filter((a) => a.status === "approved").length,
+    rejected: allApplications.filter((a) => a.status === "rejected").length,
   };
 
   return (

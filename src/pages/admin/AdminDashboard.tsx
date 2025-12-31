@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -25,7 +25,7 @@ import {
   ShoppingCart,
   Users,
   Building2,
-  DollarSign,
+  IndianRupee,
   AlertTriangle,
   TrendingUp,
   ArrowUpRight,
@@ -44,19 +44,19 @@ import {
 } from "recharts";
 import { formatCurrency, formatDate } from "@/lib/formatting";
 
-// Order Status Badge
-const OrderStatusBadge = ({ status }: { status: string }) => {
-  const statusConfig: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
-    pending: { variant: "outline", label: "Pending" },
-    confirmed: { variant: "secondary", label: "Confirmed" },
-    processing: { variant: "secondary", label: "Processing" },
-    shipped: { variant: "default", label: "Shipped" },
-    delivered: { variant: "default", label: "Delivered" },
-    cancelled: { variant: "destructive", label: "Cancelled" },
-    refunded: { variant: "destructive", label: "Refunded" },
-  };
+// Order Status Badge - Move config outside component to prevent recreation
+const ORDER_STATUS_CONFIG: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
+  pending: { variant: "outline", label: "Pending" },
+  confirmed: { variant: "secondary", label: "Confirmed" },
+  processing: { variant: "secondary", label: "Processing" },
+  shipped: { variant: "default", label: "Shipped" },
+  delivered: { variant: "default", label: "Delivered" },
+  cancelled: { variant: "destructive", label: "Cancelled" },
+  refunded: { variant: "destructive", label: "Refunded" },
+};
 
-  const config = statusConfig[status] || { variant: "outline" as const, label: status };
+const OrderStatusBadge = ({ status }: { status: string }) => {
+  const config = ORDER_STATUS_CONFIG[status] || { variant: "outline" as const, label: status };
 
   return <Badge variant={config.variant}>{config.label}</Badge>;
 };
@@ -68,42 +68,56 @@ const AdminDashboard = () => {
   const dashboardData = useQuery(api.analytics.getDashboardOverview);
   const lowStockProducts = useQuery(api.products.getLowStockProducts);
 
+  // Memoize the date range to prevent recalculation on every render
+  const dateRange = useMemo(() => {
+    const now = Date.now();
+    return {
+      thirtyDaysAgo: now - 30 * 24 * 60 * 60 * 1000,
+      endDate: now,
+    };
+  }, []); // Empty dependency array - only calculate once on mount
+
   // Get analytics data for charts (last 30 days)
-  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
   const salesAnalytics = useQuery(api.analytics.getSalesAnalytics, {
-    startDate: thirtyDaysAgo,
-    endDate: Date.now(),
+    startDate: dateRange.thirtyDaysAgo,
+    endDate: dateRange.endDate,
   });
   const orderTypeBreakdown = useQuery(api.analytics.getOrderTypeBreakdown, {
-    startDate: thirtyDaysAgo,
-    endDate: Date.now(),
+    startDate: dateRange.thirtyDaysAgo,
+    endDate: dateRange.endDate,
   });
 
-  // Prepare chart data
-  const chartData = salesAnalytics?.dailyStats
-    ? Object.entries(salesAnalytics.dailyStats)
-        .map(([date, data]) => ({
-          date: new Date(date).toLocaleDateString("en-IN", {
-            month: "short",
-            day: "numeric",
-          }),
-          revenue: data.revenue,
-          orders: data.orders,
-        }))
-        .slice(-14) // Last 14 days
-    : [];
+  // Memoize chart data to prevent recreation on every render
+  const chartData = useMemo(() => {
+    if (!salesAnalytics?.dailyStats) return [];
 
-  const orderTypeData = orderTypeBreakdown
-    ? [
-        { name: "Retail", value: orderTypeBreakdown.retail.revenue, count: orderTypeBreakdown.retail.count },
-        { name: "Wholesale", value: orderTypeBreakdown.wholesale.revenue, count: orderTypeBreakdown.wholesale.count },
-      ]
-    : [];
+    return Object.entries(salesAnalytics.dailyStats)
+      .map(([date, data]) => ({
+        date: new Date(date).toLocaleDateString("en-IN", {
+          month: "short",
+          day: "numeric",
+        }),
+        revenue: data.revenue,
+        orders: data.orders,
+      }))
+      .slice(-14); // Last 14 days
+  }, [salesAnalytics?.dailyStats]);
 
-  const handleRefresh = () => {
+  // Memoize order type data to prevent recreation on every render
+  const orderTypeData = useMemo(() => {
+    if (!orderTypeBreakdown) return [];
+
+    return [
+      { name: "Retail", value: orderTypeBreakdown.retail.revenue, count: orderTypeBreakdown.retail.count },
+      { name: "Wholesale", value: orderTypeBreakdown.wholesale.revenue, count: orderTypeBreakdown.wholesale.count },
+    ];
+  }, [orderTypeBreakdown]);
+
+  // Memoize the refresh handler to prevent recreation on every render
+  const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
     setTimeout(() => setIsRefreshing(false), 1000);
-  };
+  }, []);
 
   if (!dashboardData) {
     return (
@@ -138,6 +152,31 @@ const AdminDashboard = () => {
           </Button>
         </div>
 
+        {/* Disputed Orders Alert - Prominent warning banner */}
+        {dashboardData.disputedOrders > 0 && (
+          <Card className="border-red-500 bg-red-50 dark:bg-red-950/30">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+                <CardTitle className="text-red-600">
+                  {dashboardData.disputedOrders} Disputed Order{dashboardData.disputedOrders !== 1 ? "s" : ""} Require Attention
+                </CardTitle>
+              </div>
+              <Button asChild variant="destructive" size="sm">
+                <Link to="/admin/orders?payment=disputed">
+                  View Disputes
+                  <ArrowUpRight className="h-4 w-4 ml-1" />
+                </Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-red-600/80">
+                Payment disputes require immediate action. Visit the Razorpay Dashboard to submit evidence and respond to chargebacks.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Metrics Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {/* Revenue Card */}
@@ -146,7 +185,7 @@ const AdminDashboard = () => {
               <CardTitle className="text-sm font-medium">
                 Total Revenue (30d)
               </CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <IndianRupee className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -317,6 +356,18 @@ const AdminDashboard = () => {
                   <Link to="/admin/products?filter=low-stock">
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     Restock Low Items ({dashboardData.lowStockCount})
+                  </Link>
+                </Button>
+              )}
+              {dashboardData.disputedOrders > 0 && (
+                <Button
+                  asChild
+                  className="w-full justify-start"
+                  variant="destructive"
+                >
+                  <Link to="/admin/orders?payment=disputed">
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Handle Disputes ({dashboardData.disputedOrders})
                   </Link>
                 </Button>
               )}

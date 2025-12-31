@@ -13,8 +13,6 @@ import {
   ProductsTable,
   useProductFilters,
   useProductMutations,
-  filterProducts,
-  paginateProducts,
 } from "@/components/admin/products";
 
 const ITEMS_PER_PAGE = 10;
@@ -28,10 +26,13 @@ const AdminProducts = () => {
     categoryFilter,
     stockFilter,
     currentPage,
+    cursor,
+    cursorHistory,
     setSearchQuery,
     setCategoryFilter,
     setStockFilter,
-    setCurrentPage,
+    goToNextPage,
+    goToPreviousPage,
   } = useProductFilters();
 
   const {
@@ -41,24 +42,43 @@ const AdminProducts = () => {
     handleDeleteProduct,
   } = useProductMutations();
 
-  // Fetch products
-  const allProducts = useQuery(api.products.listProducts, {}) as Product[] | undefined;
-  const lowStockProducts = useQuery(api.products.getLowStockProducts);
+  // Type-safe wrapper to convert Product to ProductFormData for editing
+  const handleEdit = (product: Product) => {
+    setEditingProduct({
+      _id: product._id,
+      name: product.name,
+      slug: product.slug,
+      description: product.description,
+      shortDescription: product.shortDescription || "",
+      category: product.category,
+      retailPrice: product.retailPrice,
+      wholesalePrice: product.wholesalePrice || 0,
+      minOrderQuantity: product.minOrderQuantity || 1,
+      featured: product.featured,
+      bestseller: product.bestseller,
+      newArrival: product.newArrival,
+    });
+  };
 
-  // Filter and paginate products
-  const filteredProducts = filterProducts(
-    allProducts || [],
-    searchQuery,
-    categoryFilter,
-    stockFilter
-  );
+  // Fetch products using server-side pagination
+  const productsResult = useQuery(api.products.listProductsForAdmin, {
+    category: categoryFilter !== "all" ? categoryFilter : undefined,
+    stockStatus: stockFilter !== "all" ? stockFilter : undefined,
+    searchQuery: searchQuery || undefined,
+    limit: ITEMS_PER_PAGE,
+    cursor: cursor ?? undefined,
+  });
 
-  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
-  const paginatedProducts = paginateProducts(
-    filteredProducts,
-    currentPage,
-    ITEMS_PER_PAGE
-  );
+  const products = (productsResult?.products || []) as Product[];
+  const continueCursor = productsResult?.continueCursor;
+  const isDone = productsResult?.isDone ?? true;
+
+  // Fetch aggregated stats using dedicated efficient query
+  const productStats = useQuery(api.products.getProductStats, {});
+
+  // Calculate if we can navigate
+  const canGoNext = !isDone && continueCursor;
+  const canGoPrevious = cursorHistory.length > 0;
 
   return (
     <AdminLayout>
@@ -79,8 +99,13 @@ const AdminProducts = () => {
 
         {/* Stats Cards */}
         <ProductStatsCards
-          products={allProducts || []}
-          lowStockCount={lowStockProducts?.length || 0}
+          stats={productStats ?? {
+            totalCount: 0,
+            activeCount: 0,
+            inStockCount: 0,
+            lowStockCount: 0,
+            outOfStockCount: 0,
+          }}
         />
 
         {/* Filters */}
@@ -93,16 +118,26 @@ const AdminProducts = () => {
           onStockChange={setStockFilter}
         />
 
-        {/* Products Table */}
+        {/* Products Table with server-side pagination */}
         <ProductsTable
-          products={paginatedProducts}
-          totalCount={filteredProducts.length}
+          products={products}
+          totalCount={products.length}
           currentPage={currentPage}
-          totalPages={totalPages}
+          totalPages={isDone ? currentPage : currentPage + 1}
           itemsPerPage={ITEMS_PER_PAGE}
-          onPageChange={setCurrentPage}
-          onEdit={setEditingProduct}
+          onPageChange={(page) => {
+            if (page > currentPage && canGoNext) {
+              goToNextPage(continueCursor!);
+            } else if (page < currentPage && canGoPrevious) {
+              goToPreviousPage();
+            }
+          }}
+          onEdit={handleEdit}
           onDelete={handleDeleteProduct}
+          canGoNext={!!canGoNext}
+          canGoPrevious={canGoPrevious}
+          onNextPage={() => canGoNext && goToNextPage(continueCursor!)}
+          onPreviousPage={() => canGoPrevious && goToPreviousPage()}
         />
 
         {/* Add Product Dialog */}

@@ -79,13 +79,16 @@ const orderStatusConfig: Record<
 // Payment Status Configuration
 const paymentStatusConfig: Record<
   string,
-  { variant: "default" | "secondary" | "destructive" | "outline"; label: string }
+  { variant: "default" | "secondary" | "destructive" | "outline" | "warning"; label: string }
 > = {
   pending: { variant: "outline", label: "Pending" },
   paid: { variant: "default", label: "Paid" },
   failed: { variant: "destructive", label: "Failed" },
   refunded: { variant: "destructive", label: "Refunded" },
   partially_refunded: { variant: "secondary", label: "Partial Refund" },
+  disputed: { variant: "warning", label: "⚠️ Disputed" },
+  refund_pending: { variant: "outline", label: "Refund Pending" },
+  refund_failed: { variant: "destructive", label: "Refund Failed" },
 };
 
 // Order Status Badge
@@ -323,6 +326,59 @@ const OrderDetailsDialog = ({
               </CardContent>
             </Card>
 
+            {/* Dispute Information - Only shown if order has dispute */}
+            {order.disputeStatus && (
+              <Card className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <span className="text-amber-600">⚠️</span> Dispute Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Status</span>
+                    <Badge variant={
+                      order.disputeStatus === 'action_required' ? 'destructive' :
+                      order.disputeStatus === 'won' ? 'default' :
+                      order.disputeStatus === 'lost' ? 'destructive' :
+                      'warning'
+                    }>
+                      {order.disputeStatus.replace('_', ' ').toUpperCase()}
+                    </Badge>
+                  </div>
+                  {order.disputeId && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Dispute ID</span>
+                      <span className="text-xs font-mono">{order.disputeId}</span>
+                    </div>
+                  )}
+                  {order.disputeReason && (
+                    <div className="flex justify-between items-start">
+                      <span className="text-sm text-muted-foreground">Reason</span>
+                      <span className="text-sm text-right max-w-[200px]">{order.disputeReason}</span>
+                    </div>
+                  )}
+                  {order.disputeCreatedAt && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Opened</span>
+                      <span className="text-sm">{formatDateTime(order.disputeCreatedAt)}</span>
+                    </div>
+                  )}
+                  {order.disputeResolvedAt && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Resolved</span>
+                      <span className="text-sm">{formatDateTime(order.disputeResolvedAt)}</span>
+                    </div>
+                  )}
+                  {order.disputeStatus === 'action_required' && (
+                    <div className="mt-3 p-2 bg-red-100 dark:bg-red-900/30 rounded text-sm text-red-700 dark:text-red-300">
+                      ⏰ <strong>Action Required:</strong> Submit evidence in Razorpay Dashboard to contest this dispute.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">Shipping</CardTitle>
@@ -428,19 +484,23 @@ const OrderDetailsDialog = ({
 const AdminOrders = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [paymentFilter, setPaymentFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const itemsPerPage = 10;
 
   // Fetch orders
-  const allOrders = useQuery(api.orders.listAllOrders, { limit: 500 });
+  const ordersResult = useQuery(api.orders.listAllOrders, { limit: 500 });
 
   // Mutations
   const updateOrderStatus = useMutation(api.orders.updateOrderStatus);
 
+  // Extract orders array from paginated result
+  const allOrders = ordersResult?.orders ?? [];
+
   // Filter orders
-  const filteredOrders = (allOrders || []).filter((order) => {
+  const filteredOrders = allOrders.filter((order) => {
     const matchesSearch =
       order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.userEmail.toLowerCase().includes(searchQuery.toLowerCase());
@@ -448,9 +508,12 @@ const AdminOrders = () => {
     const matchesStatus =
       statusFilter === "all" || order.orderStatus === statusFilter;
 
+    const matchesPayment =
+      paymentFilter === "all" || order.paymentStatus === paymentFilter;
+
     const matchesType = typeFilter === "all" || order.orderType === typeFilter;
 
-    return matchesSearch && matchesStatus && matchesType;
+    return matchesSearch && matchesStatus && matchesPayment && matchesType;
   });
 
   // Pagination
@@ -485,13 +548,12 @@ const AdminOrders = () => {
 
   // Count orders by status
   const orderCounts = {
-    all: allOrders?.length || 0,
-    pending: allOrders?.filter((o) => o.orderStatus === "pending").length || 0,
-    processing:
-      allOrders?.filter((o) => o.orderStatus === "processing").length || 0,
-    shipped: allOrders?.filter((o) => o.orderStatus === "shipped").length || 0,
-    delivered:
-      allOrders?.filter((o) => o.orderStatus === "delivered").length || 0,
+    all: allOrders.length,
+    pending: allOrders.filter((o) => o.orderStatus === "pending").length,
+    processing: allOrders.filter((o) => o.orderStatus === "processing").length,
+    shipped: allOrders.filter((o) => o.orderStatus === "shipped").length,
+    delivered: allOrders.filter((o) => o.orderStatus === "delivered").length,
+    disputed: allOrders.filter((o) => o.paymentStatus === "disputed").length,
   };
 
   return (
@@ -506,12 +568,12 @@ const AdminOrders = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-6">
           <Card
             className={`cursor-pointer transition-colors ${
-              statusFilter === "all" ? "ring-2 ring-primary" : ""
+              statusFilter === "all" && paymentFilter === "all" ? "ring-2 ring-primary" : ""
             }`}
-            onClick={() => setStatusFilter("all")}
+            onClick={() => { setStatusFilter("all"); setPaymentFilter("all"); }}
           >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">All Orders</CardTitle>
@@ -520,11 +582,32 @@ const AdminOrders = () => {
               <div className="text-2xl font-bold">{orderCounts.all}</div>
             </CardContent>
           </Card>
+          {/* Disputed Alert Card - Highlighted for attention */}
+          {orderCounts.disputed > 0 && (
+            <Card
+              className={`cursor-pointer transition-colors border-red-500 bg-red-50 dark:bg-red-950/30 ${
+                paymentFilter === "disputed" ? "ring-2 ring-red-500" : ""
+              }`}
+              onClick={() => { setStatusFilter("all"); setPaymentFilter("disputed"); }}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-red-600 flex items-center gap-1">
+                  ⚠️ Disputed
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">
+                  {orderCounts.disputed}
+                </div>
+                <p className="text-xs text-red-500 mt-1">Needs attention</p>
+              </CardContent>
+            </Card>
+          )}
           <Card
             className={`cursor-pointer transition-colors ${
               statusFilter === "pending" ? "ring-2 ring-primary" : ""
             }`}
-            onClick={() => setStatusFilter("pending")}
+            onClick={() => { setStatusFilter("pending"); setPaymentFilter("all"); }}
           >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-amber-600">
@@ -541,7 +624,7 @@ const AdminOrders = () => {
             className={`cursor-pointer transition-colors ${
               statusFilter === "processing" ? "ring-2 ring-primary" : ""
             }`}
-            onClick={() => setStatusFilter("processing")}
+            onClick={() => { setStatusFilter("processing"); setPaymentFilter("all"); }}
           >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-blue-600">
@@ -558,7 +641,7 @@ const AdminOrders = () => {
             className={`cursor-pointer transition-colors ${
               statusFilter === "shipped" ? "ring-2 ring-primary" : ""
             }`}
-            onClick={() => setStatusFilter("shipped")}
+            onClick={() => { setStatusFilter("shipped"); setPaymentFilter("all"); }}
           >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-purple-600">
@@ -575,7 +658,7 @@ const AdminOrders = () => {
             className={`cursor-pointer transition-colors ${
               statusFilter === "delivered" ? "ring-2 ring-primary" : ""
             }`}
-            onClick={() => setStatusFilter("delivered")}
+            onClick={() => { setStatusFilter("delivered"); setPaymentFilter("all"); }}
           >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-green-600">
@@ -608,7 +691,7 @@ const AdminOrders = () => {
                   />
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Select
                   value={statusFilter}
                   onValueChange={(value) => {
@@ -628,6 +711,28 @@ const AdminOrders = () => {
                     <SelectItem value="shipped">Shipped</SelectItem>
                     <SelectItem value="delivered">Delivered</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={paymentFilter}
+                  onValueChange={(value) => {
+                    setPaymentFilter(value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="Payment" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Payments</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="failed">Failed</SelectItem>
+                    <SelectItem value="disputed">⚠️ Disputed</SelectItem>
+                    <SelectItem value="refunded">Refunded</SelectItem>
+                    <SelectItem value="partially_refunded">Partial Refund</SelectItem>
+                    <SelectItem value="refund_pending">Refund Pending</SelectItem>
+                    <SelectItem value="refund_failed">Refund Failed</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select

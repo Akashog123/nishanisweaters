@@ -54,7 +54,7 @@ export function ProductTableRow({ product, onEdit, onDelete }: ProductTableRowPr
           {formatCurrency(product.retailPrice)}
         </div>
         <div className="text-xs text-muted-foreground">
-          W: {formatCurrency(product.wholesalePriceTier1)}
+          W: {product.wholesalePrice ? formatCurrency(product.wholesalePrice) : "N/A"}
         </div>
       </TableCell>
       <TableCell>

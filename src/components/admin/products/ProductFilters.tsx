@@ -55,6 +55,7 @@ export function ProductFilters({
                 <SelectItem value="all">All Categories</SelectItem>
                 <SelectItem value="mens">Mens</SelectItem>
                 <SelectItem value="womens">Womens</SelectItem>
+                <SelectItem value="kids">Kids</SelectItem>
                 <SelectItem value="winter">Winter</SelectItem>
                 <SelectItem value="accessories">Accessories</SelectItem>
               </SelectContent>
@@ -68,9 +69,9 @@ export function ProductFilters({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Stock</SelectItem>
-                <SelectItem value="in">In Stock</SelectItem>
-                <SelectItem value="low">Low Stock</SelectItem>
-                <SelectItem value="out">Out of Stock</SelectItem>
+                <SelectItem value="in_stock">In Stock</SelectItem>
+                <SelectItem value="low_stock">Low Stock</SelectItem>
+                <SelectItem value="out_of_stock">Out of Stock</SelectItem>
               </SelectContent>
             </Select>
           </div>
