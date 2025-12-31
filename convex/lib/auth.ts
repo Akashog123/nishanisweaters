@@ -10,9 +10,10 @@
  */
 
 import { ConvexError } from "convex/values";
-import { QueryCtx, MutationCtx } from "../_generated/server";
+import { QueryCtx, MutationCtx, ActionCtx } from "../_generated/server";
 
 type AuthContext = QueryCtx | MutationCtx;
+type ActionAuthContext = ActionCtx;
 
 /**
  * User role hierarchy (from lowest to highest privilege)
@@ -226,4 +227,59 @@ export async function isAdmin(ctx: AuthContext): Promise<boolean> {
 export async function isWholesaleOrAdmin(ctx: AuthContext): Promise<boolean> {
   const user = await getCurrentUser(ctx);
   return user?.role === "wholesale" || user?.role === "admin";
+}
+
+// ============================================
+// ACTION-SPECIFIC AUTH HELPERS
+// Actions have a different context type (ActionCtx) that doesn't have direct DB access
+// ============================================
+
+/**
+ * Gets the authenticated user's Clerk ID from the server-side identity in an action context
+ * NEVER trust client-provided clerkId - always use identity.subject
+ *
+ * @throws ConvexError if user is not authenticated
+ */
+export async function requireAuthAction(ctx: ActionAuthContext) {
+  const identity = await ctx.auth.getUserIdentity();
+
+  if (!identity) {
+    throw new ConvexError({
+      code: "UNAUTHORIZED",
+      message: "Authentication required. Please sign in to continue.",
+    });
+  }
+
+  return {
+    clerkId: identity.subject,
+    email: identity.email || "",
+    name: identity.name || "",
+    identity,
+  };
+}
+
+/**
+ * Requires user to have admin role in an action context
+ * Note: This requires a database query via runQuery to check the user's role
+ *
+ * @throws ConvexError if user is not an admin
+ */
+export async function requireAdminAction(
+  ctx: ActionAuthContext,
+  runQuery: <T>(query: any, args: any) => Promise<T>
+) {
+  const { clerkId } = await requireAuthAction(ctx);
+
+  // We need to query the database to check the user's role
+  // The caller must provide a way to run queries
+  const user = await runQuery("users:getUserByClerkId" as any, { clerkId });
+
+  if (!user || (user as any).role !== "admin") {
+    throw new ConvexError({
+      code: "FORBIDDEN",
+      message: "Access denied. Admin role required.",
+    });
+  }
+
+  return user;
 }

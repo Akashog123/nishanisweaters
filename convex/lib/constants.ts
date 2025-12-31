@@ -53,20 +53,6 @@ export const MAX_CART_ITEM_QUANTITY = 100;
 /** Minimum order quantity for wholesale */
 export const MIN_WHOLESALE_ORDER_QUANTITY = 10;
 
-/** Minimum order amount for wholesale tiers (in INR) */
-export const WHOLESALE_MIN_ORDER_AMOUNTS = {
-  tier1: 10000,  // Starter tier
-  tier2: 50000,  // Growth tier
-  tier3: 100000, // Enterprise tier
-} as const;
-
-/** Wholesale tier discount percentages */
-export const WHOLESALE_DISCOUNTS = {
-  tier1: 0.15, // 15% discount
-  tier2: 0.22, // 22% discount
-  tier3: 0.30, // 30% discount
-} as const;
-
 /** Maximum characters for customer notes */
 export const MAX_NOTES_LENGTH = 500;
 
@@ -83,6 +69,22 @@ export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as 
 /** Allowed document file types */
 export const ALLOWED_DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"] as const;
 
+/** File magic bytes for content-type validation */
+export const FILE_MAGIC_BYTES = {
+  "image/jpeg": [
+    [0xFF, 0xD8, 0xFF], // JPEG/JFIF
+  ],
+  "image/png": [
+    [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], // PNG
+  ],
+  "image/webp": [
+    [0x52, 0x49, 0x46, 0x46], // RIFF (WebP container)
+  ],
+  "application/pdf": [
+    [0x25, 0x50, 0x44, 0x46], // %PDF
+  ],
+} as const;
+
 // ============================================
 // DISPLAY & FORMATTING
 // ============================================
@@ -92,6 +94,16 @@ export const CURRENCY_SYMBOL = "₹";
 
 /** Locale for number formatting */
 export const LOCALE = "en-IN";
+
+// ============================================
+// WHOLESALE CONTACT
+// ============================================
+
+/** WhatsApp contact for bulk pricing negotiation */
+export const WHATSAPP_BULK_PRICING_CONTACT = "+91 7458 816 343";
+
+/** WhatsApp URL for bulk pricing inquiries */
+export const WHATSAPP_BULK_PRICING_URL = "https://wa.me/917458816343?text=Hi,%20I%27m%20interested%20in%20bulk%20purchase.";
 
 // ============================================
 // HELPER FUNCTIONS
