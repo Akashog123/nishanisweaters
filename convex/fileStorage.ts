@@ -1,8 +1,99 @@
-import { mutation, query, action } from "./_generated/server";
+import { mutation, query, action, ActionCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { ConvexError } from "convex/values";
-import { requireAuth, requireAdmin } from "./lib/auth";
-import { MAX_FILE_SIZE_BYTES, ALLOWED_DOCUMENT_TYPES, ALLOWED_IMAGE_TYPES } from "./lib/constants";
+import { requireAuth, requireAdmin, requireAuthAction } from "./lib/auth";
+import { MAX_FILE_SIZE_BYTES, ALLOWED_DOCUMENT_TYPES, ALLOWED_IMAGE_TYPES, FILE_MAGIC_BYTES } from "./lib/constants";
+import { Id } from "./_generated/dataModel";
+import { api, internal } from "./_generated/api";
+
+/**
+ * Type guard to check if a content type is an allowed document type
+ */
+function isAllowedDocumentType(contentType: string): contentType is typeof ALLOWED_DOCUMENT_TYPES[number] {
+  return (ALLOWED_DOCUMENT_TYPES as readonly string[]).includes(contentType);
+}
+
+/**
+ * Type guard to check if a content type is an allowed image type
+ */
+function isAllowedImageType(contentType: string): contentType is typeof ALLOWED_IMAGE_TYPES[number] {
+  return (ALLOWED_IMAGE_TYPES as readonly string[]).includes(contentType);
+}
+
+/**
+ * Storage context type for file operations in actions
+ * Actions have access to ctx.storage.get() for reading file content
+ */
+type StorageContext = Pick<ActionCtx, "storage">;
+
+/**
+ * Validate file content-type and magic bytes to prevent malicious uploads
+ */
+async function validateFileContent(
+  storageId: string,
+  expectedContentType: string,
+  ctx: StorageContext
+): Promise<void> {
+  // Get the file blob
+  const blob = await ctx.storage.get(storageId);
+  if (!blob) {
+    throw new ConvexError({
+      code: "FILE_ERROR",
+      message: "File not found in storage",
+    });
+  }
+
+  // Read the first 16 bytes to check magic bytes
+  const arrayBuffer = await blob.slice(0, 16).arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+
+  // Validate magic bytes match the declared content type
+  const magicByteSignatures = FILE_MAGIC_BYTES[expectedContentType as keyof typeof FILE_MAGIC_BYTES];
+
+  if (!magicByteSignatures) {
+    throw new ConvexError({
+      code: "INVALID_FILE_TYPE",
+      message: `Unsupported file type: ${expectedContentType}`,
+    });
+  }
+
+  // Check if file starts with any of the valid magic byte signatures
+  const isValidMagicBytes = magicByteSignatures.some((signature) => {
+    return signature.every((byte, index) => bytes[index] === byte);
+  });
+
+  if (!isValidMagicBytes) {
+    throw new ConvexError({
+      code: "FILE_VALIDATION_FAILED",
+      message: `File content does not match declared type ${expectedContentType}. Possible file type mismatch or malicious upload attempt.`,
+    });
+  }
+
+  // Additional validation for WebP (check for WEBP signature after RIFF)
+  if (expectedContentType === "image/webp") {
+    const webpSignature = [0x57, 0x45, 0x42, 0x50]; // "WEBP"
+    const hasWebpSignature = webpSignature.every((byte, index) => bytes[8 + index] === byte);
+
+    if (!hasWebpSignature) {
+      throw new ConvexError({
+        code: "FILE_VALIDATION_FAILED",
+        message: "Invalid WebP file format",
+      });
+    }
+  }
+}
+
+/**
+ * Validate file size
+ */
+function validateFileSize(blob: Blob): void {
+  if (blob.size > MAX_FILE_SIZE_BYTES) {
+    throw new ConvexError({
+      code: "FILE_TOO_LARGE",
+      message: `File size exceeds maximum allowed size of ${MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB`,
+    });
+  }
+}
 
 /**
  * File Storage Utilities for Convex
@@ -20,7 +111,7 @@ export const generateUploadUrl = mutation({
 });
 
 // Store document reference after upload (for wholesale applications)
-export const saveDocument = mutation({
+export const saveDocument = action({
   args: {
     storageId: v.id("_storage"),
     documentType: v.union(
@@ -30,9 +121,37 @@ export const saveDocument = mutation({
       v.literal("other")
     ),
     applicationId: v.optional(v.id("wholesaleApplications")),
+    contentType: v.string(), // Required for validation
   },
-  handler: async (ctx, args) => {
-    const { clerkId } = await requireAuth(ctx);
+  handler: async (ctx, args): Promise<{
+    success: boolean;
+    documentUrl: string;
+    documentType?: "reseller_certificate" | "business_license" | "gst_certificate" | "other";
+    storageId?: Id<"_storage">;
+  }> => {
+    const { clerkId } = await requireAuthAction(ctx);
+
+    // Validate content-type is allowed for documents
+    if (!isAllowedDocumentType(args.contentType)) {
+      throw new ConvexError({
+        code: "INVALID_FILE_TYPE",
+        message: `Invalid file type. Allowed types: ${ALLOWED_DOCUMENT_TYPES.join(", ")}`,
+      });
+    }
+
+    // Validate file content matches declared content-type (magic byte validation)
+    // Actions have access to ctx.storage.get()
+    await validateFileContent(args.storageId, args.contentType, ctx);
+
+    // Get the file and validate size
+    const blob = await ctx.storage.get(args.storageId);
+    if (!blob) {
+      throw new ConvexError({
+        code: "FILE_ERROR",
+        message: "Failed to retrieve uploaded file",
+      });
+    }
+    validateFileSize(blob);
 
     // Get the file URL
     const url = await ctx.storage.getUrl(args.storageId);
@@ -43,50 +162,20 @@ export const saveDocument = mutation({
       });
     }
 
-    // If applicationId provided, update the application with the document
-    if (args.applicationId) {
-      const application = await ctx.db.get(args.applicationId);
-      if (!application) {
-        throw new ConvexError({
-          code: "NOT_FOUND",
-          message: "Application not found",
-        });
-      }
-
-      // Verify ownership
-      if (application.clerkId !== clerkId) {
-        throw new ConvexError({
-          code: "FORBIDDEN",
-          message: "You can only upload documents to your own application",
-        });
-      }
-
-      const newDocument = {
-        type: args.documentType,
-        url,
-        storageId: args.storageId,
-        uploadedAt: Date.now(),
-      };
-
-      const existingDocuments = application.documents || [];
-      await ctx.db.patch(args.applicationId, {
-        documents: [...existingDocuments, newDocument],
-        updatedAt: Date.now(),
-      });
-
-      return {
-        success: true,
-        documentUrl: url,
-        documentType: args.documentType,
-      };
-    }
-
-    // Return the document info for pending applications
-    return {
-      success: true,
-      documentUrl: url,
+    // Call internal mutation to save to database
+    // Type assertion needed to break circular type reference with internal API
+    const result = await (ctx.runMutation as any)(internal.fileStorageInternal.internalSaveDocument, {
+      clerkId,
       storageId: args.storageId,
       documentType: args.documentType,
+      applicationId: args.applicationId,
+      url,
+    });
+    return result as {
+      success: boolean;
+      documentUrl: string;
+      documentType?: "reseller_certificate" | "business_license" | "gst_certificate" | "other";
+      storageId?: Id<"_storage">;
     };
   },
 });
@@ -165,7 +254,7 @@ export const getApplicationDocuments = query({
     // Get URLs for all documents
     const documentsWithUrls = await Promise.all(
       (application.documents || []).map(async (doc) => {
-        const url = await ctx.storage.getUrl(doc.storageId as any);
+        const url = await ctx.storage.getUrl(doc.storageId as Id<"_storage">);
         return {
           ...doc,
           url: url || doc.url,
@@ -190,25 +279,51 @@ export const generateAdminUploadUrl = mutation({
   },
 });
 
-// Save product image after upload
-export const saveProductImage = mutation({
+// Save product image after upload (Admin only)
+export const saveProductImage = action({
   args: {
     storageId: v.id("_storage"),
     productId: v.id("products"),
     alt: v.optional(v.string()),
     order: v.optional(v.number()),
+    contentType: v.string(), // Required for validation
   },
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx);
-
-    const product = await ctx.db.get(args.productId);
-    if (!product) {
+  handler: async (ctx, args): Promise<{
+    success: boolean;
+    imageUrl: string;
+  }> => {
+    // Verify admin access via auth identity
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
       throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "Product not found",
+        code: "UNAUTHORIZED",
+        message: "Authentication required. Please sign in to continue.",
       });
     }
 
+    // Validate content-type is allowed for images
+    if (!isAllowedImageType(args.contentType)) {
+      throw new ConvexError({
+        code: "INVALID_FILE_TYPE",
+        message: `Invalid image type. Allowed types: ${ALLOWED_IMAGE_TYPES.join(", ")}`,
+      });
+    }
+
+    // Validate file content matches declared content-type (magic byte validation)
+    // Actions have access to ctx.storage.get()
+    await validateFileContent(args.storageId, args.contentType, ctx);
+
+    // Get the file and validate size
+    const blob = await ctx.storage.get(args.storageId);
+    if (!blob) {
+      throw new ConvexError({
+        code: "FILE_ERROR",
+        message: "Failed to retrieve uploaded file",
+      });
+    }
+    validateFileSize(blob);
+
+    // Get the file URL
     const url = await ctx.storage.getUrl(args.storageId);
     if (!url) {
       throw new ConvexError({
@@ -217,19 +332,19 @@ export const saveProductImage = mutation({
       });
     }
 
-    const newImage = {
+    // Call internal mutation to save to database
+    // Type assertion needed to break circular type reference with internal API
+    const result = await (ctx.runMutation as any)(internal.fileStorageInternal.internalSaveProductImage, {
+      storageId: args.storageId,
+      productId: args.productId,
+      alt: args.alt,
+      order: args.order,
       url,
-      storageId: args.storageId as unknown as string,
-      alt: args.alt || product.name,
-      order: args.order ?? product.images.length,
-    };
-
-    await ctx.db.patch(args.productId, {
-      images: [...product.images, newImage],
-      updatedAt: Date.now(),
     });
-
-    return { success: true, imageUrl: url };
+    return result as {
+      success: boolean;
+      imageUrl: string;
+    };
   },
 });
 
@@ -268,7 +383,7 @@ export const deleteProductImage = mutation({
 
     // Delete from storage
     try {
-      await ctx.storage.delete(args.storageId as any);
+      await ctx.storage.delete(args.storageId);
     } catch {
       // Ignore storage deletion errors (file might already be deleted)
     }

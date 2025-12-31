@@ -159,6 +159,7 @@ export const getDashboardOverview = query({
       lowStockProducts,
       pendingApplicationsList,
       paidOrdersLast30Days,
+      disputedOrdersList,
     ] = await Promise.all([
       // Recent orders - uses created_at index, limited to 5
       ctx.db
@@ -192,6 +193,12 @@ export const getDashboardOverview = query({
           q.eq("paymentStatus", "paid").gte("createdAt", thirtyDaysAgo)
         )
         .collect(),
+
+      // Disputed orders - filter by payment status (no index, but disputes are rare)
+      ctx.db
+        .query("orders")
+        .filter((q) => q.eq(q.field("paymentStatus"), "disputed"))
+        .collect(),
     ]);
 
     // Calculate metrics from the indexed query results
@@ -204,6 +211,7 @@ export const getDashboardOverview = query({
       pendingApplications: pendingApplicationsList.length,
       totalRevenue,
       totalOrders: paidOrdersLast30Days.length,
+      disputedOrders: disputedOrdersList.length,
     };
   },
 });

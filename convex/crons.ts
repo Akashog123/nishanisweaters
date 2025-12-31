@@ -25,4 +25,28 @@ crons.daily(
   internal.maintenance.cleanupOldInventoryLogs
 );
 
+// Run every 6 hours to process abandoned cart reminders
+// Sends reminder emails to users who left items in their cart
+crons.interval(
+  "process abandoned cart reminders",
+  { hours: 6 },
+  internal.abandonedCart.processAbandonedCarts
+);
+
+// Run every hour to cleanup expired rate limit records
+// Prevents database bloat from stale rate limiting data
+crons.interval(
+  "cleanup expired rate limits",
+  { hours: 1 },
+  internal.maintenance.cleanupExpiredRateLimits
+);
+
+// Run daily at 4 AM UTC to cleanup old security events
+// Keeps 90 days of non-critical events, 1 year for critical
+crons.daily(
+  "cleanup old security events",
+  { hourUTC: 4, minuteUTC: 0 },
+  internal.maintenance.cleanupOldSecurityEvents
+);
+
 export default crons;

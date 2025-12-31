@@ -1,17 +1,25 @@
-import { query, mutation, internalMutation, action } from "./_generated/server";
+import { query, mutation, internalMutation, internalQuery, action } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAuth, requireAdmin, requireOwnershipOrAdmin, requireCurrentUser } from "./lib/auth";
 import { ConvexError } from "convex/values";
-import { MutationCtx } from "./_generated/server";
+import { MutationCtx, QueryCtx } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { internal, api } from "./_generated/api";
 import {
-  TAX_RATE,
-  FREE_SHIPPING_THRESHOLD,
-  SHIPPING_COST,
-  WHOLESALE_MIN_ORDER_AMOUNTS,
-  WHOLESALE_DISCOUNTS,
-} from "./lib/constants";
+  getTaxRate,
+  getShippingConfig,
+} from "./lib/getSettings";
+import {
+  validateOrderItems,
+  calculateOrderPricing,
+  deductInventory,
+  restoreInventory,
+  recordPromoUsage,
+  generateUniqueOrderNumber,
+  clearUserCart,
+  createStatusHistory,
+} from "./lib/orderService";
+import { sanitizeText, validatePhone, validatePostalCode } from "./lib/validation";
 
 // Valid order status transitions
 const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
@@ -23,33 +31,6 @@ const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
   cancelled: [], // Terminal state
 };
 
-// Helper to generate order number with uniqueness check
-async function generateUniqueOrderNumber(ctx: MutationCtx): Promise<string> {
-  let attempts = 0;
-  const maxAttempts = 5;
-
-  while (attempts < maxAttempts) {
-    const timestamp = Date.now().toString(36).toUpperCase();
-    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const orderNumber = `NW-${timestamp}-${random}`;
-
-    // Check if order number already exists
-    const existing = await ctx.db
-      .query("orders")
-      .withIndex("by_order_number", (q) => q.eq("orderNumber", orderNumber))
-      .first();
-
-    if (!existing) {
-      return orderNumber;
-    }
-
-    attempts++;
-  }
-
-  // Fallback with more randomness
-  const fallback = `NW-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().substring(0, 8).toUpperCase()}`;
-  return fallback;
-}
 
 // Helper to validate status transition
 function isValidStatusTransition(fromStatus: string, toStatus: string): boolean {
@@ -57,13 +38,6 @@ function isValidStatusTransition(fromStatus: string, toStatus: string): boolean 
   return validNextStates.includes(toStatus);
 }
 
-// Helper type for inventory deduction tracking
-interface InventoryDeduction {
-  productId: Id<"products">;
-  variantSku: string;
-  quantity: number;
-  quantityBefore: number;
-}
 
 // Mutation: Create order
 // SECURITY: Uses server-side identity verification and atomic inventory operations
@@ -98,6 +72,7 @@ export const createOrder = mutation({
       v.literal("bank_transfer")
     ),
     customerNotes: v.optional(v.string()),
+    promoCode: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // SECURITY: Get authenticated user from server-side identity (not client-provided)
@@ -105,238 +80,76 @@ export const createOrder = mutation({
     const userId = user.clerkId;
     const userEmail = user.email;
 
-    // Determine order type and tier from database user (not client-provided)
+    // Determine order type from database user (not client-provided)
     const orderType = user.role === "wholesale" && user.wholesaleStatus === "approved"
       ? "wholesale" as const
       : "retail" as const;
-    const wholesaleTier = orderType === "wholesale" ? user.wholesaleTier : undefined;
 
-    // Validate items array
-    if (args.items.length === 0) {
-      throw new ConvexError({
-        code: "VALIDATION_ERROR",
-        message: "Order must contain at least one item",
-      });
-    }
+    // Validate shipping address phone and postal code using centralized validators
+    // This avoids magic numbers and ensures consistent validation across the app
+    validatePhone(args.shippingAddress.phone, "phone");
+    validatePostalCode(args.shippingAddress.postalCode);
 
-    // Validate shipping address phone and postal code
-    const phoneRegex = /^[0-9]{10}$/;
-    const postalRegex = /^[0-9]{6}$/;
+    // Step 1: Validate order items and enrich with product data
+    const validatedItems = await validateOrderItems(ctx, args.items, orderType);
 
-    const cleanPhone = args.shippingAddress.phone.replace(/\D/g, '');
-    if (!phoneRegex.test(cleanPhone)) {
-      throw new ConvexError({
-        code: "VALIDATION_ERROR",
-        message: "Please enter a valid 10-digit phone number",
-      });
-    }
+    // Step 2: Calculate pricing with promo code if provided
+    const pricing = await calculateOrderPricing(
+      ctx,
+      validatedItems,
+      args.promoCode,
+      orderType,
+      userId
+    );
 
-    if (!postalRegex.test(args.shippingAddress.postalCode)) {
-      throw new ConvexError({
-        code: "VALIDATION_ERROR",
-        message: "Please enter a valid 6-digit postal code",
-      });
-    }
-
-    const now = Date.now();
-    const inventoryDeductions: InventoryDeduction[] = [];
-    const orderItems: Array<{
-      productId: Id<"products">;
-      variantSku: string;
-      quantity: number;
-      name: string;
-      image: string;
-      size: string;
-      color: string;
-      unitPrice: number;
-      subtotal: number;
-    }> = [];
-
-    // ATOMIC OPERATION: Validate AND deduct inventory in a single pass per item
-    // This prevents race conditions (TOCTOU vulnerability)
-    for (const item of args.items) {
-      const product = await ctx.db.get(item.productId);
-      if (!product) {
-        throw new ConvexError({
-          code: "NOT_FOUND",
-          message: `Product not found`,
-        });
-      }
-
-      if (!product.isActive) {
-        throw new ConvexError({
-          code: "VALIDATION_ERROR",
-          message: `${product.name} is no longer available`,
-        });
-      }
-
-      const variantIndex = product.variants.findIndex(v => v.sku === item.variantSku);
-      if (variantIndex === -1) {
-        throw new ConvexError({
-          code: "NOT_FOUND",
-          message: `Variant ${item.variantSku} not found for ${product.name}`,
-        });
-      }
-
-      const variant = product.variants[variantIndex];
-
-      // Validate quantity
-      if (item.quantity <= 0) {
-        throw new ConvexError({
-          code: "VALIDATION_ERROR",
-          message: `Invalid quantity for ${product.name}`,
-        });
-      }
-
-      if (variant.stockQuantity < item.quantity) {
-        throw new ConvexError({
-          code: "OUT_OF_STOCK",
-          message: `Insufficient stock for ${product.name} - ${variant.size}/${variant.color}. Only ${variant.stockQuantity} available.`,
-        });
-      }
-
-      // ATOMIC: Immediately deduct inventory to prevent race conditions
-      const updatedVariants = [...product.variants];
-      const quantityBefore = updatedVariants[variantIndex].stockQuantity;
-      updatedVariants[variantIndex] = {
-        ...updatedVariants[variantIndex],
-        stockQuantity: quantityBefore - item.quantity,
-      };
-
-      // Recalculate hasLowStock flag
-      const hasLowStock = updatedVariants.some(
-        v => v.stockQuantity <= v.lowStockThreshold
-      );
-
-      await ctx.db.patch(item.productId, {
-        variants: updatedVariants,
-        hasLowStock,
-        updatedAt: now,
-      });
-
-      // Track deduction for inventory logs (and potential rollback)
-      inventoryDeductions.push({
-        productId: item.productId,
-        variantSku: item.variantSku,
-        quantity: item.quantity,
-        quantityBefore,
-      });
-
-      // Determine price based on order type and tier
-      let unitPrice = product.retailPrice;
-      if (orderType === "wholesale" && wholesaleTier) {
-        if (wholesaleTier === "tier1") unitPrice = product.wholesalePriceTier1;
-        else if (wholesaleTier === "tier2") unitPrice = product.wholesalePriceTier2;
-        else if (wholesaleTier === "tier3") unitPrice = product.wholesalePriceTier3;
-      }
-
-      orderItems.push({
-        productId: item.productId,
-        variantSku: item.variantSku,
-        quantity: item.quantity,
-        name: product.name,
-        image: product.images[0]?.url || "",
-        size: variant.size,
-        color: variant.color,
-        unitPrice,
-        subtotal: unitPrice * item.quantity,
-      });
-    }
-
-    // Calculate totals using constants
-    const subtotal = orderItems.reduce((sum, item) => sum + item.subtotal, 0);
-
-    // Apply wholesale discount if applicable
-    let discount = 0;
-    if (orderType === "wholesale" && wholesaleTier) {
-      const tierDiscount = WHOLESALE_DISCOUNTS[wholesaleTier as keyof typeof WHOLESALE_DISCOUNTS] || 0;
-      discount = subtotal * tierDiscount;
-
-      // Enforce MOQ for wholesale orders
-      const discountedTotal = subtotal - discount;
-      const minOrderAmount = WHOLESALE_MIN_ORDER_AMOUNTS[wholesaleTier as keyof typeof WHOLESALE_MIN_ORDER_AMOUNTS] || 10000;
-
-      if (discountedTotal < minOrderAmount) {
-        // Rollback inventory deductions if MOQ not met
-        for (const deduction of inventoryDeductions) {
-          const product = await ctx.db.get(deduction.productId);
-          if (!product) continue;
-
-          const variantIndex = product.variants.findIndex(v => v.sku === deduction.variantSku);
-          if (variantIndex === -1) continue;
-
-          const updatedVariants = [...product.variants];
-          updatedVariants[variantIndex] = {
-            ...updatedVariants[variantIndex],
-            stockQuantity: deduction.quantityBefore,
-          };
-
-          await ctx.db.patch(deduction.productId, {
-            variants: updatedVariants,
-            updatedAt: now,
-          });
-        }
-
-        throw new ConvexError({
-          code: "VALIDATION_ERROR",
-          message: `Wholesale orders require a minimum order of ₹${minOrderAmount.toLocaleString('en-IN')}. Your current total after discount is ₹${discountedTotal.toLocaleString('en-IN')}.`,
-        });
-      }
-    }
-
-    const tax = subtotal * TAX_RATE;
-    const shippingCost = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
-    const total = subtotal + tax + shippingCost - discount;
-
-    // Generate unique order number
+    // Step 3: Generate unique order number
     const orderNumber = await generateUniqueOrderNumber(ctx);
 
-    // Create order
+    // Step 4: Create order record
+    const now = Date.now();
     const orderId = await ctx.db.insert("orders", {
       orderNumber,
       userId,
       userEmail,
       orderType,
-      items: orderItems,
-      subtotal,
-      tax,
-      shippingCost,
-      discount,
-      total,
+      items: validatedItems,
+      subtotal: pricing.subtotal,
+      tax: pricing.tax,
+      shippingCost: pricing.shippingCost,
+      discount: pricing.discount,
+      total: pricing.total,
+      promoCodeId: pricing.promoCodeId,
+      promoCode: pricing.promoCode,
+      promoDiscount: pricing.promoDiscount,
       shippingAddress: args.shippingAddress,
       billingAddress: args.billingAddress,
       paymentMethod: args.paymentMethod,
       paymentStatus: "pending",
       orderStatus: "pending",
-      customerNotes: args.customerNotes,
+      customerNotes: args.customerNotes ? sanitizeText(args.customerNotes, 500) : undefined,
       createdAt: now,
       updatedAt: now,
     });
 
-    // Log inventory changes
-    for (const deduction of inventoryDeductions) {
-      await ctx.db.insert("inventoryLogs", {
-        productId: deduction.productId,
-        variantSku: deduction.variantSku,
-        changeType: "sale",
-        quantityBefore: deduction.quantityBefore,
-        quantityChange: -deduction.quantity,
-        quantityAfter: deduction.quantityBefore - deduction.quantity,
+    // Step 5: Deduct inventory and create audit logs
+    await deductInventory(ctx, validatedItems, orderId);
+
+    // Step 6: Record promo code usage if applied
+    if (pricing.promoCodeId && pricing.promoDiscount && pricing.promoDiscount > 0) {
+      await recordPromoUsage(
+        ctx,
+        pricing.promoCodeId,
         orderId,
-        changedBy: "system",
-        timestamp: now,
-      });
+        userId,
+        pricing.promoDiscount
+      );
     }
 
-    // Create initial status history
-    await ctx.db.insert("orderStatusHistory", {
-      orderId,
-      fromStatus: undefined,
-      toStatus: "pending",
-      changedBy: "system",
-      notes: "Order created",
-      timestamp: now,
-    });
+    // Step 7: Create status history and clear cart in parallel
+    await Promise.all([
+      createStatusHistory(ctx, orderId, undefined, "pending", "system", "Order created"),
+      clearUserCart(ctx, userId),
+    ]);
 
     return orderId;
   },
@@ -366,7 +179,11 @@ export const updatePaymentStatus = internalMutation({
       v.literal("pending"),
       v.literal("paid"),
       v.literal("failed"),
-      v.literal("refunded")
+      v.literal("refunded"),
+      v.literal("partially_refunded"),
+      v.literal("disputed"),
+      v.literal("refund_pending"),
+      v.literal("refund_failed")
     ),
     razorpayPaymentId: v.optional(v.string()),
   },
@@ -380,10 +197,10 @@ export const updatePaymentStatus = internalMutation({
     }
 
     const updates: {
-      paymentStatus: "pending" | "paid" | "failed" | "refunded";
+      paymentStatus: "pending" | "paid" | "failed" | "refunded" | "partially_refunded" | "disputed" | "refund_pending" | "refund_failed";
       updatedAt: number;
       razorpayPaymentId?: string;
-      orderStatus?: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled";
+      orderStatus?: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded";
     } = {
       paymentStatus: args.paymentStatus,
       updatedAt: Date.now(),
@@ -433,6 +250,156 @@ export const updatePaymentStatus = internalMutation({
     }
 
     await ctx.db.patch(args.orderId, updates);
+  },
+});
+
+// Internal Query: Get order payment status for idempotency checks
+// Used by webhook handler to avoid duplicate processing
+export const getOrderPaymentStatus = internalQuery({
+  args: {
+    orderId: v.id("orders"),
+  },
+  handler: async (ctx, args) => {
+    const order = await ctx.db.get(args.orderId);
+
+    if (!order) {
+      return null;
+    }
+
+    return {
+      paymentStatus: order.paymentStatus,
+      orderStatus: order.orderStatus,
+      razorpayOrderId: order.razorpayOrderId,
+      razorpayPaymentId: order.razorpayPaymentId,
+      disputeStatus: order.disputeStatus,
+    };
+  },
+});
+
+// Internal Query: Get order Razorpay status for payment deduplication
+// Used by createRazorpayOrder action to check if order already has a Razorpay order
+export const getOrderRazorpayStatus = internalQuery({
+  args: {
+    orderId: v.id("orders"),
+  },
+  handler: async (ctx, args) => {
+    const order = await ctx.db.get(args.orderId);
+
+    if (!order) {
+      return null;
+    }
+
+    return {
+      razorpayOrderId: order.razorpayOrderId,
+      paymentStatus: order.paymentStatus,
+      orderStatus: order.orderStatus,
+    };
+  },
+});
+
+// Internal Mutation: Update dispute status
+// SECURITY: This is an internal mutation - only callable from server-side code (webhooks)
+// Handles payment.dispute.* events from Razorpay
+export const updateDisputeStatus = internalMutation({
+  args: {
+    orderId: v.id("orders"),
+    disputeStatus: v.union(
+      v.literal("created"),
+      v.literal("under_review"),
+      v.literal("action_required"),
+      v.literal("won"),
+      v.literal("lost"),
+      v.literal("closed")
+    ),
+    disputeId: v.optional(v.string()),
+    disputeReason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const order = await ctx.db.get(args.orderId);
+    if (!order) {
+      throw new ConvexError({
+        code: "ORDER_NOT_FOUND",
+        message: "Order not found",
+      });
+    }
+
+    const now = Date.now();
+    const updates: {
+      disputeStatus: "created" | "under_review" | "action_required" | "won" | "lost" | "closed";
+      disputeId?: string;
+      disputeReason?: string;
+      disputeCreatedAt?: number;
+      disputeResolvedAt?: number;
+      paymentStatus?: "disputed" | "paid" | "refunded";
+      updatedAt: number;
+    } = {
+      disputeStatus: args.disputeStatus,
+      updatedAt: now,
+    };
+
+    if (args.disputeId) {
+      updates.disputeId = args.disputeId;
+    }
+
+    if (args.disputeReason) {
+      updates.disputeReason = args.disputeReason;
+    }
+
+    // Track dispute creation time
+    if (args.disputeStatus === "created" && !order.disputeCreatedAt) {
+      updates.disputeCreatedAt = now;
+      updates.paymentStatus = "disputed";
+    }
+
+    // Track dispute resolution time
+    if (["won", "lost", "closed"].includes(args.disputeStatus)) {
+      updates.disputeResolvedAt = now;
+
+      // If merchant won, restore to paid status
+      if (args.disputeStatus === "won") {
+        updates.paymentStatus = "paid";
+      }
+
+      // If merchant lost, mark as refunded (chargeback completed)
+      if (args.disputeStatus === "lost") {
+        updates.paymentStatus = "refunded";
+      }
+    }
+
+    await ctx.db.patch(args.orderId, updates);
+
+    // Log dispute status change for audit trail
+    await ctx.db.insert("orderStatusHistory", {
+      orderId: args.orderId,
+      fromStatus: order.orderStatus,
+      toStatus: order.orderStatus, // Order status doesn't change
+      changedBy: "system",
+      notes: `Dispute ${args.disputeStatus}: ${args.disputeReason || "No reason provided"}`,
+      timestamp: now,
+    });
+
+    // Send email notifications for dispute events
+    const actionRequiredStatuses = ["created", "action_required"];
+    const resolutionStatuses = ["won", "lost", "closed"];
+
+    if (actionRequiredStatuses.includes(args.disputeStatus)) {
+      // Send urgent alert for new disputes or action required
+      await ctx.scheduler.runAfter(0, internal.emails.sendDisputeAlertEmail, {
+        orderNumber: order.orderNumber,
+        disputeStatus: args.disputeStatus,
+        disputeReason: args.disputeReason,
+        customerEmail: order.userEmail,
+        orderTotal: order.total,
+        actionRequired: args.disputeStatus === "action_required",
+      });
+    } else if (resolutionStatuses.includes(args.disputeStatus)) {
+      // Send resolution notification
+      await ctx.scheduler.runAfter(0, internal.emails.sendDisputeResolutionEmail, {
+        orderNumber: order.orderNumber,
+        resolution: args.disputeStatus as "won" | "lost" | "closed",
+        orderTotal: order.total,
+      });
+    }
   },
 });
 
@@ -522,11 +489,12 @@ export const listAllOrders = query({
     let query;
 
     // Use appropriate index based on filters
-    if (args.orderStatus) {
+    const orderStatus = args.orderStatus;
+    if (orderStatus) {
       // Use compound index by_status_created for status + ordering
       query = ctx.db
         .query("orders")
-        .withIndex("by_status_created", (q) => q.eq("orderStatus", args.orderStatus))
+        .withIndex("by_status_created", (q) => q.eq("orderStatus", orderStatus))
         .order("desc");
     } else {
       // Use by_created_at index for ordering when no status filter
@@ -609,7 +577,7 @@ export const updateOrderStatus = mutation({
 
     if (args.trackingNumber) updates.trackingNumber = args.trackingNumber;
     if (args.shippingCarrier) updates.shippingCarrier = args.shippingCarrier;
-    if (args.adminNotes) updates.adminNotes = args.adminNotes;
+    if (args.adminNotes) updates.adminNotes = sanitizeText(args.adminNotes, 500);
 
     if (args.orderStatus === "shipped") {
       updates.shippedAt = now;
@@ -631,14 +599,14 @@ export const updateOrderStatus = mutation({
     await ctx.db.patch(args.orderId, updates);
 
     // Log status change with admin info
-    await ctx.db.insert("orderStatusHistory", {
-      orderId: args.orderId,
-      fromStatus: order.orderStatus,
-      toStatus: args.orderStatus,
-      changedBy: admin.clerkId,
-      notes: args.adminNotes,
-      timestamp: now,
-    });
+    await createStatusHistory(
+      ctx,
+      args.orderId,
+      order.orderStatus,
+      args.orderStatus,
+      admin.clerkId,
+      args.adminNotes
+    );
   },
 });
 
@@ -687,64 +655,28 @@ export const cancelOrder = mutation({
     }
 
     const now = Date.now();
+    const sanitizedReason = args.reason ? sanitizeText(args.reason, 500) : "No reason provided";
+    const reason = `Order cancelled: ${sanitizedReason}`;
 
-    // Restore inventory
-    for (const item of order.items) {
-      const product = await ctx.db.get(item.productId);
-      if (!product) continue;
+    // Restore inventory using service function
+    await restoreInventory(ctx, order.items, args.orderId, reason, changedBy);
 
-      const variantIndex = product.variants.findIndex(v => v.sku === item.variantSku);
-      if (variantIndex === -1) continue;
-
-      const updatedVariants = [...product.variants];
-      const quantityBefore = updatedVariants[variantIndex].stockQuantity;
-      updatedVariants[variantIndex] = {
-        ...updatedVariants[variantIndex],
-        stockQuantity: quantityBefore + item.quantity,
-      };
-
-      // Recalculate hasLowStock flag
-      const hasLowStock = updatedVariants.some(
-        v => v.stockQuantity <= v.lowStockThreshold
-      );
-
-      await ctx.db.patch(item.productId, {
-        variants: updatedVariants,
-        hasLowStock,
+    // Update order status and create status history in parallel
+    await Promise.all([
+      ctx.db.patch(args.orderId, {
+        orderStatus: "cancelled" as const,
+        adminNotes: sanitizedReason,
         updatedAt: now,
-      });
-
-      // Log inventory restoration
-      await ctx.db.insert("inventoryLogs", {
-        productId: item.productId,
-        variantSku: item.variantSku,
-        changeType: "return",
-        quantityBefore,
-        quantityChange: item.quantity,
-        quantityAfter: quantityBefore + item.quantity,
-        reason: `Order cancelled: ${args.reason || "No reason provided"}`,
-        orderId: args.orderId,
+      }),
+      createStatusHistory(
+        ctx,
+        args.orderId,
+        order.orderStatus,
+        "cancelled",
         changedBy,
-        timestamp: now,
-      });
-    }
-
-    // Update order status
-    await ctx.db.patch(args.orderId, {
-      orderStatus: "cancelled",
-      adminNotes: args.reason,
-      updatedAt: now,
-    });
-
-    // Log status change
-    await ctx.db.insert("orderStatusHistory", {
-      orderId: args.orderId,
-      fromStatus: order.orderStatus,
-      toStatus: "cancelled",
-      changedBy,
-      notes: args.reason || "Order cancelled by user",
-      timestamp: now,
-    });
+        sanitizedReason
+      ),
+    ]);
   },
 });
 
@@ -801,13 +733,26 @@ export const getOrderPreview = query({
     const orderType = user?.role === "wholesale" && user?.wholesaleStatus === "approved"
       ? "wholesale"
       : "retail";
-    const wholesaleTier = orderType === "wholesale" ? user?.wholesaleTier : undefined;
 
     const previewItems = [];
     const errors: string[] = [];
 
+    // OPTIMIZATION: Batch-fetch all products to prevent N+1 queries
+    const uniqueProductIds = [...new Set(args.items.map(item => item.productId))];
+    type ProductDoc = NonNullable<Awaited<ReturnType<typeof ctx.db.get<"products">>>>;
+    const productsMap = new Map<string, ProductDoc>();
+
+    await Promise.all(
+      uniqueProductIds.map(async (productId) => {
+        const product = await ctx.db.get(productId);
+        if (product) {
+          productsMap.set(productId, product as ProductDoc);
+        }
+      })
+    );
+
     for (const item of args.items) {
-      const product = await ctx.db.get(item.productId);
+      const product = productsMap.get(item.productId);
       if (!product || !product.isActive) {
         errors.push(`Product not available`);
         continue;
@@ -824,10 +769,13 @@ export const getOrderPreview = query({
       }
 
       let unitPrice = product.retailPrice;
-      if (orderType === "wholesale" && wholesaleTier) {
-        if (wholesaleTier === "tier1") unitPrice = product.wholesalePriceTier1;
-        else if (wholesaleTier === "tier2") unitPrice = product.wholesalePriceTier2;
-        else if (wholesaleTier === "tier3") unitPrice = product.wholesalePriceTier3;
+      if (orderType === "wholesale" && product.wholesalePrice) {
+        unitPrice = product.wholesalePrice;
+
+        // Check minimum order quantity for wholesale
+        if (product.minOrderQuantity && item.quantity < product.minOrderQuantity) {
+          errors.push(`${product.name}: Wholesale requires minimum ${product.minOrderQuantity} units`);
+        }
       }
 
       previewItems.push({
@@ -844,20 +792,24 @@ export const getOrderPreview = query({
     }
 
     const subtotal = previewItems.reduce((sum, item) => sum + item.subtotal, 0);
-    const tax = subtotal * TAX_RATE;
-    const shippingCost = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
+
+    // Get dynamic settings for tax and shipping
+    const taxRate = await getTaxRate(ctx);
+    const { freeThreshold, standardCost } = await getShippingConfig(ctx);
+
+    const tax = subtotal * taxRate;
+    const shippingCost = subtotal >= freeThreshold ? 0 : standardCost;
     const total = subtotal + tax + shippingCost;
 
     return {
       items: previewItems,
       subtotal,
       tax,
-      taxRate: TAX_RATE,
+      taxRate,
       shippingCost,
-      freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
+      freeShippingThreshold: freeThreshold,
       total,
       orderType,
-      wholesaleTier,
       errors,
       isValid: errors.length === 0,
     };

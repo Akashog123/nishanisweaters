@@ -13,9 +13,7 @@ export const seedProducts = mutation({
         shortDescription: "Soft merino wool sweater",
         category: "sweaters",
         retailPrice: 2999,
-        wholesalePriceTier1: 2549,
-        wholesalePriceTier2: 2399,
-        wholesalePriceTier3: 2249,
+        wholesalePrice: 2399,
         compareAtPrice: 3499,
         images: [
           { url: "/placeholder.svg", alt: "Premium Wool Sweater", order: 0 },
@@ -44,9 +42,7 @@ export const seedProducts = mutation({
         shortDescription: "Elegant cashmere cardigan",
         category: "sweaters",
         retailPrice: 4999,
-        wholesalePriceTier1: 4249,
-        wholesalePriceTier2: 3999,
-        wholesalePriceTier3: 3749,
+        wholesalePrice: 3999,
         compareAtPrice: 5999,
         images: [
           { url: "/placeholder.svg", alt: "Classic Cashmere Cardigan", order: 0 },
@@ -74,9 +70,7 @@ export const seedProducts = mutation({
         shortDescription: "Insulated winter jacket",
         category: "jackets",
         retailPrice: 6999,
-        wholesalePriceTier1: 5949,
-        wholesalePriceTier2: 5599,
-        wholesalePriceTier3: 5249,
+        wholesalePrice: 5599,
         compareAtPrice: 8499,
         images: [
           { url: "/placeholder.svg", alt: "Warm Winter Jacket", order: 0 },
@@ -105,9 +99,7 @@ export const seedProducts = mutation({
         shortDescription: "Fleece-lined knit beanie",
         category: "accessories",
         retailPrice: 599,
-        wholesalePriceTier1: 509,
-        wholesalePriceTier2: 479,
-        wholesalePriceTier3: 449,
+        wholesalePrice: 479,
         compareAtPrice: 799,
         images: [
           { url: "/placeholder.svg", alt: "Cozy Knit Beanie", order: 0 },
@@ -134,9 +126,7 @@ export const seedProducts = mutation({
         shortDescription: "Wool blend scarf with fringe",
         category: "accessories",
         retailPrice: 899,
-        wholesalePriceTier1: 764,
-        wholesalePriceTier2: 719,
-        wholesalePriceTier3: 674,
+        wholesalePrice: 719,
         images: [
           { url: "/placeholder.svg", alt: "Wool Blend Scarf", order: 0 },
         ],
@@ -161,9 +151,7 @@ export const seedProducts = mutation({
         shortDescription: "Touchscreen fleece gloves",
         category: "accessories",
         retailPrice: 699,
-        wholesalePriceTier1: 594,
-        wholesalePriceTier2: 559,
-        wholesalePriceTier3: 524,
+        wholesalePrice: 559,
         images: [
           { url: "/placeholder.svg", alt: "Fleece Lined Gloves", order: 0 },
         ],
@@ -188,9 +176,7 @@ export const seedProducts = mutation({
         shortDescription: "Thermal henley base layer",
         category: "mens",
         retailPrice: 1299,
-        wholesalePriceTier1: 1104,
-        wholesalePriceTier2: 1039,
-        wholesalePriceTier3: 974,
+        wholesalePrice: 1039,
         compareAtPrice: 1599,
         images: [
           { url: "/placeholder.svg", alt: "Men's Thermal Henley", order: 0 },
@@ -220,9 +206,7 @@ export const seedProducts = mutation({
         shortDescription: "Lightweight puffer vest",
         category: "womens",
         retailPrice: 2499,
-        wholesalePriceTier1: 2124,
-        wholesalePriceTier2: 1999,
-        wholesalePriceTier3: 1874,
+        wholesalePrice: 1999,
         compareAtPrice: 2999,
         images: [
           { url: "/placeholder.svg", alt: "Women's Puffer Vest", order: 0 },
@@ -284,5 +268,51 @@ export const createAdminUser = mutation({
     });
 
     return { success: true, userId };
+  },
+});
+
+// Promote an existing user to admin by email
+// SECURITY: Requires caller to already be an admin
+// First admin must be created via direct database edit in Convex Dashboard
+import { v } from "convex/values";
+import { requireAdmin } from "./lib/auth";
+
+export const promoteToAdmin = mutation({
+  args: {
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // SECURITY: Only existing admins can promote other users
+    await requireAdmin(ctx);
+
+    // Find target user by email
+    const targetUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+
+    if (!targetUser) {
+      return {
+        success: false,
+        message: `User with email ${args.email} not found. They need to sign up first.`,
+      };
+    }
+
+    if (targetUser.role === "admin") {
+      return {
+        success: false,
+        message: `User ${args.email} is already an admin.`,
+        userId: targetUser._id,
+      };
+    }
+
+    // Promote to admin
+    await ctx.db.patch(targetUser._id, { role: "admin" });
+
+    return {
+      success: true,
+      message: `Successfully promoted ${args.email} to admin.`,
+      userId: targetUser._id,
+    };
   },
 });

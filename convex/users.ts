@@ -1,7 +1,8 @@
 import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAuth, requireAdmin, requireOwnership, getCurrentUser } from "./lib/auth";
+import { requireAuth, requireAdmin, requireOwnership, getCurrentUser as getCurrentUserFromAuth } from "./lib/auth";
 import { ConvexError } from "convex/values";
+import { internal } from "./_generated/api";
 import {
   validatePhone,
   validatePostalCode,
@@ -101,52 +102,57 @@ export const upsertUser = mutation({
         createdAt: Date.now(),
         lastLoginAt: Date.now(),
       });
+
+      // Send welcome email to new users
+      if (email) {
+        await ctx.scheduler.runAfter(0, internal.emails.sendWelcomeEmail, {
+          to: email,
+          customerName: firstName || "Valued Customer",
+        });
+      }
+
       return userId;
     }
   },
 });
 
-// Query: Get user by Clerk ID (for authenticated user only)
-// SECURITY: Only returns data for the authenticated user
+// Query: Get user by Clerk ID using server-side identity verification
+// SECURITY: Never accepts client-provided clerkId - uses server-side identity only
+// This is an alias for getCurrentUser - use getCurrentUser instead for clarity
 export const getUserByClerkId = query({
-  args: { clerkId: v.string() },
-  handler: async (ctx, args) => {
-    // Verify the requester is asking for their own data
-    const identity = await ctx.auth.getUserIdentity();
-
-    // Allow query if user is authenticated AND requesting their own data
-    // OR if this is a server-side call (identity will be verified in Clerk middleware)
-    if (identity && identity.subject !== args.clerkId) {
-      // User is trying to query someone else's data - return null
-      return null;
-    }
-
-    return await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
-      .first();
-  },
-});
-
-// Query: Get current user (alias for getUserByClerkId with server-side identity)
-export const getCurrentUser = query({
-  args: { clerkId: v.string() },
-  handler: async (ctx, args) => {
-    // For backwards compatibility - verify identity matches
+  args: {},
+  handler: async (ctx) => {
+    // SECURITY: Get identity from server-side Clerk verification
     const identity = await ctx.auth.getUserIdentity();
 
     if (!identity) {
       return null;
     }
 
-    // Only return user if clerkId matches authenticated user
-    if (identity.subject !== args.clerkId) {
+    // Use verified server-side identity - never trust client-provided clerkId
+    return await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .first();
+  },
+});
+
+// Query: Get current user using server-side identity verification
+// SECURITY: Never accepts client-provided clerkId - uses server-side identity only
+export const getCurrentUser = query({
+  args: {},
+  handler: async (ctx) => {
+    // SECURITY: Get identity from server-side Clerk verification
+    const identity = await ctx.auth.getUserIdentity();
+
+    if (!identity) {
       return null;
     }
 
+    // Use verified server-side identity - never trust client-provided clerkId
     return await ctx.db
       .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
       .first();
   },
 });
@@ -156,7 +162,7 @@ export const getCurrentUserProfile = query({
   args: {},
   handler: async (ctx) => {
     // Get user from server-side identity (secure)
-    return await getCurrentUser(ctx);
+    return await getCurrentUserFromAuth(ctx);
   },
 });
 
@@ -407,20 +413,52 @@ export const updateUserRole = mutation({
   },
 });
 
-// Mutation: Assign wholesale tier (Admin only)
-export const assignWholesaleTier = mutation({
+// Mutation: Approve wholesale application (Admin only)
+// Note: Wholesale tier system has been removed. Wholesale users get a flat wholesalePrice.
+export const approveWholesale = mutation({
   args: {
     userId: v.id("users"),
-    tier: v.union(v.literal("tier1"), v.literal("tier2"), v.literal("tier3")),
+    status: v.union(v.literal("approved"), v.literal("rejected")),
+    rejectionReason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Require admin authorization
     await requireAdmin(ctx);
 
-    await ctx.db.patch(args.userId, {
-      wholesaleTier: args.tier,
-      wholesaleStatus: "approved",
-      role: "wholesale",
-    });
+    // Fetch the user to update
+    const user = await ctx.db.get(args.userId);
+
+    if (!user) {
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: "User not found",
+      });
+    }
+
+    // Validate that user has a pending wholesale application
+    if (user.wholesaleStatus !== "pending") {
+      throw new ConvexError({
+        code: "INVALID_STATE",
+        message: `Cannot process wholesale application: user status is '${user.wholesaleStatus || "none"}', expected 'pending'`,
+      });
+    }
+
+    // Update user based on approval status
+    if (args.status === "approved") {
+      await ctx.db.patch(args.userId, {
+        wholesaleStatus: "approved",
+        role: "wholesale",
+        wholesaleApprovedAt: Date.now(),
+      });
+    } else {
+      // Rejected - keep role as customer
+      await ctx.db.patch(args.userId, {
+        wholesaleStatus: "rejected",
+        role: "customer",
+        wholesaleRejectionReason: args.rejectionReason,
+      });
+    }
+
+    return { success: true, status: args.status };
   },
 });

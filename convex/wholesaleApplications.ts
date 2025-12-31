@@ -39,11 +39,6 @@ export const submitWholesaleApplication = mutation({
       url: v.string(),
       storageId: v.string(),
     }))),
-    requestedTier: v.optional(v.union(
-      v.literal("tier1"),
-      v.literal("tier2"),
-      v.literal("tier3")
-    )),
   },
   handler: async (ctx, args) => {
     // Get authenticated user's clerkId from server-side identity (SECURE)
@@ -99,7 +94,6 @@ export const submitWholesaleApplication = mutation({
         uploadedAt: now,
       })),
       status: "pending",
-      requestedTier: args.requestedTier || "tier1",
       submittedAt: now,
       updatedAt: now,
     });
@@ -190,7 +184,6 @@ export const reviewApplication = mutation({
   args: {
     applicationId: v.id("wholesaleApplications"),
     status: v.union(v.literal("approved"), v.literal("rejected"), v.literal("under_review")),
-    assignedTier: v.optional(v.union(v.literal("tier1"), v.literal("tier2"), v.literal("tier3"))),
     reviewNotes: v.optional(v.string()),
     rejectionReason: v.optional(v.string()),
   },
@@ -214,14 +207,6 @@ export const reviewApplication = mutation({
       });
     }
 
-    // Validate: can't approve without tier
-    if (args.status === "approved" && !args.assignedTier) {
-      throw new ConvexError({
-        code: "VALIDATION_ERROR",
-        message: "Assigned tier is required when approving an application",
-      });
-    }
-
     const now = Date.now();
 
     // Update application
@@ -231,7 +216,6 @@ export const reviewApplication = mutation({
       reviewedAt: now,
       reviewNotes: args.reviewNotes,
       rejectionReason: args.rejectionReason,
-      assignedTier: args.status === "approved" ? args.assignedTier : undefined,
       updatedAt: now,
     });
 
@@ -246,15 +230,13 @@ export const reviewApplication = mutation({
         await ctx.db.patch(user._id, {
           role: "wholesale",
           wholesaleStatus: "approved",
-          wholesaleTier: args.assignedTier || "tier1",
         });
 
         // Send approval email
         await ctx.scheduler.runAfter(0, internal.emails.sendWholesaleStatusEmail, {
           to: user.email,
-          customerName: user.name || application.companyName,
+          customerName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || application.companyName,
           status: "approved",
-          tier: args.assignedTier || "tier1",
         });
       } else if (args.status === "rejected") {
         await ctx.db.patch(user._id, {
@@ -264,13 +246,13 @@ export const reviewApplication = mutation({
         // Send rejection email
         await ctx.scheduler.runAfter(0, internal.emails.sendWholesaleStatusEmail, {
           to: user.email,
-          customerName: user.name || application.companyName,
+          customerName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || application.companyName,
           status: "rejected",
           rejectionReason: args.rejectionReason,
         });
       } else if (args.status === "under_review") {
         await ctx.db.patch(user._id, {
-          wholesaleStatus: "under_review",
+          wholesaleStatus: "pending",
         });
       }
     }

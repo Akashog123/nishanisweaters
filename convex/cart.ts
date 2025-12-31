@@ -1,5 +1,14 @@
 import { query, mutation, internalMutation, QueryCtx, MutationCtx } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
+import { Doc, Id } from "./_generated/dataModel";
+import {
+  validateCartItems,
+  validateCartForCheckout,
+  mergeCartItems,
+  calculateCartExpiration,
+  type CartItem,
+} from "./lib/cartUtils";
+import { validateSessionId } from "./lib/validation";
 
 // ============================================
 // HELPER FUNCTIONS
@@ -8,7 +17,7 @@ import { v, ConvexError } from "convex/values";
 /**
  * Get cart identifier from server-side auth or session
  * For authenticated users, always use server-verified identity.subject
- * For guest users, fall back to sessionId
+ * For guest users, fall back to sessionId (with format validation)
  */
 async function getCartIdentifier(ctx: QueryCtx | MutationCtx, sessionId?: string) {
   const identity = await ctx.auth.getUserIdentity();
@@ -16,8 +25,10 @@ async function getCartIdentifier(ctx: QueryCtx | MutationCtx, sessionId?: string
     // Authenticated user - use server-verified Clerk ID
     return { userId: identity.subject, sessionId: undefined };
   }
-  // Guest user - use sessionId
-  return { userId: undefined, sessionId };
+  // Guest user - validate and use sessionId
+  // Session IDs must be valid UUID v4 format to prevent injection attacks
+  const validatedSessionId = validateSessionId(sessionId);
+  return { userId: undefined, sessionId: validatedSessionId };
 }
 
 /**
@@ -52,6 +63,17 @@ export const getCart = query({
 
     if (!cart) {
       return null;
+    }
+
+    // STALENESS CHECK: Immediately detect expired carts without waiting for cron job
+    // This provides real-time staleness detection (cron runs every 6 hours)
+    const isExpired = cart.expiresAt < Date.now();
+    if (isExpired) {
+      return {
+        ...cart,
+        items: [],
+        isExpired: true,
+      };
     }
 
     // Batch fetch all products at once to avoid N+1 query problem
@@ -113,6 +135,7 @@ export const getCart = query({
     return {
       ...cart,
       items: refreshedItems,
+      isExpired: false,
     };
   },
 });
@@ -408,7 +431,7 @@ export const mergeGuestCart = mutation({
   args: {
     sessionId: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ merged: boolean; itemCount: number } | null> => {
     // Get server-verified user identity - this mutation requires authentication
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
@@ -420,115 +443,94 @@ export const mergeGuestCart = mutation({
 
     const userId = identity.subject; // Server-verified Clerk ID
 
+    // Fetch guest cart - early return if empty or non-existent
     const guestCart = await ctx.db
       .query("cart")
       .withIndex("by_session_id", (q) => q.eq("sessionId", args.sessionId))
       .first();
 
     if (!guestCart || guestCart.items.length === 0) {
-      return;
+      // No guest cart or empty - nothing to merge
+      return { merged: false, itemCount: 0 };
     }
 
+    // Validate and refresh guest cart items before merging
+    const validGuestItems = await validateCartItems(
+      ctx,
+      guestCart.items as CartItem[]
+    );
+
+    // No valid items to merge - cleanup and return
+    if (validGuestItems.length === 0) {
+      await ctx.db.delete(guestCart._id);
+      return { merged: false, itemCount: 0 };
+    }
+
+    // Fetch user's existing cart
     const userCart = await ctx.db
       .query("cart")
       .withIndex("by_user_id", (q) => q.eq("userId", userId))
       .first();
 
     const now = Date.now();
+    const itemCount = validGuestItems.length;
 
-    // Validate and refresh guest cart items before merging
-    const validatedGuestItems = await Promise.all(
-      guestCart.items.map(async (item) => {
-        const product = await ctx.db.get(item.productId);
-        if (!product || !product.isActive) {
-          return null; // Skip unavailable products
-        }
+    // Handle merge based on whether user has existing cart
+    await handleCartMerge(ctx, {
+      userCart,
+      guestCart,
+      validGuestItems,
+      userId,
+      now,
+    });
 
-        const variant = product.variants.find((v) => v.sku === item.variantSku);
-        if (!variant) {
-          return null; // Skip unavailable variants
-        }
-
-        // Limit quantity to available stock
-        const validatedQuantity = Math.min(item.quantity, variant.stockQuantity);
-        if (validatedQuantity <= 0) {
-          return null; // Skip out of stock items
-        }
-
-        return {
-          ...item,
-          quantity: validatedQuantity,
-          price: product.retailPrice, // Update to current price
-          name: product.name,
-          image: product.images[0]?.url || item.image,
-        };
-      })
-    );
-
-    // Filter out null items (unavailable products)
-    const validGuestItems = validatedGuestItems.filter(
-      (item): item is NonNullable<typeof item> => item !== null
-    );
-
-    if (validGuestItems.length === 0) {
-      // No valid items to merge, just delete the guest cart
-      await ctx.db.delete(guestCart._id);
-      return;
-    }
-
-    if (userCart) {
-      // Merge items
-      const mergedItems = [...userCart.items];
-
-      for (const guestItem of validGuestItems) {
-        const existingIndex = mergedItems.findIndex(
-          (item) =>
-            item.productId === guestItem.productId &&
-            item.variantSku === guestItem.variantSku
-        );
-
-        if (existingIndex >= 0) {
-          // Get product to check stock for merged quantity
-          const product = await ctx.db.get(guestItem.productId);
-          const variant = product?.variants.find(
-            (v) => v.sku === guestItem.variantSku
-          );
-          const maxStock = variant?.stockQuantity || 0;
-
-          // Add quantities, but cap at available stock
-          const newQuantity = Math.min(
-            mergedItems[existingIndex].quantity + guestItem.quantity,
-            maxStock
-          );
-
-          mergedItems[existingIndex] = {
-            ...mergedItems[existingIndex],
-            quantity: newQuantity,
-            price: guestItem.price, // Use the refreshed price
-          };
-        } else {
-          mergedItems.push(guestItem);
-        }
-      }
-
-      await ctx.db.patch(userCart._id, {
-        items: mergedItems,
-        lastModified: now,
-      });
-
-      // Delete guest cart
-      await ctx.db.delete(guestCart._id);
-    } else {
-      // Convert guest cart to user cart with server-verified userId
-      await ctx.db.patch(guestCart._id, {
-        userId, // Server-verified from identity.subject
-        sessionId: undefined,
-        items: validGuestItems, // Use validated items
-        lastModified: now,
-      });
-    }
+    // Return info about what was merged
+    return { merged: true, itemCount };
   },
 });
+
+/**
+ * Handles the actual cart merge operation.
+ * Extracted to reduce nesting in mergeGuestCart handler.
+ */
+async function handleCartMerge(
+  ctx: MutationCtx,
+  options: {
+    userCart: Doc<"cart"> | null;
+    guestCart: Doc<"cart">;
+    validGuestItems: CartItem[];
+    userId: string;
+    now: number;
+  }
+) {
+  const { userCart, guestCart, validGuestItems, userId, now } = options;
+
+  // User has existing cart - merge items
+  if (userCart) {
+    const mergedItems = await mergeCartItems(
+      ctx,
+      userCart.items as CartItem[],
+      validGuestItems
+    );
+
+    await ctx.db.patch(userCart._id, {
+      items: mergedItems,
+      lastModified: now,
+    });
+
+    // Delete guest cart after successful merge
+    await ctx.db.delete(guestCart._id);
+    return;
+  }
+
+  // User has no cart - convert guest cart to user cart
+  await ctx.db.patch(guestCart._id, {
+    userId, // Server-verified from identity.subject
+    sessionId: undefined,
+    items: validGuestItems,
+    lastModified: now,
+  });
+}
 
 // Mutation: Validate cart before checkout
 export const validateCart = mutation({
@@ -550,53 +552,8 @@ export const validateCart = mutation({
       };
     }
 
-    const errors: string[] = [];
-    const validatedItems = await Promise.all(
-      cart.items.map(async (item) => {
-        const product = await ctx.db.get(item.productId);
-
-        if (!product || !product.isActive) {
-          errors.push(`${item.name} is no longer available`);
-          return { ...item, isValid: false };
-        }
-
-        const variant = product.variants.find((v) => v.sku === item.variantSku);
-        if (!variant) {
-          errors.push(`${item.name} (${item.size}/${item.color}) is no longer available`);
-          return { ...item, isValid: false };
-        }
-
-        if (variant.stockQuantity < item.quantity) {
-          if (variant.stockQuantity === 0) {
-            errors.push(`${item.name} is out of stock`);
-          } else {
-            errors.push(
-              `Only ${variant.stockQuantity} of ${item.name} available (you have ${item.quantity})`
-            );
-          }
-          return {
-            ...item,
-            isValid: false,
-            maxAvailable: variant.stockQuantity,
-          };
-        }
-
-        return {
-          ...item,
-          isValid: true,
-          currentPrice: product.retailPrice,
-          priceChanged: item.price !== product.retailPrice,
-        };
-      })
-    );
-
-    const isValid = errors.length === 0;
-
-    return {
-      isValid,
-      errors,
-      items: validatedItems,
-    };
+    // Use helper function for validation logic
+    return validateCartForCheckout(ctx, cart.items as CartItem[]);
   },
 });
 
@@ -616,11 +573,26 @@ export const removeUnavailableItems = mutation({
       return { removed: 0 };
     }
 
+    // OPTIMIZATION: Batch-fetch all products to prevent N+1 queries
+    // Instead of fetching each product inside the loop, we fetch all at once
+    const uniqueProductIds = [...new Set(cart.items.map(item => item.productId))];
+    type ProductDoc = NonNullable<Awaited<ReturnType<typeof ctx.db.get<"products">>>>;
+    const productsMap = new Map<string, ProductDoc>();
+
+    await Promise.all(
+      uniqueProductIds.map(async (productId) => {
+        const product = await ctx.db.get(productId);
+        if (product) {
+          productsMap.set(productId, product as ProductDoc);
+        }
+      })
+    );
+
     const validItems: typeof cart.items = [];
     let removedCount = 0;
 
     for (const item of cart.items) {
-      const product = await ctx.db.get(item.productId);
+      const product = productsMap.get(item.productId); // O(1) lookup instead of O(n) queries
 
       if (!product || !product.isActive) {
         removedCount++;
@@ -666,6 +638,8 @@ export const cleanupExpiredCarts = internalMutation({
     let deletedCount = 0;
 
     // Find all expired carts (guest carts older than 7 days)
+    // PERFORMANCE: Batch size of 500 balances throughput with timeout risk
+    // For high-traffic sites, this processes ~2000 carts/day (500 per 6-hour run)
     const expiredCarts = await ctx.db
       .query("cart")
       .filter((q) =>
@@ -674,7 +648,7 @@ export const cleanupExpiredCarts = internalMutation({
           q.lt(q.field("expiresAt"), now)
         )
       )
-      .take(100); // Process in batches to avoid timeout
+      .take(500);
 
     for (const cart of expiredCarts) {
       await ctx.db.delete(cart._id);
@@ -682,6 +656,7 @@ export const cleanupExpiredCarts = internalMutation({
     }
 
     // Also cleanup empty carts older than 24 hours
+    // PERFORMANCE: Batch size of 500 ensures efficient cleanup of abandoned empty carts
     const oneDayAgo = now - 24 * 60 * 60 * 1000;
     const emptyCarts = await ctx.db
       .query("cart")
@@ -691,7 +666,7 @@ export const cleanupExpiredCarts = internalMutation({
           q.lt(q.field("lastModified"), oneDayAgo)
         )
       )
-      .take(100);
+      .take(500);
 
     for (const cart of emptyCarts) {
       await ctx.db.delete(cart._id);

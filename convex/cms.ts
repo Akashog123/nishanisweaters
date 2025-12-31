@@ -2,6 +2,7 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAdmin } from "./lib/auth";
 import { ConvexError } from "convex/values";
+import { Id } from "./_generated/dataModel";
 
 /**
  * CMS Content Management
@@ -134,10 +135,11 @@ export const listAllContent = query({
     await requireAdmin(ctx);
 
     let query;
-    if (args.type) {
+    const contentType = args.type;
+    if (contentType) {
       query = ctx.db
         .query("cmsContent")
-        .withIndex("by_type", (q) => q.eq("type", args.type as any));
+        .withIndex("by_type", (q) => q.eq("type", contentType));
     } else {
       query = ctx.db.query("cmsContent");
     }
@@ -286,7 +288,7 @@ export const deleteContent = mutation({
     // Delete associated storage file if exists
     if (existing.imageStorageId) {
       try {
-        await ctx.storage.delete(existing.imageStorageId as any);
+        await ctx.storage.delete(existing.imageStorageId as Id<"_storage">);
       } catch {
         // Ignore storage deletion errors
       }
