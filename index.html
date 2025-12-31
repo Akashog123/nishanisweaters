@@ -15,14 +15,180 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@blockhaus" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!--
+      Resource Hints Priority Order:
+      1. Preconnect to critical origins (fonts, auth, real-time data)
+      2. DNS prefetch for secondary origins (analytics, payments)
+      3. Preload critical resources (fonts, critical CSS)
+    -->
+
+    <!-- Preconnect to critical third-party origins (establish early connections) -->
+    <!-- Order matters: most critical first -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Convex real-time data - critical for initial render -->
+    <link rel="preconnect" href="https://convex.cloud" crossorigin />
+    <!-- Clerk authentication -->
+    <link rel="preconnect" href="https://clerk.com" crossorigin />
+    <link rel="preconnect" href="https://img.clerk.com" crossorigin />
+
+    <!-- DNS Prefetch for secondary origins (payment, analytics) -->
+    <link rel="dns-prefetch" href="https://checkout.razorpay.com" />
+    <link rel="dns-prefetch" href="https://api.razorpay.com" />
+    <link rel="dns-prefetch" href="https://browser.sentry-cdn.com" />
+
+    <!--
+      Font loading optimization using media="print" swap trick
+      This prevents render-blocking while still loading fonts early.
+      The onload handler swaps media to "all" once loaded.
+    -->
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+    />
+    <!-- Fallback for browsers with JS disabled -->
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    </noscript>
+
+    <!--
+      Hero Image LCP Optimization Note:
+      The hero image is loaded via Vite's asset pipeline which applies content hashing.
+      Preloading /src/assets/* paths won't work in production builds.
+      Instead, we rely on:
+      1. fetchpriority="high" on the img element in HeroSection.tsx
+      2. loading="eager" and decoding="sync" attributes
+      3. The <picture> element with modern format sources (AVIF/WebP)
+
+      For production LCP optimization, consider:
+      - Using a CDN with edge caching (configured in vercel.json)
+      - Generating responsive images at build time with vite-imagetools
+      - Injecting the hashed asset path during build
+    -->
+
+    <!-- Inline critical CSS for faster FCP -->
+    <style>
+      /* Critical CSS for initial render - Above the fold styles */
+      :root {
+        --font-fallback: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        /* Predefine theme colors to prevent FOUC */
+        --background: 0 0% 100%;
+        --foreground: 222.2 84% 4.9%;
+      }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      body {
+        margin: 0;
+        font-family: 'Space Grotesk', var(--font-fallback);
+        line-height: 1.5;
+        background-color: hsl(var(--background));
+        color: hsl(var(--foreground));
+      }
+      /* Prevent layout shift from font loading */
+      .font-loading body {
+        font-family: var(--font-fallback);
+      }
+      /* Loading skeleton to prevent CLS and improve perceived performance */
+      #root:empty {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #root:empty::before {
+        content: '';
+        width: 40px;
+        height: 40px;
+        border: 3px solid #e0e0e0;
+        border-top-color: #333;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
   </head>
 
   <body>
     <div id="root"></div>
+    <!--
+      Main entry point with high fetch priority
+      type="module" enables native ES modules and tree-shaking
+    -->
     <script type="module" src="/src/main.tsx"></script>
+
+    <!--
+      Web Vitals performance monitoring (development only)
+      Enable by setting window.__WEB_VITALS_DEBUG__ = true in console
+    -->
+    <script type="module">
+      // Report Web Vitals metrics in development
+      if ('PerformanceObserver' in window) {
+        // Observe Largest Contentful Paint
+        try {
+          const lcpObserver = new PerformanceObserver((list) => {
+            const entries = list.getEntries();
+            const lastEntry = entries[entries.length - 1];
+            if (window.__WEB_VITALS_DEBUG__) {
+              console.log('LCP:', lastEntry.startTime.toFixed(0), 'ms');
+            }
+          });
+          lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true });
+        } catch (e) {
+          // LCP not supported
+        }
+
+        // Observe First Input Delay
+        try {
+          const fidObserver = new PerformanceObserver((list) => {
+            const entries = list.getEntries();
+            entries.forEach((entry) => {
+              if (window.__WEB_VITALS_DEBUG__) {
+                console.log('FID:', entry.processingStart - entry.startTime, 'ms');
+              }
+            });
+          });
+          fidObserver.observe({ type: 'first-input', buffered: true });
+        } catch (e) {
+          // FID not supported
+        }
+
+        // Observe Cumulative Layout Shift
+        try {
+          let clsValue = 0;
+          const clsObserver = new PerformanceObserver((list) => {
+            for (const entry of list.getEntries()) {
+              if (!entry.hadRecentInput) {
+                clsValue += entry.value;
+              }
+            }
+            if (window.__WEB_VITALS_DEBUG__) {
+              console.log('CLS:', clsValue.toFixed(3));
+            }
+          });
+          clsObserver.observe({ type: 'layout-shift', buffered: true });
+        } catch (e) {
+          // CLS not supported
+        }
+      }
+    </script>
   </body>
 </html>

@@ -1,73 +1,191 @@
-# Welcome to your Lovable project
+# Blockhaus Clone Showcase
 
-## Project info
+A modern e-commerce application built with React, TypeScript, and Convex, featuring wholesale and retail functionality.
 
-**URL**: https://lovable.dev/projects/d2712fa6-790f-4fc7-b12a-9ff3bcefef4c
+## Tech Stack
 
-## How can I edit this code?
+- **Frontend**: React 18, TypeScript, Vite 5
+- **UI**: TailwindCSS, shadcn/ui, Radix UI primitives
+- **Backend**: Convex (serverless database with real-time sync)
+- **Authentication**: Clerk
+- **State Management**: React Context, React Query
+- **Testing**: Vitest, React Testing Library
+- **Error Tracking**: Sentry (optional)
 
-There are several ways of editing your application.
+## Features
 
-**Use Lovable**
+- Product catalog with categories and filtering
+- Shopping cart with real-time persistence
+- User authentication (sign up, sign in, profile)
+- Wholesale account applications and tiered pricing
+- Order management with status tracking
+- Admin dashboard for product, order, and customer management
+- Responsive design for mobile and desktop
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/d2712fa6-790f-4fc7-b12a-9ff3bcefef4c) and start prompting.
+## Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
+### Prerequisites
 
-**Use your preferred IDE**
+- Node.js 18+ (recommend using [nvm](https://github.com/nvm-sh/nvm))
+- npm or yarn
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Installation
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
+1. Clone the repository:
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
 git clone <YOUR_GIT_URL>
+cd blockhaus-clone-showcase
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+2. Install dependencies:
+```sh
+npm install
+```
 
-# Step 3: Install the necessary dependencies.
-npm i
+3. Set up environment variables:
+```sh
+cp .env.example .env.local
+```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+Edit `.env.local` with your configuration:
+- `VITE_CONVEX_URL` - Your Convex deployment URL
+- `VITE_CLERK_PUBLISHABLE_KEY` - Clerk publishable key
+- `VITE_SENTRY_DSN` - (Optional) Sentry DSN for error tracking
+
+4. Start the development server:
+```sh
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The app will be available at `http://localhost:8080`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Convex Setup
 
-**Use GitHub Codespaces**
+If you haven't set up Convex yet:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```sh
+npx convex dev
+```
 
-## What technologies are used for this project?
+This will prompt you to log in and create a new Convex project.
 
-This project is built with:
+## Available Scripts
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run preview` | Preview production build |
+| `npm run lint` | Run ESLint |
+| `npm run test` | Run tests with Vitest |
+| `npm run test:ui` | Run tests with UI |
+| `npm run test:coverage` | Run tests with coverage |
 
-## How can I deploy this project?
+## Project Structure
 
-Simply open [Lovable](https://lovable.dev/projects/d2712fa6-790f-4fc7-b12a-9ff3bcefef4c) and click on Share -> Publish.
+```
+src/
+├── components/       # Reusable UI components
+│   ├── admin/       # Admin dashboard components
+│   ├── auth/        # Authentication components
+│   └── ui/          # shadcn/ui components
+├── context/         # React context providers
+├── hooks/           # Custom React hooks
+├── lib/             # Utility functions and configs
+├── pages/           # Page components
+│   ├── admin/       # Admin pages
+│   └── wholesale/   # Wholesale-specific pages
+├── test/            # Test setup and utilities
+└── types/           # TypeScript type definitions
 
-## Can I connect a custom domain to my Lovable project?
+convex/              # Convex backend functions
+├── schema.ts        # Database schema
+├── products.ts      # Product queries/mutations
+├── cart.ts          # Cart operations
+├── orders.ts        # Order management
+└── users.ts         # User management
+```
 
-Yes, you can!
+## Testing
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Run the test suite:
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```sh
+npm run test
+```
+
+Run tests in watch mode:
+
+```sh
+npm run test -- --watch
+```
+
+Generate coverage report:
+
+```sh
+npm run test:coverage
+```
+
+## Build Optimizations
+
+The production build includes:
+
+- Vendor chunk splitting (React, Radix UI, Clerk, Convex, Charts, Forms)
+- Image lazy loading with priority hints for LCP
+- React.memo for expensive components
+- Context value memoization
+
+## Error Handling
+
+The application uses a centralized logging system:
+
+- Development: Console output with structured formatting
+- Production: Errors sent to Sentry (if configured)
+
+Use the logger in your code:
+
+```typescript
+import { logger } from '@/lib/logger';
+
+logger.debug('Debug message', { context: 'data' });
+logger.info('Info message');
+logger.warn('Warning message');
+logger.error('Error message', error, { context: 'data' });
+```
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_CONVEX_URL` | Yes | Convex deployment URL |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Yes | Clerk publishable key |
+| `VITE_SENTRY_DSN` | No | Sentry DSN for error tracking |
+| `VITE_SENTRY_ENVIRONMENT` | No | Environment name for Sentry |
+
+## Deployment
+
+### Vercel (Recommended)
+
+1. Connect your repository to Vercel
+2. Set environment variables in Vercel dashboard
+3. Deploy
+
+### Manual Build
+
+```sh
+npm run build
+```
+
+The output will be in the `dist/` directory, ready for static hosting.
+
+## Contributing
+
+1. Create a feature branch
+2. Make your changes
+3. Run tests: `npm run test`
+4. Run linter: `npm run lint`
+5. Submit a pull request
+
+## License
+
+This project is private and not licensed for public use.
