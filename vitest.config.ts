@@ -8,7 +8,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/test/setup.ts',
-    include: ['src/**/*.{test,spec}.{js,ts,jsx,tsx}'],
+    include: ['src/**/*.{test,spec}.{js,ts,jsx,tsx}', 'convex/**/*.{test,spec}.{js,ts}'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -19,7 +19,7 @@ export default defineConfig({
         '**/*.d.ts',
         '**/*.config.*',
         '**/mockData',
-        'convex/',
+        'convex/_generated/',
       ],
       all: true,
       lines: 80,

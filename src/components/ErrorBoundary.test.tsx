@@ -268,27 +268,22 @@ describe('ErrorBoundary', () => {
   })
 
   describe('Development Mode Error Display', () => {
-    const originalNodeEnv = process.env.NODE_ENV
+    // The component shows error details when NODE_ENV !== 'production'
+    // In vitest, NODE_ENV is 'test', so error details should be visible
 
-    beforeEach(() => {
-      process.env.NODE_ENV = 'development'
-    })
-
-    afterEach(() => {
-      process.env.NODE_ENV = originalNodeEnv
-    })
-
-    it('should show error details in development mode', () => {
+    it('should show error details in non-production mode', () => {
       render(
         <ErrorBoundary>
           <ThrowError error={new Error('Development error')} />
         </ErrorBoundary>
       )
 
+      // In non-production mode (test), error details should be visible
+      // The component shows error.toString() which includes "Error: Development error"
       expect(screen.getByText(/Development error/)).toBeInTheDocument()
     })
 
-    it('should show component stack in development mode', () => {
+    it('should show component stack in non-production mode', () => {
       render(
         <ErrorBoundary>
           <ThrowError />

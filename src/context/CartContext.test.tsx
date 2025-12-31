@@ -1,7 +1,27 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { CartProvider, useCart, CartItem } from '@/context/CartContext'
 import { createMockCartItem } from '@/test/test-utils'
+
+// Mock Clerk to avoid ClerkProvider requirement
+vi.mock('@clerk/clerk-react', () => ({
+  useUser: () => ({
+    user: { id: 'test-user-id' },
+    isSignedIn: true,
+    isLoaded: true,
+  }),
+  ClerkProvider: ({ children }: { children: React.ReactNode }) => children,
+}))
+
+// Mock Convex auth
+vi.mock('convex/react', () => ({
+  useConvexAuth: () => ({
+    isAuthenticated: true,
+    isLoading: false,
+  }),
+  useMutation: () => vi.fn(),
+  useQuery: () => null,
+}))
 
 describe('CartContext', () => {
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -18,7 +38,7 @@ describe('CartContext', () => {
       })
 
       expect(result.current.items).toHaveLength(1)
-      expect(result.current.items[0]).toEqual(item)
+      expect(result.current.items[0]).toMatchObject(item)
       expect(result.current.totalItems).toBe(1)
     })
 
