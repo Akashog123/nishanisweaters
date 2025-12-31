@@ -77,9 +77,7 @@ export interface ConvexProduct {
   category: string;
   subcategory?: string;
   retailPrice: number;
-  wholesalePriceTier1: number;
-  wholesalePriceTier2: number;
-  wholesalePriceTier3: number;
+  wholesalePrice?: number;
   compareAtPrice?: number;
   costPrice?: number;
   images: ProductImage[];
@@ -120,9 +118,6 @@ export interface LocalProduct {
 /** User roles in the system */
 export type UserRole = "customer" | "wholesale" | "admin";
 
-/** Wholesale tier levels */
-export type WholesaleTier = "tier1" | "tier2" | "tier3";
-
 /** Wholesale application/account status */
 export type WholesaleStatus = "pending" | "approved" | "rejected" | "suspended";
 
@@ -141,7 +136,6 @@ export interface ConvexUser {
   gstNumber?: string;
   businessAddress?: BusinessAddress;
   website?: string;
-  wholesaleTier?: WholesaleTier;
   wholesaleStatus?: WholesaleStatus;
   shippingAddresses: ShippingAddress[];
   emailNotifications: boolean;
@@ -201,7 +195,24 @@ export type OrderType = "retail" | "wholesale";
 export type PaymentMethod = "razorpay" | "invoice" | "bank_transfer";
 
 /** Payment status tracking */
-export type PaymentStatus = "pending" | "paid" | "failed" | "refunded" | "partially_refunded";
+export type PaymentStatus =
+  | "pending"
+  | "paid"
+  | "failed"
+  | "refunded"
+  | "partially_refunded"
+  | "disputed"
+  | "refund_pending"
+  | "refund_failed";
+
+/** Dispute status for chargebacks */
+export type DisputeStatus =
+  | "created"
+  | "under_review"
+  | "action_required"
+  | "won"
+  | "lost"
+  | "closed";
 
 /** Order fulfillment status */
 export type OrderStatus =
@@ -246,6 +257,12 @@ export interface ConvexOrder {
   paymentStatus: PaymentStatus;
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
+  // Dispute tracking (chargebacks)
+  disputeStatus?: DisputeStatus;
+  disputeId?: string;
+  disputeReason?: string;
+  disputeCreatedAt?: number;
+  disputeResolvedAt?: number;
   orderStatus: OrderStatus;
   trackingNumber?: string;
   shippingCarrier?: string;
@@ -369,7 +386,6 @@ export interface ConvexWholesaleApplication {
   website?: string;
   documents?: WholesaleDocument[];
   status: WholesaleApplicationStatus;
-  requestedTier?: WholesaleTier;
   reviewedBy?: string;
   reviewedAt?: number;
   reviewNotes?: string;

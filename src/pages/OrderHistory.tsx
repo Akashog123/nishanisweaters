@@ -19,7 +19,6 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
-  ArrowLeft,
   ShoppingBag,
   MapPin,
   CreditCard,
@@ -30,7 +29,7 @@ import {
 import { formatDate, formatDateTime, formatCurrency } from "@/lib/formatting";
 
 type OrderStatus = "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded";
-type PaymentStatus = "pending" | "paid" | "failed" | "refunded" | "partially_refunded";
+type PaymentStatus = "pending" | "paid" | "failed" | "refunded" | "partially_refunded" | "disputed" | "refund_pending" | "refund_failed";
 
 const orderStatusConfig: Record<OrderStatus, { label: string; color: string; icon: React.ElementType }> = {
   pending: { label: "Pending", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300", icon: Clock },
@@ -42,20 +41,23 @@ const orderStatusConfig: Record<OrderStatus, { label: string; color: string; ico
   refunded: { label: "Refunded", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300", icon: RefreshCw },
 };
 
-const paymentStatusConfig: Record<PaymentStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const paymentStatusConfig: Record<PaymentStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline" | "warning" }> = {
   pending: { label: "Payment Pending", variant: "outline" },
   paid: { label: "Paid", variant: "default" },
   failed: { label: "Payment Failed", variant: "destructive" },
   refunded: { label: "Refunded", variant: "secondary" },
   partially_refunded: { label: "Partially Refunded", variant: "secondary" },
+  disputed: { label: "Under Review", variant: "warning" },
+  refund_pending: { label: "Refund Processing", variant: "outline" },
+  refund_failed: { label: "Refund Issue", variant: "destructive" },
 };
 
 export default function OrderHistory() {
-  const { user, isLoaded: isClerkLoaded } = useUser();
+  const { user, isSignedIn, isLoaded: isClerkLoaded } = useUser();
 
   const orders = useQuery(
     api.orders.getUserOrders,
-    user?.id ? { userId: user.id, limit: 50 } : "skip"
+    isSignedIn ? { limit: 50 } : "skip"
   );
 
   // Loading state
@@ -102,13 +104,6 @@ export default function OrderHistory() {
       <Layout showAnnouncement={false}>
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-4xl mx-auto">
-            <Button variant="ghost" asChild className="mb-6">
-              <Link to="/account">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Account
-              </Link>
-            </Button>
-
             <div className="text-center py-16">
               <ShoppingBag className="h-16 w-16 mx-auto text-muted-foreground mb-6" />
               <h1 className="text-2xl font-bold mb-2">No orders yet</h1>
@@ -130,19 +125,11 @@ export default function OrderHistory() {
       <div className="container mx-auto px-4 py-8 lg:py-12">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <Button variant="ghost" asChild className="mb-2 -ml-4">
-                <Link to="/account">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Account
-                </Link>
-              </Button>
-              <h1 className="text-3xl lg:text-4xl font-bold">Order History</h1>
-              <p className="text-muted-foreground mt-1">
-                {orders.length} order{orders.length !== 1 ? "s" : ""} placed
-              </p>
-            </div>
+          <div className="mb-8">
+            <h1 className="text-3xl lg:text-4xl font-bold">Order History</h1>
+            <p className="text-muted-foreground mt-1">
+              {orders.length} order{orders.length !== 1 ? "s" : ""} placed
+            </p>
           </div>
 
           {/* Orders List */}

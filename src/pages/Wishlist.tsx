@@ -43,12 +43,12 @@ interface WishlistItem {
 }
 
 export default function Wishlist() {
-  const { user, isLoaded: isClerkLoaded } = useUser();
+  const { user, isSignedIn, isLoaded: isClerkLoaded } = useUser();
   const { addToCart } = useCart();
 
   const wishlist = useQuery(
     api.wishlist.getWishlist,
-    user?.id ? { userId: user.id } : "skip"
+    isSignedIn ? {} : "skip"
   );
 
   const removeFromWishlist = useMutation(api.wishlist.removeFromWishlist);
@@ -98,7 +98,6 @@ export default function Wishlist() {
   const handleRemoveFromWishlist = async (productId: Id<"products">) => {
     try {
       await removeFromWishlist({
-        userId: user.id,
         productId,
       });
       toast.success("Removed from wishlist");
@@ -109,7 +108,7 @@ export default function Wishlist() {
 
   const handleClearWishlist = async () => {
     try {
-      await clearWishlist({ userId: user.id });
+      await clearWishlist({});
       toast.success("Wishlist cleared");
     } catch (error) {
       toast.error("Failed to clear wishlist");
@@ -126,12 +125,12 @@ export default function Wishlist() {
     }
 
     addToCart({
-      id: product._id,
+      productId: product._id,
       name: product.name,
-      price: formatCurrency(product.retailPrice),
+      price: product.retailPrice,
       image: product.images[0]?.url || "",
-      selectedSize: availableVariant.size,
-      selectedColor: availableVariant.color,
+      size: availableVariant.size,
+      color: availableVariant.color,
       quantity: 1,
     });
 

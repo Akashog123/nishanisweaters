@@ -19,6 +19,7 @@ const Shop = () => {
     "new-arrival": "NEW ARRIVAL",
     "mens": "MEN'S COLLECTION",
     "womens": "WOMEN'S COLLECTION",
+    "kids": "KIDS COLLECTION",
   };
 
   // Map URL categories to Convex query parameters
@@ -32,6 +33,8 @@ const Shop = () => {
         return { category: "men" };
       case "womens":
         return { category: "women" };
+      case "kids":
+        return { category: "kids" };
       default:
         return { category };
     }
@@ -45,6 +48,8 @@ const Shop = () => {
         return "men";
       case "womens":
         return "women";
+      case "kids":
+        return "kids";
       default:
         return undefined;
     }

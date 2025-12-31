@@ -35,7 +35,7 @@ import {
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/formatting";
-import { WHOLESALE_MIN_ORDER_AMOUNTS, WHOLESALE_DISCOUNTS } from "@/lib/constants";
+import { WHATSAPP_BULK_PRICING_CONTACT, WHATSAPP_BULK_PRICING_URL } from "@/lib/constants";
 import {
   ShoppingCart,
   Plus,
@@ -47,6 +47,8 @@ import {
   Loader2,
   Building2,
   CheckCircle,
+  Phone,
+  MessageCircle,
 } from "lucide-react";
 
 interface BulkOrderItem {
@@ -59,14 +61,8 @@ interface BulkOrderItem {
   unitPrice: number;
   quantity: number;
   stockQuantity: number;
+  minOrderQuantity?: number;
 }
-
-// Tier discount information (using shared constants)
-const tierInfo = {
-  tier1: { name: "Starter", discount: WHOLESALE_DISCOUNTS.tier1, minOrder: WHOLESALE_MIN_ORDER_AMOUNTS.tier1 },
-  tier2: { name: "Growth", discount: WHOLESALE_DISCOUNTS.tier2, minOrder: WHOLESALE_MIN_ORDER_AMOUNTS.tier2 },
-  tier3: { name: "Enterprise", discount: WHOLESALE_DISCOUNTS.tier3, minOrder: WHOLESALE_MIN_ORDER_AMOUNTS.tier3 },
-};
 
 export default function BulkOrder() {
   const navigate = useNavigate();
@@ -78,10 +74,10 @@ export default function BulkOrder() {
   const [bulkItems, setBulkItems] = useState<BulkOrderItem[]>([]);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
-  // Get user profile
+  // SECURITY: Use server-side identity verification - never pass client clerkId
   const userProfile = useQuery(
     api.users.getUserByClerkId,
-    user?.id ? { clerkId: user.id } : "skip"
+    user ? {} : "skip"
   );
 
   // Get all products for bulk ordering
@@ -90,11 +86,6 @@ export default function BulkOrder() {
 
   // Get filter options
   const filterOptions = useQuery(api.products.getFilterOptions, {});
-
-  // Current tier discount
-  const currentTier = userProfile?.wholesaleTier || "tier1";
-  const tierDiscount = tierInfo[currentTier as keyof typeof tierInfo]?.discount || 0.15;
-  const minOrderAmount = tierInfo[currentTier as keyof typeof tierInfo]?.minOrder || 10000;
 
   // Filter products based on search and category
   const filteredProducts = useMemo(() => {
@@ -110,16 +101,19 @@ export default function BulkOrder() {
     });
   }, [products, searchTerm, selectedCategory]);
 
-  // Calculate totals
+  // Calculate totals (now using wholesale prices directly)
   const orderSummary = useMemo(() => {
-    const subtotal = bulkItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-    const discount = subtotal * tierDiscount;
-    const total = subtotal - discount;
+    const total = bulkItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
     const totalItems = bulkItems.reduce((sum, item) => sum + item.quantity, 0);
-    const meetsMinOrder = total >= minOrderAmount;
 
-    return { subtotal, discount, total, totalItems, meetsMinOrder };
-  }, [bulkItems, tierDiscount, minOrderAmount]);
+    // Check if all items meet their minimum order quantities
+    const itemsNotMeetingMOQ = bulkItems.filter(item =>
+      item.minOrderQuantity && item.quantity < item.minOrderQuantity
+    );
+    const allMeetMOQ = itemsNotMeetingMOQ.length === 0;
+
+    return { total, totalItems, allMeetMOQ, itemsNotMeetingMOQ };
+  }, [bulkItems]);
 
   // Add item to bulk order
   const addToBulkOrder = (
@@ -141,7 +135,8 @@ export default function BulkOrder() {
         toast.error(`Only ${variant.stockQuantity} units available`);
       }
     } else {
-      // Add new item
+      // Add new item (use wholesale price if available, otherwise retail)
+      const price = product.wholesalePrice || product.retailPrice;
       setBulkItems([
         ...bulkItems,
         {
@@ -151,9 +146,10 @@ export default function BulkOrder() {
           variantSku: variant.sku,
           size: variant.size,
           color: variant.color,
-          unitPrice: product.retailPrice,
+          unitPrice: price,
           quantity: 1,
           stockQuantity: variant.stockQuantity,
+          minOrderQuantity: product.minOrderQuantity,
         },
       ]);
     }
@@ -190,8 +186,11 @@ export default function BulkOrder() {
 
   // Add all to cart and proceed to checkout
   const handleProceedToCheckout = async () => {
-    if (!orderSummary.meetsMinOrder) {
-      toast.error(`Minimum order amount is ${formatCurrency(minOrderAmount)}`);
+    if (!orderSummary.allMeetMOQ) {
+      const itemNames = orderSummary.itemsNotMeetingMOQ.map(item =>
+        `${item.productName}: min ${item.minOrderQuantity} required`
+      ).join(", ");
+      toast.error(`Minimum order quantities not met: ${itemNames}`);
       return;
     }
 
@@ -273,11 +272,16 @@ export default function BulkOrder() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Bulk Order</h1>
           <p className="text-muted-foreground">
-            Add multiple products to your order quickly. Your tier discount of{" "}
-            <span className="font-semibold text-green-600">
-              {(tierDiscount * 100).toFixed(0)}%
-            </span>{" "}
-            will be applied at checkout.
+            Add multiple products to your order quickly with exclusive wholesale pricing.
+            Need custom bulk pricing?{" "}
+            <a
+              href={WHATSAPP_BULK_PRICING_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-green-600 hover:text-green-700 font-medium"
+            >
+              Contact us on WhatsApp
+            </a>.
           </p>
         </div>
 
@@ -344,12 +348,25 @@ export default function BulkOrder() {
                         />
                         <div className="flex-1">
                           <h4 className="font-medium line-clamp-1">{product.name}</h4>
-                          <p className="text-lg font-bold text-primary">
-                            {formatCurrency(product.retailPrice)}
-                          </p>
-                          <p className="text-xs text-green-600">
-                            Wholesale: {formatCurrency(product.retailPrice * (1 - tierDiscount))}
-                          </p>
+                          {product.wholesalePrice ? (
+                            <>
+                              <p className="text-lg font-bold text-green-600">
+                                {formatCurrency(product.wholesalePrice)}
+                              </p>
+                              <p className="text-xs text-muted-foreground line-through">
+                                Retail: {formatCurrency(product.retailPrice)}
+                              </p>
+                            </>
+                          ) : (
+                            <p className="text-lg font-bold text-primary">
+                              {formatCurrency(product.retailPrice)}
+                            </p>
+                          )}
+                          {product.minOrderQuantity && product.minOrderQuantity > 1 && (
+                            <p className="text-xs text-amber-600">
+                              Min: {product.minOrderQuantity} units
+                            </p>
+                          )}
                         </div>
                       </div>
 
@@ -470,39 +487,55 @@ export default function BulkOrder() {
 
                     {/* Totals */}
                     <div className="border-t pt-4 space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Subtotal</span>
-                        <span>{formatCurrency(orderSummary.subtotal)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm text-green-600">
-                        <span>Tier Discount ({(tierDiscount * 100).toFixed(0)}%)</span>
-                        <span>-{formatCurrency(orderSummary.discount)}</span>
-                      </div>
-                      <div className="flex justify-between font-bold text-lg border-t pt-2">
+                      <div className="flex justify-between font-bold text-lg">
                         <span>Total</span>
                         <span>{formatCurrency(orderSummary.total)}</span>
                       </div>
+                      <p className="text-xs text-muted-foreground">
+                        Wholesale prices already applied
+                      </p>
                     </div>
 
-                    {/* Min Order Alert */}
-                    {!orderSummary.meetsMinOrder && (
+                    {/* MOQ Alert */}
+                    {!orderSummary.allMeetMOQ && (
                       <div className="flex items-start gap-2 p-3 bg-yellow-50 rounded-lg text-yellow-800 text-sm">
                         <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                         <div>
-                          <p className="font-medium">Minimum order not met</p>
-                          <p className="text-xs">
-                            Add {formatCurrency(minOrderAmount - orderSummary.total)} more to meet the minimum order of {formatCurrency(minOrderAmount)}
-                          </p>
+                          <p className="font-medium">Minimum quantities not met</p>
+                          <ul className="text-xs mt-1 space-y-0.5">
+                            {orderSummary.itemsNotMeetingMOQ.map(item => (
+                              <li key={`${item.productId}-${item.variantSku}`}>
+                                {item.productName}: need {item.minOrderQuantity} units (have {item.quantity})
+                              </li>
+                            ))}
+                          </ul>
                         </div>
                       </div>
                     )}
 
-                    {orderSummary.meetsMinOrder && (
+                    {orderSummary.allMeetMOQ && bulkItems.length > 0 && (
                       <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg text-green-800 text-sm">
                         <CheckCircle className="h-4 w-4" />
-                        <p>Minimum order requirement met!</p>
+                        <p>Ready to checkout!</p>
                       </div>
                     )}
+
+                    {/* WhatsApp CTA */}
+                    <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <MessageCircle className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-medium text-green-800">Need custom pricing?</span>
+                      </div>
+                      <a
+                        href={WHATSAPP_BULK_PRICING_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-green-600 hover:text-green-700"
+                      >
+                        <Phone className="h-3 w-3" />
+                        Chat on WhatsApp: {WHATSAPP_BULK_PRICING_CONTACT}
+                      </a>
+                    </div>
                   </>
                 )}
               </CardContent>
@@ -511,7 +544,7 @@ export default function BulkOrder() {
                   className="w-full"
                   size="lg"
                   onClick={handleProceedToCheckout}
-                  disabled={bulkItems.length === 0 || !orderSummary.meetsMinOrder || isAddingToCart}
+                  disabled={bulkItems.length === 0 || !orderSummary.allMeetMOQ || isAddingToCart}
                 >
                   {isAddingToCart ? (
                     <>

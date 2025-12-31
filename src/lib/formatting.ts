@@ -5,7 +5,7 @@
 
 /**
  * Formats a number as currency.
- * Defaults to INR (Indian Rupee) with en-IN locale.
+ * Uses INR (Indian Rupee) with en-IN locale.
  *
  * @param amount - The amount to format
  * @param locale - The locale to use (default: "en-IN")
@@ -15,7 +15,6 @@
  * @example
  * formatCurrency(1500) // "₹1,500"
  * formatCurrency(1500.50) // "₹1,501"
- * formatCurrency(1500, "en-US", "USD") // "$1,500"
  */
 export function formatCurrency(
   amount: number,

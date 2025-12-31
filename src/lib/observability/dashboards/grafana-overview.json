@@ -1,0 +1,759 @@
+{
+  "title": "Nishani Woolera - E-Commerce Overview",
+  "description": "Production monitoring dashboard for the Nishani Woolera e-commerce platform",
+  "tags": ["ecommerce", "production", "nishani-woolera"],
+  "timezone": "Asia/Kolkata",
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "annotations": {
+    "list": [
+      {
+        "name": "Deployments",
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "iconColor": "green",
+        "type": "tags",
+        "tags": ["deployment"]
+      },
+      {
+        "name": "Incidents",
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "iconColor": "red",
+        "type": "tags",
+        "tags": ["incident"]
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "environment",
+        "type": "custom",
+        "current": {"text": "production", "value": "production"},
+        "options": [
+          {"text": "production", "value": "production"},
+          {"text": "staging", "value": "staging"}
+        ]
+      },
+      {
+        "name": "user_segment",
+        "type": "custom",
+        "current": {"text": "All", "value": ""},
+        "options": [
+          {"text": "All", "value": ""},
+          {"text": "Retail", "value": "retail"},
+          {"text": "Wholesale", "value": "wholesale"}
+        ]
+      },
+      {
+        "name": "device_type",
+        "type": "custom",
+        "current": {"text": "All", "value": ""},
+        "options": [
+          {"text": "All", "value": ""},
+          {"text": "Mobile", "value": "mobile"},
+          {"text": "Tablet", "value": "tablet"},
+          {"text": "Desktop", "value": "desktop"}
+        ]
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "SLO Status Overview",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+      "description": "Current SLO compliance status for critical services",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "avg(slo_compliance{slo=\"checkout_availability\"})",
+          "legendFormat": "Checkout Availability"
+        },
+        {
+          "refId": "B",
+          "expr": "avg(slo_compliance{slo=\"payment_success_rate\"})",
+          "legendFormat": "Payment Success"
+        },
+        {
+          "refId": "C",
+          "expr": "avg(slo_compliance{slo=\"api_availability\"})",
+          "legendFormat": "API Availability"
+        },
+        {
+          "refId": "D",
+          "expr": "histogram_quantile(0.75, web_vitals_lcp_bucket)",
+          "legendFormat": "LCP p75"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "yellow", "value": 95},
+              {"color": "green", "value": 99}
+            ]
+          },
+          "unit": "percent"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Error Budget Remaining",
+      "type": "gauge",
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 4},
+      "description": "28-day rolling error budget consumption",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 - (error_budget_consumed{slo=\"checkout_availability\"} / error_budget_total{slo=\"checkout_availability\"} * 100)",
+          "legendFormat": "Checkout"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": 0},
+              {"color": "yellow", "value": 25},
+              {"color": "green", "value": 50}
+            ]
+          },
+          "unit": "percent"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Revenue Impact - Orders",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 9, "x": 6, "y": 4},
+      "description": "Order volume and revenue metrics",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(ecommerce_orders_total[$__rate_interval]))",
+          "legendFormat": "Orders/min"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(ecommerce_revenue_total[$__rate_interval]))",
+          "legendFormat": "Revenue/min (INR)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 10
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Active Users",
+      "type": "stat",
+      "gridPos": {"h": 6, "w": 3, "x": 15, "y": 4},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(active_sessions{user_segment=~\"$user_segment\"})",
+          "legendFormat": "Active Sessions"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Active Checkouts",
+      "type": "stat",
+      "gridPos": {"h": 6, "w": 3, "x": 18, "y": 4},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(active_checkouts)",
+          "legendFormat": "Checkouts"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Cart Value",
+      "type": "stat",
+      "gridPos": {"h": 6, "w": 3, "x": 21, "y": 4},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "avg(cart_total_value)",
+          "legendFormat": "Avg Cart"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyINR",
+          "decimals": 0
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "Core Web Vitals",
+      "type": "row",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 10},
+      "collapsed": false
+    },
+    {
+      "id": 11,
+      "title": "LCP - Largest Contentful Paint",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 11},
+      "description": "Measures loading performance. Target: < 2.5s",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.75, sum(rate(web_vitals_lcp_bucket{device_type=~\"$device_type\", user_segment=~\"$user_segment\"}[$__rate_interval])) by (le))",
+          "legendFormat": "p75"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum(rate(web_vitals_lcp_bucket{device_type=~\"$device_type\", user_segment=~\"$user_segment\"}[$__rate_interval])) by (le))",
+          "legendFormat": "p95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "thresholdsStyle": {"mode": "line+area"}
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 2500},
+              {"color": "red", "value": 4000}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 12,
+      "title": "INP - Interaction to Next Paint",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 11},
+      "description": "Measures interactivity. Target: < 200ms",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.75, sum(rate(web_vitals_inp_bucket{device_type=~\"$device_type\", user_segment=~\"$user_segment\"}[$__rate_interval])) by (le))",
+          "legendFormat": "p75"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum(rate(web_vitals_inp_bucket{device_type=~\"$device_type\", user_segment=~\"$user_segment\"}[$__rate_interval])) by (le))",
+          "legendFormat": "p95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "thresholdsStyle": {"mode": "line+area"}
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 200},
+              {"color": "red", "value": 500}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 13,
+      "title": "CLS - Cumulative Layout Shift",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 11},
+      "description": "Measures visual stability. Target: < 0.1",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.75, sum(rate(web_vitals_cls_bucket{device_type=~\"$device_type\", user_segment=~\"$user_segment\"}[$__rate_interval])) by (le))",
+          "legendFormat": "p75"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 3,
+          "custom": {
+            "thresholdsStyle": {"mode": "line+area"}
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 0.1},
+              {"color": "red", "value": 0.25}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 14,
+      "title": "Web Vitals Rating Distribution",
+      "type": "piechart",
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 19},
+      "description": "Distribution of Core Web Vitals ratings",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(web_vitals_rating_total{rating=\"good\"}) by (metric)",
+          "legendFormat": "{{metric}} - Good"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(web_vitals_rating_total{rating=\"needs-improvement\"}) by (metric)",
+          "legendFormat": "{{metric}} - Needs Improvement"
+        },
+        {
+          "refId": "C",
+          "expr": "sum(web_vitals_rating_total{rating=\"poor\"}) by (metric)",
+          "legendFormat": "{{metric}} - Poor"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "title": "Payment & Checkout",
+      "type": "row",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 27},
+      "collapsed": false
+    },
+    {
+      "id": 21,
+      "title": "Payment Success Rate",
+      "type": "gauge",
+      "gridPos": {"h": 6, "w": 4, "x": 0, "y": 28},
+      "description": "Percentage of successful payment transactions",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(ecommerce_payment_success_total[$__rate_interval])) / sum(rate(ecommerce_payment_initiated_total[$__rate_interval])) * 100",
+          "legendFormat": "Success Rate"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 90,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": 90},
+              {"color": "yellow", "value": 98},
+              {"color": "green", "value": 99.5}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 22,
+      "title": "Checkout Funnel",
+      "type": "barchart",
+      "gridPos": {"h": 10, "w": 10, "x": 4, "y": 28},
+      "description": "Conversion funnel through checkout steps",
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(ecommerce_funnel_step_total{step=\"cart_view\"}) by (step)",
+          "legendFormat": "Cart View"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(ecommerce_funnel_step_total{step=\"checkout_start\"}) by (step)",
+          "legendFormat": "Checkout Start"
+        },
+        {
+          "refId": "C",
+          "expr": "sum(ecommerce_funnel_step_total{step=\"shipping_info\"}) by (step)",
+          "legendFormat": "Shipping Info"
+        },
+        {
+          "refId": "D",
+          "expr": "sum(ecommerce_funnel_step_total{step=\"payment_method\"}) by (step)",
+          "legendFormat": "Payment Method"
+        },
+        {
+          "refId": "E",
+          "expr": "sum(ecommerce_funnel_step_total{step=\"payment_init\"}) by (step)",
+          "legendFormat": "Payment Init"
+        },
+        {
+          "refId": "F",
+          "expr": "sum(ecommerce_funnel_step_total{step=\"payment_success\"}) by (step)",
+          "legendFormat": "Payment Success"
+        },
+        {
+          "refId": "G",
+          "expr": "sum(ecommerce_funnel_step_total{step=\"order_confirmed\"}) by (step)",
+          "legendFormat": "Order Confirmed"
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "barWidth": 0.8,
+        "groupWidth": 0.7
+      }
+    },
+    {
+      "id": 23,
+      "title": "Payment Failures by Error Code",
+      "type": "piechart",
+      "gridPos": {"h": 6, "w": 5, "x": 14, "y": 28},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(ecommerce_payment_failure_total) by (error_code)",
+          "legendFormat": "{{error_code}}"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "title": "Checkout Latency",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 5, "x": 19, "y": 28},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum(rate(ecommerce_checkout_duration_bucket[$__rate_interval])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum(rate(ecommerce_checkout_duration_bucket[$__rate_interval])) by (le))",
+          "legendFormat": "p95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "id": 25,
+      "title": "Payment Processing Time",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 10, "x": 14, "y": 34},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum(rate(ecommerce_payment_duration_bucket[$__rate_interval])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum(rate(ecommerce_payment_duration_bucket[$__rate_interval])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum(rate(ecommerce_payment_duration_bucket[$__rate_interval])) by (le))",
+          "legendFormat": "p99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 3000},
+              {"color": "red", "value": 10000}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 30,
+      "title": "API Performance",
+      "type": "row",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 40},
+      "collapsed": false
+    },
+    {
+      "id": 31,
+      "title": "API Request Rate",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 41},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(convex_api_requests_total[$__rate_interval])) by (endpoint)",
+          "legendFormat": "{{endpoint}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      }
+    },
+    {
+      "id": 32,
+      "title": "API Latency by Endpoint",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 41},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(convex_api_latency_bucket[$__rate_interval])) by (le, endpoint))",
+          "legendFormat": "{{endpoint}} p95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 500},
+              {"color": "red", "value": 2000}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 33,
+      "title": "API Error Rate",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 49},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(convex_api_errors_total[$__rate_interval])) / sum(rate(convex_api_requests_total[$__rate_interval])) * 100",
+          "legendFormat": "Error Rate %"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 1},
+              {"color": "red", "value": 5}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 34,
+      "title": "Convex Query Performance",
+      "type": "heatmap",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 49},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(convex_query_duration_bucket[$__rate_interval])) by (le)",
+          "legendFormat": "{{le}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "id": 40,
+      "title": "Errors & Exceptions",
+      "type": "row",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 57},
+      "collapsed": false
+    },
+    {
+      "id": 41,
+      "title": "Error Rate by Page",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 58},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(sentry_errors_total[$__rate_interval])) by (page_path)",
+          "legendFormat": "{{page_path}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 42,
+      "title": "Top Errors",
+      "type": "table",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 58},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum(sentry_errors_total) by (error_type, error_message))",
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "error_type": "Error Type",
+              "error_message": "Message",
+              "Value": "Count"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 43,
+      "title": "Unhandled Exceptions",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 66},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(sentry_unhandled_exceptions_total[1h]))",
+          "legendFormat": "Unhandled (1h)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": 0},
+              {"color": "yellow", "value": 5},
+              {"color": "red", "value": 20}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 44,
+      "title": "JavaScript Errors by Browser",
+      "type": "piechart",
+      "gridPos": {"h": 8, "w": 6, "x": 6, "y": 66},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(sentry_errors_total) by (browser)",
+          "legendFormat": "{{browser}}"
+        }
+      ]
+    },
+    {
+      "id": 50,
+      "title": "User Segments",
+      "type": "row",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 74},
+      "collapsed": false
+    },
+    {
+      "id": 51,
+      "title": "Performance by User Segment",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 75},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.75, sum(rate(web_vitals_lcp_bucket[$__rate_interval])) by (le, user_segment))",
+          "legendFormat": "LCP p75 - {{user_segment}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "id": 52,
+      "title": "Conversion Rate by Segment",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 75},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(ecommerce_orders_total{user_segment=\"retail\"}) / sum(ecommerce_cart_view_total{user_segment=\"retail\"}) * 100",
+          "legendFormat": "Retail"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(ecommerce_orders_total{user_segment=\"wholesale\"}) / sum(ecommerce_cart_view_total{user_segment=\"wholesale\"}) * 100",
+          "legendFormat": "Wholesale"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        }
+      }
+    },
+    {
+      "id": 53,
+      "title": "Revenue by Segment",
+      "type": "piechart",
+      "gridPos": {"h": 8, "w": 6, "x": 18, "y": 75},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(ecommerce_revenue_total) by (user_segment)",
+          "legendFormat": "{{user_segment}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyINR"
+        }
+      }
+    }
+  ]
+}

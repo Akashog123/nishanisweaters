@@ -6,15 +6,17 @@ import { api } from "../../../convex/_generated/api";
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredRole?: "customer" | "wholesale" | "admin";
+  blockAdminAccess?: boolean;
 }
 
-export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, requiredRole, blockAdminAccess }: ProtectedRouteProps) {
   const { isSignedIn, user, isLoaded } = useUser();
   const location = useLocation();
 
+  // SECURITY: Use server-side identity verification - never pass client clerkId
   const dbUser = useQuery(
     api.users.getCurrentUser,
-    isSignedIn && user ? { clerkId: user.id } : "skip"
+    isSignedIn ? {} : "skip"
   );
 
   if (!isLoaded) {

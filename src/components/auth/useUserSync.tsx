@@ -1,5 +1,5 @@
 import { useUser } from "@clerk/clerk-react";
-import { useMutation } from "convex/react";
+import { useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useEffect } from "react";
 import { logger } from "@/lib/logger";
@@ -13,10 +13,13 @@ import { logger } from "@/lib/logger";
  */
 export function useUserSync() {
   const { user, isSignedIn, isLoaded } = useUser();
+  const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
   const upsertUser = useMutation(api.users.upsertUser);
 
   useEffect(() => {
-    if (isLoaded && isSignedIn && user) {
+    // Wait for both Clerk AND Convex auth to be ready
+    // This prevents calling mutations before JWT token is available
+    if (isLoaded && isSignedIn && user && isConvexAuthenticated) {
       // SECURITY: Only pass optional profile data
       // The clerkId and email are now extracted from server-side identity
       upsertUser({
@@ -27,5 +30,5 @@ export function useUserSync() {
         logger.error("[useUserSync] Failed to sync user", error);
       });
     }
-  }, [isLoaded, isSignedIn, user, upsertUser]);
+  }, [isLoaded, isSignedIn, user, isConvexAuthenticated, upsertUser]);
 }

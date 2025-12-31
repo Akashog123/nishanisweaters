@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useState, useMemo, useCallback } from "react";
 import { Minus, Plus } from "lucide-react";
 import { useQuery } from "convex/react";
+import { useUser } from "@clerk/clerk-react";
 import { api } from "../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -82,9 +83,14 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { handleError } = useConvexError();
+  const { isSignedIn } = useUser();
 
   // Use slug to fetch product from Convex
   const product = useQuery(api.products.getProductBySlug, { slug: productId || "" });
+
+  // Check if current user is admin (to hide purchase buttons)
+  const dbUser = useQuery(api.users.getCurrentUser, isSignedIn ? {} : "skip");
+  const isAdmin = dbUser?.role === "admin";
 
   // Fetch related products (limit to 6)
   const allProducts = useQuery(api.products.listProducts, { limit: 6 });
@@ -93,60 +99,45 @@ const ProductDetail = () => {
   const [selectedColor, setSelectedColor] = useState("");
   const [quantity, setQuantity] = useState(1);
 
-  // Loading state
-  if (product === undefined) {
-    return <ProductDetailSkeleton />;
-  }
-
-  // Product not found - Use NotFoundError component
-  if (!product) {
-    return (
-      <Layout>
-        <NotFoundError
-          resourceType="product"
-          resourceId={productId}
-          showSearch={true}
-        />
-      </Layout>
-    );
-  }
-
   // Extract unique sizes and colors from variants (memoized)
+  // Must be called before any early returns to follow Rules of Hooks
   const sizes = useMemo(
-    () => [...new Set(product.variants.map((v) => v.size))],
-    [product.variants]
+    () => (product ? [...new Set(product.variants.map((v) => v.size))] : []),
+    [product]
   );
   const colors = useMemo(
-    () => [...new Set(product.variants.map((v) => v.color))],
-    [product.variants]
+    () => (product ? [...new Set(product.variants.map((v) => v.color))] : []),
+    [product]
   );
 
   // Get product images URLs (memoized)
   const productImages = useMemo(
-    () => product.images.map((img) => img.url),
-    [product.images]
+    () => (product ? product.images.map((img) => img.url) : []),
+    [product]
   );
 
   // Get product videos for gallery (memoized)
   const productVideos = useMemo(
     () =>
-      product.videos?.map((video) => ({
+      product?.videos?.map((video) => ({
         youtubeId: video.youtubeId,
         title: video.title,
         thumbnail: video.thumbnail,
       })) || [],
-    [product.videos]
+    [product]
   );
 
   // Filter related products - excluding current product (memoized)
   const relatedProducts = useMemo(
     () => (allProducts?.products || [])
-      .filter((p) => p._id !== product._id)
+      .filter((p) => product && p._id !== product._id)
       .slice(0, 3),
-    [allProducts?.products, product._id]
+    [allProducts?.products, product]
   );
 
   const handleAddToCart = useCallback(() => {
+    if (!product) return;
+
     try {
       // Validate selection
       if (!selectedSize || !selectedColor) {
@@ -224,7 +215,7 @@ const ProductDetail = () => {
       }
 
       // Check max stock if variant is selected
-      if (selectedSize && selectedColor) {
+      if (selectedSize && selectedColor && product) {
         const variant = product.variants.find(
           (v) => v.size === selectedSize && v.color === selectedColor
         );
@@ -242,7 +233,25 @@ const ProductDetail = () => {
         toast.error(error.message);
       }
     }
-  }, [selectedSize, selectedColor, product.variants]);
+  }, [selectedSize, selectedColor, product]);
+
+  // Loading state - must be after all hooks
+  if (product === undefined) {
+    return <ProductDetailSkeleton />;
+  }
+
+  // Product not found - Use NotFoundError component
+  if (!product) {
+    return (
+      <Layout>
+        <NotFoundError
+          resourceType="product"
+          resourceId={productId}
+          showSearch={true}
+        />
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -319,39 +328,43 @@ const ProductDetail = () => {
               <p className="text-muted-foreground leading-relaxed">{product.description}</p>
             </div>
 
-            {/* Quantity */}
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => handleQuantityChange(Math.max(1, quantity - 1))}
-                className="p-3 border-2 border-border hover:border-primary transition-colors"
-              >
-                <Minus className="h-4 w-4" />
-              </button>
-              <span className="text-lg font-medium w-12 text-center">{quantity}</span>
-              <button
-                onClick={() => handleQuantityChange(quantity + 1)}
-                className="p-3 border-2 border-border hover:border-primary transition-colors"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
-            </div>
+            {/* Quantity - Hidden for admin */}
+            {!isAdmin && (
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => handleQuantityChange(Math.max(1, quantity - 1))}
+                  className="p-3 border-2 border-border hover:border-primary transition-colors"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span className="text-lg font-medium w-12 text-center">{quantity}</span>
+                <button
+                  onClick={() => handleQuantityChange(quantity + 1)}
+                  className="p-3 border-2 border-border hover:border-primary transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+            )}
 
-            {/* Action Buttons */}
-            <div className="flex gap-4 pt-4">
-              <Button
-                onClick={handleAddToCart}
-                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground h-14 text-base font-medium"
-              >
-                Add to Cart
-              </Button>
-              <Button
-                onClick={handleBuyNow}
-                variant="outline"
-                className="flex-1 border-2 h-14 text-base font-medium"
-              >
-                Buy Now
-              </Button>
-            </div>
+            {/* Action Buttons - Hidden for admin */}
+            {!isAdmin && (
+              <div className="flex gap-4 pt-4">
+                <Button
+                  onClick={handleAddToCart}
+                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground h-14 text-base font-medium"
+                >
+                  Add to Cart
+                </Button>
+                <Button
+                  onClick={handleBuyNow}
+                  variant="outline"
+                  className="flex-1 border-2 h-14 text-base font-medium"
+                >
+                  Buy Now
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 

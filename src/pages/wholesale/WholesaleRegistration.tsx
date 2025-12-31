@@ -77,7 +77,6 @@ const wholesaleFormSchema = z.object({
     .url("Please enter a valid URL")
     .optional()
     .or(z.literal("")),
-  requestedTier: z.enum(["tier1", "tier2", "tier3"]).optional(),
 });
 
 type WholesaleFormValues = z.infer<typeof wholesaleFormSchema>;
@@ -109,13 +108,13 @@ const WholesaleRegistration = () => {
   // Check for existing application
   const existingApplication = useQuery(
     api.wholesaleApplications.getUserApplication,
-    user?.id ? { clerkId: user.id } : "skip"
+    isSignedIn ? {} : "skip"
   );
 
-  // Get user profile
+  // SECURITY: Use server-side identity verification - never pass client clerkId
   const userProfile = useQuery(
     api.users.getUserByClerkId,
-    user?.id ? { clerkId: user.id } : "skip"
+    user ? {} : "skip"
   );
 
   // Submit mutation
@@ -133,7 +132,6 @@ const WholesaleRegistration = () => {
       postalCode: "",
       country: "India",
       website: "",
-      requestedTier: "tier1",
     },
   });
 
@@ -167,7 +165,6 @@ const WholesaleRegistration = () => {
         },
         website: values.website || undefined,
         documents: documentsPayload.length > 0 ? documentsPayload : undefined,
-        requestedTier: values.requestedTier,
       });
 
       setSubmitSuccess(true);
@@ -328,9 +325,9 @@ const WholesaleRegistration = () => {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 bg-muted rounded-lg text-center">
-                  <p className="font-bold text-2xl text-primary mb-1">15-30%</p>
+                  <p className="font-bold text-2xl text-primary mb-1">Exclusive</p>
                   <p className="text-sm text-muted-foreground">
-                    Tiered Discounts
+                    Wholesale Pricing
                   </p>
                 </div>
                 <div className="p-4 bg-muted rounded-lg text-center">
@@ -538,48 +535,6 @@ const WholesaleRegistration = () => {
                         )}
                       />
                     </div>
-                  </div>
-
-                  {/* Tier Selection */}
-                  <div className="space-y-4 pt-4 border-t">
-                    <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
-                      Partnership Tier
-                    </h3>
-
-                    <FormField
-                      control={form.control}
-                      name="requestedTier"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Requested Tier</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a tier" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="tier1">
-                                Tier 1 - Starter (15% discount)
-                              </SelectItem>
-                              <SelectItem value="tier2">
-                                Tier 2 - Growth (22% discount)
-                              </SelectItem>
-                              <SelectItem value="tier3">
-                                Tier 3 - Enterprise (30% discount)
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormDescription>
-                            Final tier assignment is subject to review and approval.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                   </div>
 
                   {/* Document Upload */}

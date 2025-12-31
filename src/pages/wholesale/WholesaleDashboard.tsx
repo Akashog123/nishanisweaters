@@ -15,14 +15,15 @@ import {
   Loader2,
   ShoppingCart,
   Eye,
-  Percent,
   Calendar,
   Truck,
   ClipboardList,
+  MessageCircle,
+  Phone,
 } from "lucide-react";
 import { Id } from "../../../convex/_generated/dataModel";
 import { formatCurrency, formatDate } from "@/lib/formatting";
-import { WHOLESALE_MIN_ORDER_AMOUNTS, WHOLESALE_DISCOUNTS } from "@/lib/constants";
+import { WHATSAPP_BULK_PRICING_CONTACT, WHATSAPP_BULK_PRICING_URL } from "@/lib/constants";
 
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -79,15 +80,8 @@ interface Order {
   createdAt: number;
 }
 
-// Tier discount information (using shared constants)
-const tierInfo = {
-  tier1: { name: "Starter", discount: WHOLESALE_DISCOUNTS.tier1 * 100, minOrder: WHOLESALE_MIN_ORDER_AMOUNTS.tier1 },
-  tier2: { name: "Growth", discount: WHOLESALE_DISCOUNTS.tier2 * 100, minOrder: WHOLESALE_MIN_ORDER_AMOUNTS.tier2 },
-  tier3: { name: "Enterprise", discount: WHOLESALE_DISCOUNTS.tier3 * 100, minOrder: WHOLESALE_MIN_ORDER_AMOUNTS.tier3 },
-};
-
 // Status badge variants
-const getStatusBadgeVariant = (status: string) => {
+const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" | "warning" => {
   switch (status) {
     case "delivered":
     case "paid":
@@ -97,11 +91,18 @@ const getStatusBadgeVariant = (status: string) => {
     case "shipped":
     case "pending":
     case "under_review":
+    case "refund_pending":
       return "secondary";
     case "cancelled":
     case "failed":
     case "rejected":
+    case "refund_failed":
       return "destructive";
+    case "disputed":
+      return "warning";
+    case "refunded":
+    case "partially_refunded":
+      return "outline";
     default:
       return "outline";
   }
@@ -119,11 +120,18 @@ const StatusIcon = ({ status }: { status: string }) => {
       return <Truck className="h-4 w-4 text-blue-600" />;
     case "pending":
     case "under_review":
+    case "refund_pending":
       return <Clock className="h-4 w-4 text-yellow-600" />;
     case "cancelled":
     case "failed":
     case "rejected":
+    case "refund_failed":
       return <XCircle className="h-4 w-4 text-red-600" />;
+    case "disputed":
+      return <AlertCircle className="h-4 w-4 text-amber-500" />;
+    case "refunded":
+    case "partially_refunded":
+      return <RefreshCw className="h-4 w-4 text-gray-600" />;
     default:
       return <AlertCircle className="h-4 w-4 text-gray-600" />;
   }
@@ -134,22 +142,22 @@ const WholesaleDashboard = () => {
   const navigate = useNavigate();
   const [orderFilter, setOrderFilter] = useState<string>("all");
 
-  // Get user profile
+  // SECURITY: Use server-side identity verification - never pass client clerkId
   const userProfile = useQuery(
     api.users.getUserByClerkId,
-    user?.id ? { clerkId: user.id } : "skip"
+    user ? {} : "skip"
   );
 
   // Get wholesale application
   const wholesaleApplication = useQuery(
     api.wholesaleApplications.getUserApplication,
-    user?.id ? { clerkId: user.id } : "skip"
+    isSignedIn ? {} : "skip"
   );
 
   // Get user orders
   const orders = useQuery(
     api.orders.getUserOrders,
-    user?.id ? { userId: user.id, limit: 50 } : "skip"
+    isSignedIn ? { limit: 50 } : "skip"
   ) as Order[] | undefined;
 
   // Filter for wholesale orders only
@@ -259,10 +267,6 @@ const WholesaleDashboard = () => {
     );
   }
 
-  // Get current tier info
-  const currentTier = userProfile?.wholesaleTier || "tier1";
-  const currentTierInfo = tierInfo[currentTier as keyof typeof tierInfo];
-
   return (
     <Layout>
       <div className="container mx-auto px-4 lg:px-8 py-12 lg:py-20">
@@ -316,21 +320,26 @@ const WholesaleDashboard = () => {
                 <div className="p-4 bg-muted rounded-lg">
                   <div className="flex items-center gap-2 mb-1">
                     <TrendingUp className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium">Tier</span>
+                    <span className="text-sm font-medium">Account Type</span>
                   </div>
                   <p className="font-bold text-lg">
-                    {currentTierInfo?.name || "Starter"}
+                    Wholesale Partner
                   </p>
                 </div>
 
                 <div className="p-4 bg-muted rounded-lg">
                   <div className="flex items-center gap-2 mb-1">
-                    <Percent className="h-4 w-4 text-green-600" />
-                    <span className="text-sm font-medium">Your Discount</span>
+                    <Phone className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium">Bulk Pricing</span>
                   </div>
-                  <p className="font-bold text-lg text-green-600">
-                    {currentTierInfo?.discount || 15}% OFF
-                  </p>
+                  <a
+                    href={WHATSAPP_BULK_PRICING_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-green-600 hover:text-green-700 font-medium text-sm"
+                  >
+                    Contact on WhatsApp
+                  </a>
                 </div>
 
                 <div className="p-4 bg-muted rounded-lg">
@@ -400,40 +409,42 @@ const WholesaleDashboard = () => {
           </Card>
         </div>
 
-        {/* Tier Progress Card */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="text-lg">Tier Benefits</CardTitle>
+        {/* Bulk Pricing CTA Card */}
+        <Card className="mb-8 border-green-200 bg-green-50/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-green-600" />
+              Need Bulk Pricing?
+            </CardTitle>
             <CardDescription>
-              Your current tier and how to upgrade
+              Get custom quotes for large orders
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {Object.entries(tierInfo).map(([tier, info]) => (
-                <div
-                  key={tier}
-                  className={`p-4 rounded-lg border-2 transition-colors ${
-                    currentTier === tier
-                      ? "border-primary bg-primary/5"
-                      : "border-transparent bg-muted"
-                  }`}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-2">
+                  For orders with custom quantities or special pricing requirements,
+                  reach out to us directly on WhatsApp. We're happy to discuss
+                  volume-based discounts and custom arrangements.
+                </p>
+                <p className="text-sm font-medium">
+                  WhatsApp: {WHATSAPP_BULK_PRICING_CONTACT}
+                </p>
+              </div>
+              <Button
+                asChild
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <a
+                  href={WHATSAPP_BULK_PRICING_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold">{info.name}</h4>
-                    {currentTier === tier && (
-                      <Badge variant="default">Current</Badge>
-                    )}
-                  </div>
-                  <p className="text-2xl font-bold text-primary mb-1">
-                    {info.discount}% OFF
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Min. order:{" "}
-                    {formatCurrency(info.minOrder)}
-                  </p>
-                </div>
-              ))}
+                  <Phone className="mr-2 h-4 w-4" />
+                  Chat on WhatsApp
+                </a>
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -488,6 +499,7 @@ const WholesaleDashboard = () => {
                       <TableHead>Items</TableHead>
                       <TableHead>Total</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Payment</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -514,6 +526,17 @@ const WholesaleDashboard = () => {
                               variant={getStatusBadgeVariant(order.orderStatus)}
                             >
                               {order.orderStatus.toUpperCase()}
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <StatusIcon status={order.paymentStatus} />
+                            <Badge
+                              variant={getStatusBadgeVariant(order.paymentStatus)}
+                            >
+                              {order.paymentStatus === "disputed" ? "⚠️ " : ""}
+                              {order.paymentStatus.replace("_", " ").toUpperCase()}
                             </Badge>
                           </div>
                         </TableCell>
