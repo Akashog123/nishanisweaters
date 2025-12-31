@@ -11,6 +11,7 @@ import { api } from "../../convex/_generated/api";
 import { toast } from "sonner";
 import { Id } from "../../convex/_generated/dataModel";
 import { useState } from "react";
+import { PromoCodeInput } from "@/components/PromoCodeInput";
 import {
   Select,
   SelectContent,
@@ -187,6 +188,10 @@ export default function Cart() {
   const moveToCartMutation = useMutation(api.wishlist.moveToCart);
   const removeFromWishlistMutation = useMutation(api.wishlist.removeFromWishlist);
 
+  // Query cart for promo code data
+  const cartData = useQuery(api.cart.getCart, {});
+  const promoDiscount = cartData?.promoDiscount ?? 0;
+
   const [savingItem, setSavingItem] = useState<string | null>(null);
 
   const handleSaveForLater = async (productId: string, variantSku: string) => {
@@ -279,7 +284,7 @@ export default function Cart() {
   const subtotal = getSubtotal();
   const shipping = subtotal >= 1000 ? 0 : 99;
   const tax = subtotal * 0.18;
-  const total = subtotal + shipping + tax;
+  const total = subtotal + shipping + tax - promoDiscount;
 
   return (
     <Layout showAnnouncement={false}>
@@ -472,6 +477,12 @@ export default function Cart() {
                     )}
                   </span>
                 </div>
+                {promoDiscount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Promo Discount</span>
+                    <span>-${promoDiscount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="border-t pt-2 mt-2">
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total</span>
@@ -484,6 +495,11 @@ export default function Cart() {
                     </span>
                   </div>
                 </div>
+              </div>
+
+              {/* Promo Code Input */}
+              <div className="mt-4 pt-4 border-t">
+                <PromoCodeInput />
               </div>
 
               {subtotal < 1000 && (

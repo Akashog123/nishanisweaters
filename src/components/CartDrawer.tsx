@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Minus, Plus, Trash2, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,7 +7,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { useCart } from "@/context/CartContext";
+import { useCartItems, useCartActions, CartItem } from "@/context/CartContext";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
@@ -33,8 +34,107 @@ function CartItemSkeleton() {
   );
 }
 
+// Memoized cart item to prevent unnecessary re-renders
+interface CartItemRowProps {
+  item: CartItem;
+  onUpdateQuantity: (productId: string, size: string, color: string, quantity: number) => void;
+  onRemove: (productId: string, size: string, color: string) => void;
+  isOptimistic?: boolean;
+}
+
+const CartItemRow = memo(function CartItemRow({
+  item,
+  onUpdateQuantity,
+  onRemove,
+  isOptimistic,
+}: CartItemRowProps) {
+  return (
+    <div
+      className={`flex gap-4 ${isOptimistic ? "opacity-75" : ""}`}
+    >
+      <img
+        src={item.image}
+        alt={item.name}
+        className="w-24 h-24 object-cover rounded"
+        // Explicit dimensions to prevent CLS (Cumulative Layout Shift)
+        // w-24 = 96px, h-24 = 96px in Tailwind default spacing
+        width={96}
+        height={96}
+        loading="lazy"
+      />
+      <div className="flex-1 space-y-2">
+        <div>
+          <h3 className="font-medium">{item.name}</h3>
+          <p className="text-sm text-muted-foreground">
+            {item.color} / {item.size}
+          </p>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() =>
+                onUpdateQuantity(
+                  item.productId,
+                  item.size,
+                  item.color,
+                  item.quantity - 1
+                )
+              }
+              className="p-1 border border-border hover:border-primary transition-colors"
+            >
+              <Minus className="h-3 w-3" />
+            </button>
+            <span className="w-8 text-center text-sm">
+              {item.quantity}
+            </span>
+            <button
+              onClick={() =>
+                onUpdateQuantity(
+                  item.productId,
+                  item.size,
+                  item.color,
+                  item.quantity + 1
+                )
+              }
+              className="p-1 border border-border hover:border-primary transition-colors"
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+          </div>
+          <button
+            onClick={() =>
+              onRemove(item.productId, item.size, item.color)
+            }
+            className="p-1 hover:text-destructive transition-colors"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="font-bold">
+            {typeof item.price === 'number'
+              ? `$${item.price.toFixed(2)}`
+              : `$${item.price}`
+            }
+          </span>
+          {item.originalPrice && (
+            <span className="text-sm text-muted-foreground line-through">
+              ${typeof item.originalPrice === 'number'
+                ? item.originalPrice.toFixed(2)
+                : item.originalPrice
+              }
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+});
+
 const CartDrawer = ({ open, onOpenChange }: CartDrawerProps) => {
-  const { items, updateQuantity, removeFromCart, subtotal, isLoading, error } = useCart();
+  // Use split contexts for better performance
+  const { items, subtotal, isLoading, error } = useCartItems();
+  const { updateQuantity, removeFromCart } = useCartActions();
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -82,88 +182,13 @@ const CartDrawer = ({ open, onOpenChange }: CartDrawerProps) => {
             <ScrollArea className="flex-1 -mx-6 px-6 my-6">
               <div className="space-y-6">
                 {items.map((item) => (
-                  <div
+                  <CartItemRow
                     key={`${item.productId}-${item.size}-${item.color}`}
-                    className="flex gap-4"
-                  >
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-24 h-24 object-cover rounded"
-                    />
-                    <div className="flex-1 space-y-2">
-                      <div>
-                        <h3 className="font-medium">{item.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {item.color} / {item.size}
-                        </p>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() =>
-                              updateQuantity(
-                                item.productId,
-                                item.size,
-                                item.color,
-                                item.quantity - 1
-                              )
-                            }
-                            className="p-1 border border-border hover:border-primary transition-colors disabled:opacity-50"
-                            disabled={isLoading}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </button>
-                          <span className="w-8 text-center text-sm">
-                            {isLoading ? (
-                              <Loader2 className="h-3 w-3 animate-spin mx-auto" />
-                            ) : (
-                              item.quantity
-                            )}
-                          </span>
-                          <button
-                            onClick={() =>
-                              updateQuantity(
-                                item.productId,
-                                item.size,
-                                item.color,
-                                item.quantity + 1
-                              )
-                            }
-                            className="p-1 border border-border hover:border-primary transition-colors disabled:opacity-50"
-                            disabled={isLoading}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </button>
-                        </div>
-                        <button
-                          onClick={() =>
-                            removeFromCart(item.productId, item.size, item.color)
-                          }
-                          className="p-1 hover:text-destructive transition-colors disabled:opacity-50"
-                          disabled={isLoading}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold">
-                          {typeof item.price === 'number'
-                            ? `$${item.price.toFixed(2)}`
-                            : `$${item.price}`
-                          }
-                        </span>
-                        {item.originalPrice && (
-                          <span className="text-sm text-muted-foreground line-through">
-                            ${typeof item.originalPrice === 'number'
-                              ? item.originalPrice.toFixed(2)
-                              : item.originalPrice
-                            }
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                    item={item}
+                    onUpdateQuantity={updateQuantity}
+                    onRemove={removeFromCart}
+                    isOptimistic={item._isOptimistic}
+                  />
                 ))}
               </div>
             </ScrollArea>
@@ -176,7 +201,7 @@ const CartDrawer = ({ open, onOpenChange }: CartDrawerProps) => {
                     {isLoading ? (
                       <Skeleton className="h-6 w-20 inline-block" />
                     ) : (
-                      `$${subtotal.toFixed(2)}`
+                      `₹${subtotal.toFixed(2)}`
                     )}
                   </span>
                 </div>
