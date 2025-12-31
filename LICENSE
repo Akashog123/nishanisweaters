@@ -1,0 +1,34 @@
+MIT License with Template Clause
+
+Copyright (c) 2013-2025 Nishani Woolera
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to use
+the Software as a template or starting point for creating new, substantially
+different web applications, subject to the following conditions:
+
+1. PERMITTED USES:
+   - Using this Software as a foundation to build new, original web applications
+   - Learning from and adapting the code patterns, architecture, and techniques
+   - Creating derivative works that are substantially different in purpose,
+     branding, and functionality
+
+2. RESTRICTIONS:
+   - Direct copying, cloning, or redistribution of this Software without
+     substantial modification is NOT permitted
+   - Using this Software to create a competing product with the same or
+     similar branding, design, or business purpose is NOT permitted
+   - Removing or altering this license notice is NOT permitted
+
+3. REQUIREMENTS:
+   - Any derivative work must include its own branding and identity
+   - Attribution to the original project is appreciated but not required
+   - This license notice must be included in derivative works
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
