@@ -98,7 +98,7 @@ const SearchBar = () => {
       <Button
         variant="ghost"
         size="icon"
-        className="hover:bg-secondary"
+        className="hover:bg-secondary hover:text-foreground"
         onClick={() => {
           setIsOpen(true);
           setTimeout(() => inputRef.current?.focus(), 100);
@@ -130,7 +130,7 @@ const SearchBar = () => {
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="hover:bg-secondary shrink-0"
+                className="hover:bg-secondary hover:text-foreground shrink-0"
                 onClick={() => {
                   setIsOpen(false);
                   setSearchQuery("");

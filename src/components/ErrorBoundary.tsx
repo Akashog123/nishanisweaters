@@ -108,7 +108,7 @@ class ErrorBoundary extends Component<Props, State> {
                 We encountered an unexpected error. Please try again.
               </p>
 
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+              {process.env.NODE_ENV !== 'production' && this.state.error && (
                 <div className="mb-6 p-4 bg-muted rounded-lg text-left">
                   <p className="text-sm font-mono text-destructive break-all">
                     {this.state.error.toString()}

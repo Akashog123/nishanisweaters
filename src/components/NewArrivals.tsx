@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 
 const NewArrivals = () => {
   // Fetch new arrival products with a limit of 4
-  const products = useQuery(api.products.listProducts, { newArrival: true, limit: 4 });
+  const result = useQuery(api.products.listProducts, { newArrival: true, limit: 4 });
+  const products = result?.products ?? [];
 
   return (
     <section id="new-arrival" className="py-16 lg:py-24 bg-background">
@@ -22,7 +23,7 @@ const NewArrivals = () => {
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8">
-          {products === undefined ? (
+          {result === undefined ? (
             <ProductSkeleton count={4} />
           ) : products.length === 0 ? (
             <div className="col-span-full text-center py-12">

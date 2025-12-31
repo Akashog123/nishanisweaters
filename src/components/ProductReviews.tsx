@@ -260,7 +260,7 @@ function WriteReviewDialog({
 
 // Main ProductReviews Component
 export function ProductReviews({ productId }: ProductReviewsProps) {
-  const { user } = useUser();
+  const { user, isSignedIn } = useUser();
   const reviews = useQuery(api.reviews.getProductReviews, { productId });
   const stats = useQuery(api.reviews.getProductReviewStats, { productId });
   const canReview = useQuery(
@@ -268,6 +268,10 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
     user ? { productId } : "skip"
   );
   const markHelpful = useMutation(api.reviews.markHelpful);
+
+  // Check if current user is admin (to hide write review button)
+  const dbUser = useQuery(api.users.getCurrentUser, isSignedIn ? {} : "skip");
+  const isAdmin = dbUser?.role === "admin";
 
   const handleHelpful = async (reviewId: Id<"reviews">) => {
     try {
@@ -324,22 +328,29 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
         </div>
 
         <div className="flex items-center justify-center md:justify-end">
-          {user ? (
-            canReview?.canReview ? (
-              <WriteReviewDialog
-                productId={productId}
-                isVerifiedPurchase={canReview.isVerifiedPurchase || false}
-                onSuccess={() => {}}
-              />
-            ) : canReview?.reason === "already_reviewed" ? (
+          {/* Hide write review section for admin users */}
+          {!isAdmin && (
+            user ? (
+              canReview?.canReview ? (
+                <WriteReviewDialog
+                  productId={productId}
+                  isVerifiedPurchase={canReview.isVerifiedPurchase || false}
+                  onSuccess={() => {}}
+                />
+              ) : canReview?.reason === "already_reviewed" ? (
+                <p className="text-muted-foreground">
+                  You have already reviewed this product
+                </p>
+              ) : canReview?.reason === "not_purchased" ? (
+                <p className="text-muted-foreground text-sm">
+                  Only customers who have purchased this product can write a review
+                </p>
+              ) : null
+            ) : (
               <p className="text-muted-foreground">
-                You have already reviewed this product
+                Sign in to write a review
               </p>
-            ) : null
-          ) : (
-            <p className="text-muted-foreground">
-              Sign in to write a review
-            </p>
+            )
           )}
         </div>
       </div>

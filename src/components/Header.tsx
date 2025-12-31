@@ -1,40 +1,38 @@
-import { ShoppingCart, Heart, User, Menu, X, Package, Settings, LogOut, Building2 } from "lucide-react";
-import { useState, memo, useMemo, useCallback } from "react";
+import { ShoppingCart, Heart, Menu, Package, Settings, Building2, Phone, MapPin, Bell } from "lucide-react";
+import { useState, memo } from "react";
 import { Link } from "react-router-dom";
 import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/clerk-react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
-import { useCart } from "@/context/CartContext";
+import { useCartItems } from "@/context/cart/hooks";
 import CartDrawer from "@/components/CartDrawer";
 import SearchBar from "@/components/SearchBar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { ContactInfoPage } from "@/components/account/ContactInfoPage";
+import { ClerkAddressesPage } from "@/components/account/ClerkAddressesPage";
+import { ClerkNotificationsPage } from "@/components/account/ClerkNotificationsPage";
 
 // Navigation links - defined outside component to prevent recreation on each render
 const NAV_LINKS = [
   { name: "NEW ARRIVALS", href: "/shop/new-arrival" },
   { name: "MENS", href: "/shop/mens" },
   { name: "WOMENS", href: "/shop/womens" },
-  { name: "ABOUT US", href: "#about" },
+  { name: "KIDS", href: "/shop/kids" },
+  { name: "BULK PURCHASE", href: "/wholesale/register" },
+  { name: "ABOUT US", href: "/about-us" },
 ] as const;
 
 const Header = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { totalItems } = useCart();
-  const { isSignedIn, user, isLoaded } = useUser();
+  const { totalItems } = useCartItems();
+  const { isSignedIn, isLoaded } = useUser();
 
+  // SECURITY: Use server-side identity verification - never pass client clerkId
   const dbUser = useQuery(
     api.users.getCurrentUser,
-    isSignedIn && user ? { clerkId: user.id } : "skip"
+    isSignedIn ? {} : "skip"
   );
 
   const isAdmin = dbUser?.role === "admin";
@@ -66,27 +64,25 @@ const Header = () => {
                 <div className="border-t pt-4 mt-4">
                   {isSignedIn ? (
                     <>
-                      <Link
-                        to="/account"
-                        className="flex items-center gap-2 py-2 hover:text-primary"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        <User className="h-4 w-4" /> My Account
-                      </Link>
-                      <Link
-                        to="/orders"
-                        className="flex items-center gap-2 py-2 hover:text-primary"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        <Package className="h-4 w-4" /> Orders
-                      </Link>
-                      <Link
-                        to="/wishlist"
-                        className="flex items-center gap-2 py-2 hover:text-primary"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        <Heart className="h-4 w-4" /> Wishlist
-                      </Link>
+                      {/* Customer links - hidden for admin users */}
+                      {!isAdmin && (
+                        <>
+                          <Link
+                            to="/orders"
+                            className="flex items-center gap-2 py-2 hover:text-primary"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                          >
+                            <Package className="h-4 w-4" /> Orders
+                          </Link>
+                          <Link
+                            to="/wishlist"
+                            className="flex items-center gap-2 py-2 hover:text-primary"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                          >
+                            <Heart className="h-4 w-4" /> Wishlist
+                          </Link>
+                        </>
+                      )}
                       {isWholesale && (
                         <Link
                           to="/wholesale/dashboard"
@@ -124,7 +120,8 @@ const Header = () => {
           </Sheet>
 
           {/* Logo */}
-          <Link to="/" className="text-xl lg:text-3xl font-bold tracking-tight">
+          <Link to="/" className="flex items-center gap-2 text-xl lg:text-3xl font-bold tracking-tight">
+            <img src="/Logo.svg" alt="Nishani Woolera Logo" className="h-10 lg:h-12 w-auto" />
             NISHANI WOOLERA.
           </Link>
 
@@ -139,14 +136,6 @@ const Header = () => {
                 {link.name}
               </Link>
             ))}
-            {!isWholesale && isSignedIn && (
-              <Link
-                to="/wholesale/register"
-                className="text-sm font-medium text-primary hover:underline"
-              >
-                BECOME A PARTNER
-              </Link>
-            )}
           </nav>
 
           {/* Icons */}
@@ -155,97 +144,97 @@ const Header = () => {
               <SearchBar />
             </div>
 
-            {/* Wishlist - Only for signed in users */}
-            {isSignedIn && (
+            {/* Wishlist - Only for signed in non-admin users */}
+            {isSignedIn && !isAdmin && (
               <Link to="/wishlist">
-                <Button variant="ghost" size="icon" className="hover:bg-secondary">
+                <Button variant="ghost" size="icon" className="hover:bg-secondary hover:text-foreground">
                   <Heart className="h-5 w-5" />
                 </Button>
               </Link>
             )}
 
-            {/* Cart */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="hover:bg-secondary relative"
-              onClick={() => setIsCartOpen(true)}
-            >
-              <ShoppingCart className="h-5 w-5" />
-              {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
-                  {totalItems}
+            {/* Cart - Hidden for admin users */}
+            {!isAdmin && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hover:bg-secondary hover:text-foreground relative"
+                onClick={() => setIsCartOpen(true)}
+              >
+                <ShoppingCart className="h-5 w-5" />
+                {/* Always render badge to prevent CLS - use opacity for show/hide transition */}
+                <span
+                  className={`absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium transition-opacity duration-150 ${
+                    totalItems > 0 ? "opacity-100" : "opacity-0 pointer-events-none"
+                  }`}
+                  aria-hidden={totalItems === 0}
+                >
+                  {totalItems > 0 ? totalItems : 0}
                 </span>
-              )}
-            </Button>
+              </Button>
+            )}
 
             {/* User Menu */}
             {isLoaded && (
               <>
                 {isSignedIn ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="hover:bg-secondary">
-                        <User className="h-5 w-5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuLabel>
-                        <div className="flex flex-col">
-                          <span>{user?.fullName || "My Account"}</span>
-                          <span className="text-xs text-muted-foreground font-normal">
-                            {user?.primaryEmailAddress?.emailAddress}
-                          </span>
-                        </div>
-                      </DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link to="/account" className="cursor-pointer">
-                          <User className="mr-2 h-4 w-4" />
-                          Account Settings
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to="/orders" className="cursor-pointer">
-                          <Package className="mr-2 h-4 w-4" />
-                          Order History
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to="/wishlist" className="cursor-pointer">
-                          <Heart className="mr-2 h-4 w-4" />
-                          Wishlist
-                        </Link>
-                      </DropdownMenuItem>
+                  <UserButton
+                    afterSignOutUrl="/"
+                    appearance={{
+                      elements: {
+                        avatarBox: "h-8 w-8"
+                      }
+                    }}
+                  >
+                    <UserButton.UserProfilePage
+                      label="Contact Info"
+                      labelIcon={<Phone className="h-4 w-4" />}
+                      url="contact"
+                    >
+                      <ContactInfoPage />
+                    </UserButton.UserProfilePage>
+
+                    <UserButton.UserProfilePage
+                      label="Addresses"
+                      labelIcon={<MapPin className="h-4 w-4" />}
+                      url="addresses"
+                    >
+                      <ClerkAddressesPage />
+                    </UserButton.UserProfilePage>
+
+                    <UserButton.UserProfilePage
+                      label="Notifications"
+                      labelIcon={<Bell className="h-4 w-4" />}
+                      url="notifications"
+                    >
+                      <ClerkNotificationsPage />
+                    </UserButton.UserProfilePage>
+
+                    <UserButton.MenuItems>
+                      {/* Order History - hidden for admin users */}
+                      {!isAdmin && (
+                        <UserButton.Link
+                          label="Order History"
+                          labelIcon={<Package className="h-4 w-4" />}
+                          href="/orders"
+                        />
+                      )}
                       {isWholesale && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem asChild>
-                            <Link to="/wholesale/dashboard" className="cursor-pointer">
-                              <Building2 className="mr-2 h-4 w-4" />
-                              Wholesale Dashboard
-                            </Link>
-                          </DropdownMenuItem>
-                        </>
+                        <UserButton.Link
+                          label="Wholesale Dashboard"
+                          labelIcon={<Building2 className="h-4 w-4" />}
+                          href="/wholesale/dashboard"
+                        />
                       )}
                       {isAdmin && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem asChild>
-                            <Link to="/admin" className="cursor-pointer">
-                              <Settings className="mr-2 h-4 w-4" />
-                              Admin Dashboard
-                            </Link>
-                          </DropdownMenuItem>
-                        </>
+                        <UserButton.Link
+                          label="Admin Dashboard"
+                          labelIcon={<Settings className="h-4 w-4" />}
+                          href="/admin"
+                        />
                       )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="cursor-pointer">
-                        <UserButton afterSignOutUrl="/" />
-                        <span className="ml-2">Manage Account</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    </UserButton.MenuItems>
+                  </UserButton>
                 ) : (
                   <div className="hidden sm:flex items-center gap-2">
                     <SignInButton mode="modal">

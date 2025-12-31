@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -46,72 +46,32 @@ interface ProductFiltersProps {
   productCount?: number;
 }
 
-export function ProductFilters({
+// Memoized FilterContent component extracted outside parent to prevent recreation on each render
+// This improves INP (Interaction to Next Paint) by reducing JavaScript execution during interactions
+interface FilterContentProps {
+  filterOptions: {
+    sizes: string[];
+    colors: string[];
+    priceRange: { min: number; max: number };
+  };
+  filters: FilterState;
+  localPriceRange: [number, number];
+  onSizeToggle: (size: string) => void;
+  onColorToggle: (color: string) => void;
+  onPriceChange: (value: number[]) => void;
+  onPriceCommit: () => void;
+}
+
+const FilterContent = memo(function FilterContent({
   filterOptions,
   filters,
-  onFiltersChange,
-  productCount,
-}: ProductFiltersProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [localPriceRange, setLocalPriceRange] = useState<[number, number]>([
-    filters.minPrice ?? filterOptions?.priceRange.min ?? 0,
-    filters.maxPrice ?? filterOptions?.priceRange.max ?? 10000,
-  ]);
-
-  if (!filterOptions) {
-    return null;
-  }
-
-  const handleSizeToggle = (size: string) => {
-    const newSizes = filters.sizes.includes(size)
-      ? filters.sizes.filter((s) => s !== size)
-      : [...filters.sizes, size];
-    onFiltersChange({ ...filters, sizes: newSizes });
-  };
-
-  const handleColorToggle = (color: string) => {
-    const newColors = filters.colors.includes(color)
-      ? filters.colors.filter((c) => c !== color)
-      : [...filters.colors, color];
-    onFiltersChange({ ...filters, colors: newColors });
-  };
-
-  const handlePriceChange = (value: number[]) => {
-    setLocalPriceRange([value[0], value[1]]);
-  };
-
-  const handlePriceCommit = () => {
-    onFiltersChange({
-      ...filters,
-      minPrice: localPriceRange[0],
-      maxPrice: localPriceRange[1],
-    });
-  };
-
-  const handleSortChange = (value: string) => {
-    onFiltersChange({
-      ...filters,
-      sortBy: value as FilterState["sortBy"],
-    });
-  };
-
-  const clearAllFilters = () => {
-    setLocalPriceRange([filterOptions.priceRange.min, filterOptions.priceRange.max]);
-    onFiltersChange({
-      sizes: [],
-      colors: [],
-      minPrice: undefined,
-      maxPrice: undefined,
-      sortBy: undefined,
-    });
-  };
-
-  const activeFilterCount =
-    filters.sizes.length +
-    filters.colors.length +
-    (filters.minPrice !== undefined || filters.maxPrice !== undefined ? 1 : 0);
-
-  const FilterContent = () => (
+  localPriceRange,
+  onSizeToggle,
+  onColorToggle,
+  onPriceChange,
+  onPriceCommit,
+}: FilterContentProps) {
+  return (
     <div className="space-y-6">
       <Accordion type="multiple" defaultValue={["sizes", "colors", "price"]} className="w-full">
         {/* Sizes Filter */}
@@ -126,7 +86,7 @@ export function ProductFilters({
                   <Checkbox
                     id={`size-${size}`}
                     checked={filters.sizes.includes(size)}
-                    onCheckedChange={() => handleSizeToggle(size)}
+                    onCheckedChange={() => onSizeToggle(size)}
                   />
                   <Label
                     htmlFor={`size-${size}`}
@@ -152,7 +112,7 @@ export function ProductFilters({
                   <Checkbox
                     id={`color-${color}`}
                     checked={filters.colors.includes(color)}
-                    onCheckedChange={() => handleColorToggle(color)}
+                    onCheckedChange={() => onColorToggle(color)}
                   />
                   <Label
                     htmlFor={`color-${color}`}
@@ -182,8 +142,8 @@ export function ProductFilters({
                 min={filterOptions.priceRange.min}
                 max={filterOptions.priceRange.max}
                 step={100}
-                onValueChange={handlePriceChange}
-                onValueCommit={handlePriceCommit}
+                onValueChange={onPriceChange}
+                onValueCommit={onPriceCommit}
                 className="mb-4"
               />
               <div className="flex justify-between text-sm text-muted-foreground">
@@ -196,18 +156,86 @@ export function ProductFilters({
       </Accordion>
     </div>
   );
+});
+
+export function ProductFilters({
+  filterOptions,
+  filters,
+  onFiltersChange,
+  productCount,
+}: ProductFiltersProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [localPriceRange, setLocalPriceRange] = useState<[number, number]>([
+    filters.minPrice ?? filterOptions?.priceRange.min ?? 0,
+    filters.maxPrice ?? filterOptions?.priceRange.max ?? 10000,
+  ]);
+
+  // Memoized handlers to prevent unnecessary re-renders of FilterContent
+  const handleSizeToggle = useCallback((size: string) => {
+    const newSizes = filters.sizes.includes(size)
+      ? filters.sizes.filter((s) => s !== size)
+      : [...filters.sizes, size];
+    onFiltersChange({ ...filters, sizes: newSizes });
+  }, [filters, onFiltersChange]);
+
+  const handleColorToggle = useCallback((color: string) => {
+    const newColors = filters.colors.includes(color)
+      ? filters.colors.filter((c) => c !== color)
+      : [...filters.colors, color];
+    onFiltersChange({ ...filters, colors: newColors });
+  }, [filters, onFiltersChange]);
+
+  const handlePriceChange = useCallback((value: number[]) => {
+    setLocalPriceRange([value[0], value[1]]);
+  }, []);
+
+  const handlePriceCommit = useCallback(() => {
+    onFiltersChange({
+      ...filters,
+      minPrice: localPriceRange[0],
+      maxPrice: localPriceRange[1],
+    });
+  }, [filters, localPriceRange, onFiltersChange]);
+
+  const handleSortChange = useCallback((value: string) => {
+    onFiltersChange({
+      ...filters,
+      sortBy: value as FilterState["sortBy"],
+    });
+  }, [filters, onFiltersChange]);
+
+  const clearAllFilters = useCallback(() => {
+    if (!filterOptions) return;
+    setLocalPriceRange([filterOptions.priceRange.min, filterOptions.priceRange.max]);
+    onFiltersChange({
+      sizes: [],
+      colors: [],
+      minPrice: undefined,
+      maxPrice: undefined,
+      sortBy: undefined,
+    });
+  }, [filterOptions, onFiltersChange]);
+
+  if (!filterOptions) {
+    return null;
+  }
+
+  const activeFilterCount =
+    filters.sizes.length +
+    filters.colors.length +
+    (filters.minPrice !== undefined || filters.maxPrice !== undefined ? 1 : 0);
 
   return (
     <div className="flex items-center justify-between gap-4 mb-6">
-      {/* Desktop Filters */}
-      <div className="hidden lg:flex items-center gap-4">
+      {/* Filter Button and Sheet - Single instance for all screen sizes */}
+      <div className="flex items-center gap-4">
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
             <Button variant="outline" size="sm" className="gap-2">
               <SlidersHorizontal className="h-4 w-4" />
-              Filters
+              <span className="hidden sm:inline">Filters</span>
               {activeFilterCount > 0 && (
-                <span className="ml-1 bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs">
+                <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs">
                   {activeFilterCount}
                 </span>
               )}
@@ -229,8 +257,16 @@ export function ProductFilters({
                 )}
               </SheetTitle>
             </SheetHeader>
-            <div className="mt-6">
-              <FilterContent />
+            <div className="mt-6 overflow-y-auto max-h-[calc(100vh-200px)]">
+              <FilterContent
+                filterOptions={filterOptions}
+                filters={filters}
+                localPriceRange={localPriceRange}
+                onSizeToggle={handleSizeToggle}
+                onColorToggle={handleColorToggle}
+                onPriceChange={handlePriceChange}
+                onPriceCommit={handlePriceCommit}
+              />
             </div>
             <SheetFooter className="mt-6">
               <Button onClick={() => setIsOpen(false)} className="w-full">
@@ -240,9 +276,9 @@ export function ProductFilters({
           </SheetContent>
         </Sheet>
 
-        {/* Active filter tags */}
+        {/* Active filter tags - Desktop only */}
         {activeFilterCount > 0 && (
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="hidden lg:flex items-center gap-2 flex-wrap">
             {filters.sizes.map((size) => (
               <Button
                 key={size}
@@ -284,49 +320,12 @@ export function ProductFilters({
         )}
       </div>
 
-      {/* Mobile Filters */}
-      <div className="lg:hidden">
-        <Sheet open={isOpen} onOpenChange={setIsOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
-              <SlidersHorizontal className="h-4 w-4" />
-              {activeFilterCount > 0 ? `Filters (${activeFilterCount})` : "Filters"}
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="bottom" className="h-[80vh]">
-            <SheetHeader>
-              <SheetTitle className="flex items-center justify-between">
-                Filters
-                {activeFilterCount > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearAllFilters}
-                    className="text-sm text-muted-foreground"
-                  >
-                    Clear all
-                  </Button>
-                )}
-              </SheetTitle>
-            </SheetHeader>
-            <div className="mt-6 overflow-y-auto max-h-[calc(80vh-150px)]">
-              <FilterContent />
-            </div>
-            <SheetFooter className="mt-6">
-              <Button onClick={() => setIsOpen(false)} className="w-full">
-                Show {productCount ?? 0} Products
-              </Button>
-            </SheetFooter>
-          </SheetContent>
-        </Sheet>
-      </div>
-
       {/* Sort Dropdown */}
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground hidden sm:inline">Sort by:</span>
         <Select value={filters.sortBy || ""} onValueChange={handleSortChange}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Featured" />
+          <SelectTrigger className="w-[140px] sm:w-[160px]">
+            <SelectValue placeholder="Sort" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="popularity">Featured</SelectItem>

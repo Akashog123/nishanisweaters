@@ -16,6 +16,13 @@ import {
 } from "lucide-react";
 import { MAX_FILE_SIZE_BYTES, ALLOWED_DOCUMENT_TYPES } from "@/lib/constants";
 
+/**
+ * Type guard to check if a content type is an allowed document type
+ */
+function isAllowedDocumentType(contentType: string): contentType is typeof ALLOWED_DOCUMENT_TYPES[number] {
+  return (ALLOWED_DOCUMENT_TYPES as readonly string[]).includes(contentType);
+}
+
 type DocumentType = "reseller_certificate" | "business_license" | "gst_certificate" | "other";
 
 interface UploadedDocument {
@@ -70,7 +77,7 @@ export function DocumentUpload({
     }
 
     // Check file type
-    if (!ALLOWED_DOCUMENT_TYPES.includes(file.type as any)) {
+    if (!isAllowedDocumentType(file.type)) {
       return {
         valid: false,
         error: "Only PDF, JPEG, and PNG files are allowed",
