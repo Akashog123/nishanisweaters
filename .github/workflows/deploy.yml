@@ -61,23 +61,47 @@ jobs:
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
 
+  deploy-verification:
+    name: Verify Deployment
+    runs-on: ubuntu-latest
+    needs: [deploy-convex]
+    if: needs.deploy-convex.result == 'success'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Health check
+        run: |
+          for i in {1..5}; do
+            if curl -sf "${{ secrets.PRODUCTION_URL || 'https://blockhaus-clone.vercel.app' }}" > /dev/null; then
+              echo "Health check passed on attempt $i"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying..."
+            sleep 10
+          done
+          echo "Health check failed after 5 attempts"
+          exit 1
+
   # Vercel deployment is handled automatically via Vercel's Git integration
   # This job just notifies about the deployment status
   notify:
     name: Deployment Notification
     runs-on: ubuntu-latest
-    needs: [test, deploy-convex]
+    needs: [test, deploy-convex, deploy-verification]
     if: always()
 
     steps:
       - name: Check deployment status
         run: |
-          if [ "${{ needs.test.result }}" == "success" ] && [ "${{ needs.deploy-convex.result }}" == "success" ]; then
-            echo "✅ All deployments succeeded!"
+          if [ "${{ needs.test.result }}" == "success" ] && [ "${{ needs.deploy-convex.result }}" == "success" ] && [ "${{ needs.deploy-verification.result }}" == "success" ]; then
+            echo "All deployments and verifications succeeded!"
             exit 0
           else
-            echo "❌ Some deployments failed"
+            echo "Some deployments or verifications failed"
             echo "Tests: ${{ needs.test.result }}"
             echo "Convex: ${{ needs.deploy-convex.result }}"
+            echo "Verification: ${{ needs.deploy-verification.result }}"
             exit 1
           fi

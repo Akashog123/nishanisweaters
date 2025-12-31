@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json.schemastore.org/web-performance-budget.json",
+  "description": "Performance budget for Nishani Woolera e-commerce application",
+  "budgets": [
+    {
+      "resourceType": "script",
+      "budget": 1000,
+      "description": "Total JavaScript bundle size limit (KB)"
+    },
+    {
+      "resourceType": "stylesheet",
+      "budget": 200,
+      "description": "Total CSS bundle size limit (KB)"
+    },
+    {
+      "resourceType": "image",
+      "budget": 500,
+      "description": "Total image size limit (KB)"
+    },
+    {
+      "resourceType": "font",
+      "budget": 200,
+      "description": "Total font file size limit (KB)"
+    },
+    {
+      "resourceType": "total",
+      "budget": 2000,
+      "description": "Total transfer size limit (KB) - all resources"
+    },
+    {
+      "resourceType": "document",
+      "budget": 100,
+      "description": "HTML document size limit (KB)"
+    }
+  ],
+  "chunks": {
+    "vendor-react": {
+      "budget": 200,
+      "description": "React ecosystem (React + ReactDOM + Router)"
+    },
+    "vendor-radix": {
+      "budget": 150,
+      "description": "Radix UI component library"
+    },
+    "vendor-clerk": {
+      "budget": 180,
+      "description": "Clerk authentication SDK"
+    },
+    "vendor-convex": {
+      "budget": 120,
+      "description": "Convex backend client"
+    },
+    "vendor-charts": {
+      "budget": 250,
+      "description": "Recharts + D3 (admin dashboard only)"
+    },
+    "vendor-forms": {
+      "budget": 100,
+      "description": "React Hook Form + Zod validation"
+    },
+    "vendor-sentry": {
+      "budget": 80,
+      "description": "Sentry error tracking SDK"
+    },
+    "vendor-icons": {
+      "budget": 60,
+      "description": "Lucide React icon library"
+    },
+    "vendor-date": {
+      "budget": 40,
+      "description": "date-fns utilities"
+    },
+    "vendor-query": {
+      "budget": 80,
+      "description": "TanStack React Query"
+    },
+    "vendor-utils": {
+      "budget": 30,
+      "description": "Utility libraries (CVA, clsx, tailwind-merge)"
+    },
+    "index": {
+      "budget": 300,
+      "description": "Main application code bundle"
+    }
+  },
+  "metrics": {
+    "largestContentfulPaint": {
+      "budget": 2500,
+      "unit": "ms",
+      "description": "LCP - Time until largest content element is visible"
+    },
+    "firstContentfulPaint": {
+      "budget": 1800,
+      "unit": "ms",
+      "description": "FCP - Time until first content is rendered"
+    },
+    "cumulativeLayoutShift": {
+      "budget": 0.1,
+      "unit": "score",
+      "description": "CLS - Visual stability score"
+    },
+    "totalBlockingTime": {
+      "budget": 300,
+      "unit": "ms",
+      "description": "TBT - Time main thread is blocked"
+    },
+    "speedIndex": {
+      "budget": 3400,
+      "unit": "ms",
+      "description": "Speed Index - How quickly content is visually displayed"
+    },
+    "timeToInteractive": {
+      "budget": 3800,
+      "unit": "ms",
+      "description": "TTI - Time until page is fully interactive"
+    },
+    "firstInputDelay": {
+      "budget": 100,
+      "unit": "ms",
+      "description": "FID - Responsiveness to first user interaction"
+    }
+  },
+  "thresholds": {
+    "performance": {
+      "min": 80,
+      "description": "Minimum Lighthouse performance score"
+    },
+    "accessibility": {
+      "min": 90,
+      "description": "Minimum accessibility score"
+    },
+    "bestPractices": {
+      "min": 90,
+      "description": "Minimum best practices score"
+    },
+    "seo": {
+      "min": 90,
+      "description": "Minimum SEO score"
+    }
+  },
+  "recommendations": {
+    "codeOptimization": [
+      "Use code splitting for route-based chunks",
+      "Implement dynamic imports for heavy components (e.g., admin charts)",
+      "Tree-shake unused code with proper ESM imports",
+      "Minify JavaScript and CSS in production",
+      "Remove console.log statements in production builds"
+    ],
+    "assetOptimization": [
+      "Use WebP or AVIF format for images",
+      "Implement lazy loading for below-the-fold images",
+      "Serve responsive images with srcset",
+      "Use font-display: swap for web fonts",
+      "Subset font files to include only used characters",
+      "Compress images with tools like Squoosh or ImageOptim"
+    ],
+    "networkOptimization": [
+      "Enable HTTP/2 or HTTP/3 on CDN (Vercel provides this)",
+      "Use compression (gzip/brotli) for text assets",
+      "Implement cache-control headers for static assets",
+      "Preload critical resources (fonts, hero images)",
+      "Use resource hints (dns-prefetch, preconnect)"
+    ],
+    "renderingOptimization": [
+      "Minimize layout shifts with proper size attributes",
+      "Use CSS containment for isolated components",
+      "Optimize React rendering with memo and useMemo",
+      "Defer non-critical JavaScript",
+      "Inline critical CSS for above-the-fold content"
+    ]
+  },
+  "monitoring": {
+    "tools": [
+      "Lighthouse CI (automated regression testing)",
+      "Web Vitals library (field data collection)",
+      "Vercel Analytics (production monitoring)",
+      "Bundle analyzer (chunk size visualization)"
+    ],
+    "frequency": {
+      "ci": "Every pull request and merge to main",
+      "production": "Continuous monitoring with Web Vitals",
+      "analysis": "Weekly bundle size trend analysis"
+    }
+  },
+  "enforcement": {
+    "ci": {
+      "failOnBudgetExceeded": true,
+      "warnThreshold": 0.9,
+      "description": "Fail CI build if bundle exceeds 100% of budget, warn at 90%"
+    },
+    "deployment": {
+      "blockDeployment": false,
+      "notifyTeam": true,
+      "description": "Don't block deployment, but notify team of budget violations"
+    }
+  }
+}

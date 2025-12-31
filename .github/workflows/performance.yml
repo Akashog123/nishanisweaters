@@ -1,0 +1,573 @@
+name: Performance Testing
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main]
+  schedule:
+    # Run performance tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Type of performance test to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - lighthouse
+          - bundle-size
+          - load-test
+      load_test_scenario:
+        description: 'Load test scenario (if load-test selected)'
+        required: false
+        default: 'smoke'
+        type: choice
+        options:
+          - smoke
+          - normal
+          - peak
+          - stress
+      load_test_suite:
+        description: 'Load test suite to run'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - homepage
+          - products
+          - cart
+          - checkout
+          - user-journey
+
+env:
+  K6_VERSION: '0.48.0'
+
+jobs:
+  lighthouse-ci:
+    name: Lighthouse CI
+    runs-on: ubuntu-latest
+    if: inputs.test_type == 'all' || inputs.test_type == 'lighthouse' || inputs.test_type == ''
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for better comparison
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli@0.13.x
+
+      - name: Run Lighthouse CI
+        run: lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: Upload Lighthouse results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-results
+          path: .lighthouseci/
+          retention-days: 30
+
+      - name: Comment PR with Lighthouse results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // Find the latest manifest file
+            const lhciDir = '.lighthouseci';
+            const manifestPath = path.join(lhciDir, 'manifest.json');
+
+            if (!fs.existsSync(manifestPath)) {
+              console.log('No Lighthouse results found');
+              return;
+            }
+
+            const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+            const reports = manifest.map(entry => {
+              const reportPath = path.join(lhciDir, entry.jsonPath);
+              return JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+            });
+
+            // Generate summary
+            let comment = '## 🚦 Lighthouse CI Results\n\n';
+
+            reports.forEach((report, index) => {
+              const url = report.finalUrl || report.requestedUrl;
+              const scores = report.categories;
+
+              comment += `### ${url}\n\n`;
+              comment += '| Category | Score |\n';
+              comment += '|----------|-------|\n';
+
+              Object.entries(scores).forEach(([key, category]) => {
+                const score = Math.round(category.score * 100);
+                const emoji = score >= 90 ? '🟢' : score >= 50 ? '🟡' : '🔴';
+                comment += `| ${emoji} ${category.title} | ${score}/100 |\n`;
+              });
+
+              comment += '\n';
+
+              // Core Web Vitals
+              const lcp = report.audits['largest-contentful-paint'].displayValue;
+              const fcp = report.audits['first-contentful-paint'].displayValue;
+              const cls = report.audits['cumulative-layout-shift'].displayValue;
+              const tbt = report.audits['total-blocking-time'].displayValue;
+
+              comment += '**Core Web Vitals:**\n';
+              comment += `- LCP: ${lcp}\n`;
+              comment += `- FCP: ${fcp}\n`;
+              comment += `- CLS: ${cls}\n`;
+              comment += `- TBT: ${tbt}\n\n`;
+            });
+
+            comment += '\n---\n';
+            comment += '*View detailed reports in the Lighthouse CI artifacts*\n';
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  bundle-size:
+    name: Bundle Size Check
+    runs-on: ubuntu-latest
+    if: inputs.test_type == 'all' || inputs.test_type == 'bundle-size' || inputs.test_type == ''
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Check bundle sizes
+        run: node scripts/check-bundle-size.js
+
+      - name: Upload bundle size report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-size-report
+          path: bundle-size-report.json
+          retention-days: 30
+
+      - name: Comment PR with bundle size
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            if (!fs.existsSync('bundle-size-report.json')) {
+              console.log('No bundle size report found');
+              return;
+            }
+
+            const report = JSON.parse(fs.readFileSync('bundle-size-report.json', 'utf8'));
+
+            let comment = '## 📦 Bundle Size Report\n\n';
+            comment += '### Summary\n\n';
+            comment += `- **Total Size:** ${(report.summary.totalSize / 1024).toFixed(2)} KB\n`;
+            comment += `- **JavaScript:** ${report.summary.javascript.toFixed(2)} KB\n`;
+            comment += `- **CSS:** ${report.summary.css.toFixed(2)} KB\n`;
+            comment += `- **Images:** ${report.summary.images.toFixed(2)} KB\n`;
+            comment += `- **Fonts:** ${report.summary.fonts.toFixed(2)} KB\n\n`;
+
+            // Bundle breakdown
+            comment += '### JavaScript Bundles\n\n';
+            comment += '| Bundle | Size | Limit | Status |\n';
+            comment += '|--------|------|-------|--------|\n';
+
+            report.bundles.js.forEach(bundle => {
+              const chunkName = Object.keys(report.limits.chunks).find(key => bundle.name.includes(key)) || 'other';
+              const limit = report.limits.chunks[chunkName] || 'N/A';
+              const status = limit !== 'N/A' && bundle.size > limit ? '❌' : '✅';
+              comment += `| ${bundle.name} | ${bundle.size.toFixed(2)} KB | ${limit} KB | ${status} |\n`;
+            });
+
+            comment += '\n';
+
+            // Issues
+            if (report.issues.errors.length > 0) {
+              comment += '### ❌ Errors\n\n';
+              report.issues.errors.forEach(error => {
+                comment += `- **${error.type}:** ${error.current.toFixed(2)} KB / ${error.limit} KB (+${error.diff.toFixed(2)} KB)\n`;
+              });
+              comment += '\n';
+            }
+
+            if (report.issues.warnings.length > 0) {
+              comment += '### ⚠️ Warnings\n\n';
+              report.issues.warnings.forEach(warning => {
+                comment += `- **${warning.type}:** ${warning.current.toFixed(2)} KB / ${warning.limit} KB\n`;
+              });
+              comment += '\n';
+            }
+
+            if (report.passed) {
+              comment += '✅ **All bundle sizes are within limits!**\n';
+            } else {
+              comment += '❌ **Some bundles exceed size limits. Please optimize before merging.**\n';
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  playwright-performance:
+    name: Playwright Performance Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run performance tests
+        run: npx playwright test e2e/performance.spec.ts --project=chromium
+        env:
+          CI: true
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-performance-report
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Generate performance summary
+        if: always()
+        run: |
+          echo "## 📊 Playwright Performance Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f "playwright-report/index.html" ]; then
+            echo "✅ Performance tests completed" >> $GITHUB_STEP_SUMMARY
+            echo "View detailed results in the Playwright report artifact" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Performance tests failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  compare-performance:
+    name: Compare Performance (PR only)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: [lighthouse-ci, bundle-size, playwright-performance]
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download current bundle size
+        uses: actions/download-artifact@v4
+        with:
+          name: bundle-size-report
+          path: ./current
+
+      - name: Download baseline bundle size
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: bundle-size-report
+          path: ./baseline
+
+      - name: Compare bundle sizes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            const currentPath = './current/bundle-size-report.json';
+            const baselinePath = './baseline/bundle-size-report.json';
+
+            if (!fs.existsSync(currentPath)) {
+              console.log('No current bundle size report found');
+              return;
+            }
+
+            const current = JSON.parse(fs.readFileSync(currentPath, 'utf8'));
+
+            let comment = '## 📊 Performance Comparison\n\n';
+
+            if (fs.existsSync(baselinePath)) {
+              const baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
+
+              const jsDiff = current.summary.javascript - baseline.summary.javascript;
+              const cssDiff = current.summary.css - baseline.summary.css;
+              const totalDiff = current.summary.totalSize - baseline.summary.totalSize;
+
+              comment += '### Bundle Size Changes\n\n';
+              comment += '| Resource | Current | Baseline | Change |\n';
+              comment += '|----------|---------|----------|--------|\n';
+              comment += `| JavaScript | ${current.summary.javascript.toFixed(2)} KB | ${baseline.summary.javascript.toFixed(2)} KB | ${jsDiff >= 0 ? '+' : ''}${jsDiff.toFixed(2)} KB |\n`;
+              comment += `| CSS | ${current.summary.css.toFixed(2)} KB | ${baseline.summary.css.toFixed(2)} KB | ${cssDiff >= 0 ? '+' : ''}${cssDiff.toFixed(2)} KB |\n`;
+              comment += `| **Total** | **${(current.summary.totalSize / 1024).toFixed(2)} KB** | **${(baseline.summary.totalSize / 1024).toFixed(2)} KB** | **${totalDiff >= 0 ? '+' : ''}${(totalDiff / 1024).toFixed(2)} KB** |\n\n`;
+
+              if (totalDiff > 50 * 1024) { // 50KB increase
+                comment += '⚠️ **Warning:** Total bundle size increased by more than 50KB\n\n';
+              } else if (totalDiff < 0) {
+                comment += '🎉 **Great job!** Bundle size decreased\n\n';
+              }
+            } else {
+              comment += '📋 **No baseline found for comparison**\n\n';
+              comment += 'This is likely the first performance test run for this PR.\n\n';
+            }
+
+            comment += '---\n';
+            comment += '*View detailed reports in the workflow artifacts*\n';
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  # k6 Load Testing
+  k6-load-test:
+    name: k6 Load Tests
+    runs-on: ubuntu-latest
+    if: inputs.test_type == 'all' || inputs.test_type == 'load-test' || github.event_name == 'schedule'
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6=${{ env.K6_VERSION }}
+
+      - name: Create results directory
+        run: mkdir -p tests/load/results
+
+      - name: Set environment variables
+        run: |
+          echo "STAGING_FRONTEND_URL=${{ secrets.STAGING_FRONTEND_URL }}" >> $GITHUB_ENV
+          echo "STAGING_CONVEX_API=${{ secrets.STAGING_CONVEX_API }}" >> $GITHUB_ENV
+          echo "STAGING_CONVEX_URL=${{ secrets.STAGING_CONVEX_URL }}" >> $GITHUB_ENV
+          echo "TEST_ENV=staging" >> $GITHUB_ENV
+
+          # Set scenario based on input or default to smoke
+          SCENARIO="${{ inputs.load_test_scenario }}"
+          if [ -z "$SCENARIO" ]; then
+            SCENARIO="smoke"
+          fi
+          echo "LOAD_TEST_SCENARIO=$SCENARIO" >> $GITHUB_ENV
+
+      # Run smoke tests for PR validation
+      - name: Run Smoke Tests (PR validation)
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "Running smoke tests for PR validation..."
+
+          # Homepage smoke test
+          k6 run tests/load/scripts/homepage.js \
+            --env TEST_ENV=staging \
+            --vus 3 \
+            --duration 30s \
+            --out json=tests/load/results/smoke-homepage.json \
+            --quiet || true
+
+          # Cart smoke test
+          k6 run tests/load/scripts/cart.js \
+            --env TEST_ENV=staging \
+            --vus 3 \
+            --duration 30s \
+            --out json=tests/load/results/smoke-cart.json \
+            --quiet || true
+
+      # Run full load tests (manual or scheduled)
+      - name: Run Homepage Load Test
+        if: github.event_name != 'pull_request' && (inputs.load_test_suite == 'all' || inputs.load_test_suite == 'homepage' || inputs.load_test_suite == '')
+        run: |
+          k6 run tests/load/scripts/homepage.js \
+            --env TEST_ENV=staging \
+            --out json=tests/load/results/homepage.json \
+            -e SCENARIO=${{ env.LOAD_TEST_SCENARIO }}
+
+      - name: Run Products Load Test
+        if: github.event_name != 'pull_request' && (inputs.load_test_suite == 'all' || inputs.load_test_suite == 'products')
+        run: |
+          k6 run tests/load/scripts/products.js \
+            --env TEST_ENV=staging \
+            --out json=tests/load/results/products.json \
+            -e SCENARIO=${{ env.LOAD_TEST_SCENARIO }}
+
+      - name: Run Cart Load Test
+        if: github.event_name != 'pull_request' && (inputs.load_test_suite == 'all' || inputs.load_test_suite == 'cart')
+        run: |
+          k6 run tests/load/scripts/cart.js \
+            --env TEST_ENV=staging \
+            --out json=tests/load/results/cart.json \
+            -e SCENARIO=${{ env.LOAD_TEST_SCENARIO }}
+
+      - name: Run Checkout Load Test
+        if: github.event_name != 'pull_request' && (inputs.load_test_suite == 'all' || inputs.load_test_suite == 'checkout')
+        run: |
+          k6 run tests/load/scripts/checkout.js \
+            --env TEST_ENV=staging \
+            --out json=tests/load/results/checkout.json \
+            -e SCENARIO=${{ env.LOAD_TEST_SCENARIO }}
+
+      - name: Run User Journey Test
+        if: github.event_name != 'pull_request' && (inputs.load_test_suite == 'all' || inputs.load_test_suite == 'user-journey')
+        run: |
+          k6 run tests/load/scripts/user-journey.js \
+            --env TEST_ENV=staging \
+            --out json=tests/load/results/user-journey.json \
+            -e SCENARIO=${{ env.LOAD_TEST_SCENARIO }}
+
+      - name: Generate Load Test Summary
+        if: always()
+        run: |
+          echo "## k6 Load Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Scenario:** ${{ env.LOAD_TEST_SCENARIO }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Run Date:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # List all result files
+          echo "### Test Results" >> $GITHUB_STEP_SUMMARY
+          for file in tests/load/results/*.json; do
+            if [ -f "$file" ]; then
+              name=$(basename "$file" .json)
+              size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null)
+              echo "- **$name**: $size bytes" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+      - name: Upload Load Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-load-test-results-${{ github.run_number }}
+          path: tests/load/results/
+          retention-days: 30
+
+      - name: Comment PR with Load Test Results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            let comment = '## k6 Load Test Results\n\n';
+            comment += '**Status:** Smoke tests completed\n';
+            comment += '**Environment:** staging\n\n';
+
+            // Check for any failed tests
+            let hasResults = false;
+            const resultDir = 'tests/load/results';
+
+            if (fs.existsSync(resultDir)) {
+              const files = fs.readdirSync(resultDir);
+              for (const file of files) {
+                if (file.endsWith('.json')) {
+                  hasResults = true;
+                  const name = file.replace('.json', '');
+                  comment += `- ${name}: Completed\n`;
+                }
+              }
+            }
+
+            if (!hasResults) {
+              comment += '_No load test results available._\n';
+            }
+
+            comment += '\n---\n';
+            comment += `[View full results](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})\n`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  # Store baseline for future comparisons
+  store-baseline:
+    name: Store Performance Baseline
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [lighthouse-ci, bundle-size, k6-load-test]
+    timeout-minutes: 5
+
+    steps:
+      - name: Download bundle size report
+        uses: actions/download-artifact@v4
+        with:
+          name: bundle-size-report
+          path: ./reports
+
+      - name: Download Lighthouse results
+        uses: actions/download-artifact@v4
+        with:
+          name: lighthouse-results
+          path: ./reports
+
+      - name: Upload baseline artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-baseline-${{ github.sha }}
+          path: ./reports
+          retention-days: 90
