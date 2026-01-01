@@ -1,10 +1,30 @@
 import { query, mutation, internalMutation, internalQuery, action } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAuth, requireAdmin, requireOwnershipOrAdmin, requireCurrentUser } from "./lib/auth";
-import { ConvexError } from "convex/values";
 import { MutationCtx, QueryCtx } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { internal, api } from "./_generated/api";
+
+// Shared types and validators
+import {
+  orderStatusValidator,
+  paymentStatusValidator,
+  disputeStatusValidator,
+  addressValidator,
+  paymentMethodValidator,
+  orderItemInputValidator,
+  type OrderStatus,
+  type PaymentStatus,
+  type DisputeStatus,
+} from "./lib/types";
+
+// Error factory
+import {
+  orderNotFound,
+  invalidStatusTransition,
+  validationError,
+  forbidden,
+} from "./lib/errors";
 import {
   getTaxRate,
   getShippingConfig,
@@ -43,34 +63,10 @@ function isValidStatusTransition(fromStatus: string, toStatus: string): boolean 
 // SECURITY: Uses server-side identity verification and atomic inventory operations
 export const createOrder = mutation({
   args: {
-    items: v.array(v.object({
-      productId: v.id("products"),
-      variantSku: v.string(),
-      quantity: v.number(),
-    })),
-    shippingAddress: v.object({
-      name: v.string(),
-      phone: v.string(),
-      street: v.string(),
-      city: v.string(),
-      state: v.string(),
-      postalCode: v.string(),
-      country: v.string(),
-    }),
-    billingAddress: v.optional(v.object({
-      name: v.string(),
-      phone: v.string(),
-      street: v.string(),
-      city: v.string(),
-      state: v.string(),
-      postalCode: v.string(),
-      country: v.string(),
-    })),
-    paymentMethod: v.union(
-      v.literal("razorpay"),
-      v.literal("invoice"),
-      v.literal("bank_transfer")
-    ),
+    items: v.array(orderItemInputValidator),
+    shippingAddress: addressValidator,
+    billingAddress: v.optional(addressValidator),
+    paymentMethod: paymentMethodValidator,
     customerNotes: v.optional(v.string()),
     promoCode: v.optional(v.string()),
   },
@@ -80,10 +76,9 @@ export const createOrder = mutation({
     const userId = user.clerkId;
     const userEmail = user.email;
 
-    // Determine order type from database user (not client-provided)
-    const orderType = user.role === "wholesale" && user.wholesaleStatus === "approved"
-      ? "wholesale" as const
-      : "retail" as const;
+    // Order type is always retail for online orders
+    // Bulk pricing is applied at the product/cart level, not order level
+    const orderType = "retail" as const;
 
     // Validate shipping address phone and postal code using centralized validators
     // This avoids magic numbers and ensures consistent validation across the app
@@ -175,32 +170,20 @@ export const updateRazorpayOrderId = internalMutation({
 export const updatePaymentStatus = internalMutation({
   args: {
     orderId: v.id("orders"),
-    paymentStatus: v.union(
-      v.literal("pending"),
-      v.literal("paid"),
-      v.literal("failed"),
-      v.literal("refunded"),
-      v.literal("partially_refunded"),
-      v.literal("disputed"),
-      v.literal("refund_pending"),
-      v.literal("refund_failed")
-    ),
+    paymentStatus: paymentStatusValidator,
     razorpayPaymentId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const order = await ctx.db.get(args.orderId);
     if (!order) {
-      throw new ConvexError({
-        code: "ORDER_NOT_FOUND",
-        message: "Order not found",
-      });
+      throw orderNotFound();
     }
 
     const updates: {
-      paymentStatus: "pending" | "paid" | "failed" | "refunded" | "partially_refunded" | "disputed" | "refund_pending" | "refund_failed";
+      paymentStatus: PaymentStatus;
       updatedAt: number;
       razorpayPaymentId?: string;
-      orderStatus?: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded";
+      orderStatus?: OrderStatus;
     } = {
       paymentStatus: args.paymentStatus,
       updatedAt: Date.now(),
@@ -293,6 +276,7 @@ export const getOrderRazorpayStatus = internalQuery({
       razorpayOrderId: order.razorpayOrderId,
       paymentStatus: order.paymentStatus,
       orderStatus: order.orderStatus,
+      total: order.total, // Include total for server-side amount calculation
     };
   },
 });
@@ -303,29 +287,19 @@ export const getOrderRazorpayStatus = internalQuery({
 export const updateDisputeStatus = internalMutation({
   args: {
     orderId: v.id("orders"),
-    disputeStatus: v.union(
-      v.literal("created"),
-      v.literal("under_review"),
-      v.literal("action_required"),
-      v.literal("won"),
-      v.literal("lost"),
-      v.literal("closed")
-    ),
+    disputeStatus: disputeStatusValidator,
     disputeId: v.optional(v.string()),
     disputeReason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const order = await ctx.db.get(args.orderId);
     if (!order) {
-      throw new ConvexError({
-        code: "ORDER_NOT_FOUND",
-        message: "Order not found",
-      });
+      throw orderNotFound();
     }
 
     const now = Date.now();
     const updates: {
-      disputeStatus: "created" | "under_review" | "action_required" | "won" | "lost" | "closed";
+      disputeStatus: DisputeStatus;
       disputeId?: string;
       disputeReason?: string;
       disputeCreatedAt?: number;
@@ -429,10 +403,7 @@ export const getOrder = query({
     const order = await ctx.db.get(args.orderId);
 
     if (!order) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "Order not found",
-      });
+      throw orderNotFound();
     }
 
     // Verify ownership (admins can view any order)
@@ -452,10 +423,7 @@ export const getOrderByNumber = query({
       .first();
 
     if (!order) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "Order not found",
-      });
+      throw orderNotFound();
     }
 
     // Verify ownership (admins can view any order)
@@ -469,14 +437,7 @@ export const getOrderByNumber = query({
 // Optimized: Uses indexes for status filtering and cursor-based pagination
 export const listAllOrders = query({
   args: {
-    orderStatus: v.optional(v.union(
-      v.literal("pending"),
-      v.literal("confirmed"),
-      v.literal("processing"),
-      v.literal("shipped"),
-      v.literal("delivered"),
-      v.literal("cancelled")
-    )),
+    orderStatus: v.optional(orderStatusValidator),
     orderType: v.optional(v.string()),
     limit: v.optional(v.number()),
     cursor: v.optional(v.string()),
@@ -529,14 +490,7 @@ export const listAllOrders = query({
 export const updateOrderStatus = mutation({
   args: {
     orderId: v.id("orders"),
-    orderStatus: v.union(
-      v.literal("pending"),
-      v.literal("confirmed"),
-      v.literal("processing"),
-      v.literal("shipped"),
-      v.literal("delivered"),
-      v.literal("cancelled")
-    ),
+    orderStatus: orderStatusValidator,
     trackingNumber: v.optional(v.string()),
     shippingCarrier: v.optional(v.string()),
     adminNotes: v.optional(v.string()),
@@ -547,23 +501,21 @@ export const updateOrderStatus = mutation({
 
     const order = await ctx.db.get(args.orderId);
     if (!order) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "Order not found",
-      });
+      throw orderNotFound();
     }
 
     // Validate status transition
     if (!isValidStatusTransition(order.orderStatus, args.orderStatus)) {
-      throw new ConvexError({
-        code: "VALIDATION_ERROR",
-        message: `Invalid status transition from "${order.orderStatus}" to "${args.orderStatus}". Valid next states: ${VALID_STATUS_TRANSITIONS[order.orderStatus]?.join(", ") || "none"}`,
-      });
+      throw invalidStatusTransition(
+        order.orderStatus,
+        args.orderStatus,
+        VALID_STATUS_TRANSITIONS[order.orderStatus] || []
+      );
     }
 
     const now = Date.now();
     const updates: {
-      orderStatus: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled";
+      orderStatus: OrderStatus;
       updatedAt: number;
       trackingNumber?: string;
       shippingCarrier?: string;
@@ -620,10 +572,7 @@ export const cancelOrder = mutation({
   handler: async (ctx, args) => {
     const order = await ctx.db.get(args.orderId);
     if (!order) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "Order not found",
-      });
+      throw orderNotFound();
     }
 
     // SECURITY: Verify ownership or admin access
@@ -633,25 +582,20 @@ export const cancelOrder = mutation({
 
     // Validate cancellation is allowed
     if (order.orderStatus === "delivered") {
-      throw new ConvexError({
-        code: "VALIDATION_ERROR",
-        message: "Cannot cancel a delivered order. Please initiate a return instead.",
-      });
+      throw validationError(
+        "Cannot cancel a delivered order. Please initiate a return instead."
+      );
     }
 
     if (order.orderStatus === "cancelled") {
-      throw new ConvexError({
-        code: "VALIDATION_ERROR",
-        message: "This order has already been cancelled.",
-      });
+      throw validationError("This order has already been cancelled.");
     }
 
     // Only allow cancellation of shipped orders by admin
     if (order.orderStatus === "shipped" && !isAdmin) {
-      throw new ConvexError({
-        code: "FORBIDDEN",
-        message: "Cannot cancel a shipped order. Please contact customer support.",
-      });
+      throw forbidden(
+        "Cannot cancel a shipped order. Please contact customer support."
+      );
     }
 
     const now = Date.now();
@@ -687,10 +631,7 @@ export const getOrderStatusHistory = query({
   handler: async (ctx, args) => {
     const order = await ctx.db.get(args.orderId);
     if (!order) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "Order not found",
-      });
+      throw orderNotFound();
     }
 
     // SECURITY: Verify ownership or admin access
@@ -730,9 +671,8 @@ export const getOrderPreview = query({
       }
     })();
 
-    const orderType = user?.role === "wholesale" && user?.wholesaleStatus === "approved"
-      ? "wholesale"
-      : "retail";
+    // Order type is always retail - bulk pricing is handled at product level
+    const orderType = "retail";
 
     const previewItems = [];
     const errors: string[] = [];
@@ -768,15 +708,7 @@ export const getOrderPreview = query({
         errors.push(`${product.name}: Only ${variant.stockQuantity} available`);
       }
 
-      let unitPrice = product.retailPrice;
-      if (orderType === "wholesale" && product.wholesalePrice) {
-        unitPrice = product.wholesalePrice;
-
-        // Check minimum order quantity for wholesale
-        if (product.minOrderQuantity && item.quantity < product.minOrderQuantity) {
-          errors.push(`${product.name}: Wholesale requires minimum ${product.minOrderQuantity} units`);
-        }
-      }
+      const unitPrice = product.retailPrice;
 
       previewItems.push({
         productId: item.productId,
