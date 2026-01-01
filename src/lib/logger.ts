@@ -19,7 +19,6 @@
 
 import { captureError, captureMessage, addBreadcrumb, isSentryInitialized } from './sentry';
 
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 interface LogContext {
   [key: string]: unknown;

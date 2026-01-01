@@ -20,8 +20,7 @@ type ActionAuthContext = ActionCtx;
  */
 const ROLE_HIERARCHY = {
   customer: 0,
-  wholesale: 1,
-  admin: 2,
+  admin: 1,
 } as const;
 
 type UserRole = keyof typeof ROLE_HIERARCHY;
@@ -127,15 +126,6 @@ export async function requireAdmin(ctx: AuthContext) {
 }
 
 /**
- * Requires user to have wholesale or admin role
- *
- * @throws ConvexError if user is not wholesale or admin
- */
-export async function requireWholesale(ctx: AuthContext) {
-  return await requireRole(ctx, "wholesale");
-}
-
-/**
  * Verifies that the authenticated user owns a specific resource
  *
  * @param ctx - Convex context
@@ -168,7 +158,7 @@ export async function requireOwnershipOrAdmin(ctx: AuthContext, resourceUserId: 
 
   // Admins can access any resource
   if (user.role === "admin") {
-    return user;
+      return user as unknown as ActionUser;
   }
 
   // Non-admins must own the resource
@@ -176,28 +166,6 @@ export async function requireOwnershipOrAdmin(ctx: AuthContext, resourceUserId: 
     throw new ConvexError({
       code: "FORBIDDEN",
       message: "Access denied. You can only access your own resources.",
-    });
-  }
-
-  return user;
-}
-
-/**
- * Validates that a user has approved wholesale status
- *
- * @throws ConvexError if user's wholesale status is not approved
- */
-export async function requireApprovedWholesale(ctx: AuthContext) {
-  const user = await requireWholesale(ctx);
-
-  if (user.wholesaleStatus !== "approved") {
-    throw new ConvexError({
-      code: "FORBIDDEN",
-      message: "Wholesale account approval required. Your application status: " +
-               (user.wholesaleStatus || "not submitted"),
-      details: {
-        wholesaleStatus: user.wholesaleStatus,
-      },
     });
   }
 
@@ -221,18 +189,40 @@ export async function isAdmin(ctx: AuthContext): Promise<boolean> {
   return user?.role === "admin";
 }
 
-/**
- * Helper to check if current user is wholesale or admin without throwing
- */
-export async function isWholesaleOrAdmin(ctx: AuthContext): Promise<boolean> {
-  const user = await getCurrentUser(ctx);
-  return user?.role === "wholesale" || user?.role === "admin";
-}
-
 // ============================================
 // ACTION-SPECIFIC AUTH HELPERS
 // Actions have a different context type (ActionCtx) that doesn't have direct DB access
 // ============================================
+
+/**
+ * User type as returned from the users query
+ * This matches the schema definition for the users table
+ */
+export interface ActionUser {
+  _id: string;
+  _creationTime: number;
+  clerkId: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  role: "customer" | "admin";
+  shippingAddresses: Array<{
+    id: string;
+    name: string;
+    phone: string;
+    street: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+    isDefault: boolean;
+  }>;
+  emailNotifications: boolean;
+  smsNotifications: boolean;
+  createdAt: number;
+  lastLoginAt?: number;
+}
 
 /**
  * Gets the authenticated user's Clerk ID from the server-side identity in an action context
@@ -262,19 +252,21 @@ export async function requireAuthAction(ctx: ActionAuthContext) {
  * Requires user to have admin role in an action context
  * Note: This requires a database query via runQuery to check the user's role
  *
- * @throws ConvexError if user is not an admin
+ * The caller should use ctx.runQuery(api.users.getCurrentUser, {}) to get the user.
+ * This function validates the user exists and has admin role.
+ *
+ * @param user - The user object returned from api.users.getCurrentUser query
+ * @throws ConvexError if user is null or not an admin
  */
-export async function requireAdminAction(
-  ctx: ActionAuthContext,
-  runQuery: <T>(query: any, args: any) => Promise<T>
-) {
-  const { clerkId } = await requireAuthAction(ctx);
+export function requireAdminFromUser(user: ActionUser | null): ActionUser {
+  if (!user) {
+    throw new ConvexError({
+      code: "UNAUTHORIZED",
+      message: "Authentication required. Please sign in to continue.",
+    });
+  }
 
-  // We need to query the database to check the user's role
-  // The caller must provide a way to run queries
-  const user = await runQuery("users:getUserByClerkId" as any, { clerkId });
-
-  if (!user || (user as any).role !== "admin") {
+  if (user.role !== "admin") {
     throw new ConvexError({
       code: "FORBIDDEN",
       message: "Access denied. Admin role required.",

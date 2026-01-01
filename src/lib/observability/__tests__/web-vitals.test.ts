@@ -106,7 +106,7 @@ describe('Core Web Vitals Tests', () => {
     });
 
     it('should have valid threshold ranges', () => {
-      Object.entries(PERFORMANCE_THRESHOLDS).forEach(([metric, thresholds]) => {
+      Object.entries(PERFORMANCE_THRESHOLDS).forEach(([, thresholds]) => {
         expect(thresholds.good).toBeGreaterThan(0);
         expect(thresholds.needsImprovement).toBeGreaterThan(thresholds.good);
         expect(thresholds.unit).toBeTruthy();

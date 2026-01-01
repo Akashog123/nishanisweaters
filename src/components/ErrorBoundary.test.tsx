@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import ErrorBoundary from './ErrorBoundary'
 import * as errors from '@/lib/errors'
@@ -208,7 +208,7 @@ describe('ErrorBoundary', () => {
         return <div>Recovered</div>
       }
 
-      const { rerender } = render(
+      render(
         <ErrorBoundary>
           <ConditionalThrow />
         </ErrorBoundary>
@@ -437,7 +437,7 @@ describe('ErrorBoundary', () => {
     })
 
     it('should log each error separately', () => {
-      const { rerender } = render(
+      render(
         <ErrorBoundary>
           <ThrowError error={new Error('First error')} />
         </ErrorBoundary>
@@ -446,12 +446,11 @@ describe('ErrorBoundary', () => {
       expect(screen.getByText('Something went wrong')).toBeInTheDocument()
 
       // First error logged once
-      const firstCallCount = (errors.logError as any).mock.calls.length
 
       // Reset mocks and render new error boundary with different error
       vi.clearAllMocks()
 
-      const { rerender: rerender2 } = render(
+      render(
         <ErrorBoundary key="second">
           <ThrowError error={new Error('Second error')} />
         </ErrorBoundary>
@@ -615,7 +614,7 @@ describe('ErrorBoundary', () => {
       const user = userEvent.setup()
 
       // Start with an error
-      const { rerender } = render(
+      render(
         <ErrorBoundary>
           <ThrowError />
         </ErrorBoundary>

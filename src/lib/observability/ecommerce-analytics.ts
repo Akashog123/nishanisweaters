@@ -9,6 +9,7 @@
 
 import * as Sentry from '@sentry/react';
 import { logger } from '../logger';
+import { metrics } from './sentry-metrics-compat';
 
 /**
  * Checkout funnel step definitions
@@ -172,7 +173,7 @@ export function trackProductEvent(
 
   try {
     // Increment event counter
-    Sentry.metrics.increment(metricName, 1, {
+    metrics.increment(metricName, 1, {
       tags: {
         product_id: product.productId,
         category: product.category || 'uncategorized',
@@ -182,7 +183,7 @@ export function trackProductEvent(
 
     // Track product value for revenue attribution
     if (eventType === 'add_to_cart' || eventType === 'view') {
-      Sentry.metrics.distribution(`ecommerce.product.value.${eventType}`, product.price, {
+      metrics.distribution(`ecommerce.product.value.${eventType}`, product.price, {
         unit: 'none', // Currency value
         tags: {
           product_id: product.productId,
@@ -228,7 +229,7 @@ export function trackCheckoutStep(
     updateFunnelSession(stepInfo.name);
 
     // Increment step counter
-    Sentry.metrics.increment(`ecommerce.funnel.${stepInfo.name}`, 1, {
+    metrics.increment(`ecommerce.funnel.${stepInfo.name}`, 1, {
       tags: {
         step_order: stepInfo.order.toString(),
         ...getCommonTags(),
@@ -238,7 +239,7 @@ export function trackCheckoutStep(
     // Track drop-off rate
     const dropOffRate = calculateDropOffRate(step);
     if (dropOffRate > 0) {
-      Sentry.metrics.increment('ecommerce.funnel.drop_off', 1, {
+      metrics.increment('ecommerce.funnel.drop_off', 1, {
         tags: {
           from_step: stepInfo.name,
           step_order: stepInfo.order.toString(),
@@ -248,7 +249,7 @@ export function trackCheckoutStep(
 
     // Track cart value at this step
     if (cartData) {
-      Sentry.metrics.distribution(`ecommerce.funnel.cart_value.${stepInfo.name}`, cartData.totalValue, {
+      metrics.distribution(`ecommerce.funnel.cart_value.${stepInfo.name}`, cartData.totalValue, {
         unit: 'none',
         tags: {
           item_count: cartData.itemCount.toString(),
@@ -284,7 +285,7 @@ export function trackCheckoutStep(
  */
 export function trackPaymentInit(payment: PaymentData): void {
   try {
-    Sentry.metrics.increment('ecommerce.payment.initiated', 1, {
+    metrics.increment('ecommerce.payment.initiated', 1, {
       tags: {
         payment_method: payment.paymentMethod,
         gateway: payment.gateway || 'unknown',
@@ -292,7 +293,7 @@ export function trackPaymentInit(payment: PaymentData): void {
       },
     });
 
-    Sentry.metrics.distribution('ecommerce.payment.amount.initiated', payment.amount, {
+    metrics.distribution('ecommerce.payment.amount.initiated', payment.amount, {
       unit: 'none',
       tags: {
         currency: payment.currency,
@@ -342,7 +343,7 @@ export function trackPaymentInit(payment: PaymentData): void {
  */
 export function trackPaymentSuccess(payment: PaymentData, transactionId?: string): void {
   try {
-    Sentry.metrics.increment('ecommerce.payment.success', 1, {
+    metrics.increment('ecommerce.payment.success', 1, {
       tags: {
         payment_method: payment.paymentMethod,
         gateway: payment.gateway || 'unknown',
@@ -350,7 +351,7 @@ export function trackPaymentSuccess(payment: PaymentData, transactionId?: string
       },
     });
 
-    Sentry.metrics.distribution('ecommerce.payment.amount.success', payment.amount, {
+    metrics.distribution('ecommerce.payment.amount.success', payment.amount, {
       unit: 'none',
       tags: {
         currency: payment.currency,
@@ -359,7 +360,7 @@ export function trackPaymentSuccess(payment: PaymentData, transactionId?: string
     });
 
     // Track revenue
-    Sentry.metrics.distribution('ecommerce.revenue', payment.amount, {
+    metrics.distribution('ecommerce.revenue', payment.amount, {
       unit: 'none',
       tags: {
         currency: payment.currency,
@@ -404,7 +405,7 @@ export function trackPaymentFailure(
   errorMessage: string
 ): void {
   try {
-    Sentry.metrics.increment('ecommerce.payment.failure', 1, {
+    metrics.increment('ecommerce.payment.failure', 1, {
       tags: {
         payment_method: payment.paymentMethod,
         gateway: payment.gateway || 'unknown',
@@ -413,7 +414,7 @@ export function trackPaymentFailure(
       },
     });
 
-    Sentry.metrics.distribution('ecommerce.payment.amount.failed', payment.amount, {
+    metrics.distribution('ecommerce.payment.amount.failed', payment.amount, {
       unit: 'none',
       tags: {
         currency: payment.currency,
@@ -463,7 +464,7 @@ export function trackPromoCode(promoData: PromoCodeData): void {
   try {
     const status = promoData.applied ? 'applied' : 'failed';
 
-    Sentry.metrics.increment(`ecommerce.promo_code.${status}`, 1, {
+    metrics.increment(`ecommerce.promo_code.${status}`, 1, {
       tags: {
         code: promoData.code.toUpperCase(),
         discount_type: promoData.discountType,
@@ -472,7 +473,7 @@ export function trackPromoCode(promoData: PromoCodeData): void {
     });
 
     if (promoData.applied) {
-      Sentry.metrics.distribution('ecommerce.promo_code.discount_value', promoData.discountValue, {
+      metrics.distribution('ecommerce.promo_code.discount_value', promoData.discountValue, {
         unit: 'none',
         tags: {
           discount_type: promoData.discountType,
@@ -532,7 +533,7 @@ export function trackCartAbandonmentRisk(
   cartAbandonmentTimer = setTimeout(() => {
     const idleTime = Date.now() - lastCartActivity;
 
-    Sentry.metrics.increment('ecommerce.cart.abandonment_risk', 1, {
+    metrics.increment('ecommerce.cart.abandonment_risk', 1, {
       tags: {
         idle_time_bucket: getIdleTimeBucket(idleTime),
         item_count: cartData.itemCount.toString(),
@@ -602,7 +603,7 @@ function getValueBucket(value: number): string {
  */
 export function trackSearch(query: string, resultCount: number, filters?: Record<string, string>): void {
   try {
-    Sentry.metrics.increment('ecommerce.search', 1, {
+    metrics.increment('ecommerce.search', 1, {
       tags: {
         has_results: resultCount > 0 ? 'true' : 'false',
         result_bucket: resultCount === 0 ? 'none' : resultCount < 10 ? 'few' : 'many',
@@ -610,7 +611,7 @@ export function trackSearch(query: string, resultCount: number, filters?: Record
       },
     });
 
-    Sentry.metrics.distribution('ecommerce.search.result_count', resultCount, {
+    metrics.distribution('ecommerce.search.result_count', resultCount, {
       unit: 'none',
       tags: {
         ...filters,
@@ -641,7 +642,7 @@ export function trackSearch(query: string, resultCount: number, filters?: Record
  */
 export function trackFilterUsage(filterType: string, filterValue: string): void {
   try {
-    Sentry.metrics.increment('ecommerce.filter.applied', 1, {
+    metrics.increment('ecommerce.filter.applied', 1, {
       tags: {
         filter_type: filterType,
         filter_value: filterValue,

@@ -12,11 +12,10 @@
 
 import * as Sentry from '@sentry/react';
 import { logger } from '../logger';
+import { metrics } from './sentry-metrics-compat';
 import {
   PERFORMANCE_THRESHOLDS,
-  reportCustomMetric,
 } from './web-vitals';
-import { SLO_DEFINITIONS, USER_SEGMENT_MODIFIERS } from './sli-slo-definitions';
 
 // =============================================================================
 // User Segment Context
@@ -369,7 +368,7 @@ export function reportBudgetViolation(violation: BudgetViolation): void {
   });
 
   // Report to Sentry
-  Sentry.metrics.increment('performance.budget.violation', 1, {
+  metrics.increment('performance.budget.violation', 1, {
     tags: {
       metric: violation.metric,
       severity: violation.severity,
@@ -534,7 +533,7 @@ export function reportEnhancedMetric(
 
   // Report to Sentry
   const unit = metricName === 'CLS' ? 'none' : 'millisecond';
-  Sentry.metrics.distribution(`web_vitals.${metricName.toLowerCase()}.enhanced`, value, {
+  metrics.distribution(`web_vitals.${metricName.toLowerCase()}.enhanced`, value, {
     unit,
     tags,
   });
@@ -712,7 +711,7 @@ export function initSessionSummaryReporting(): void {
       const summary = getPerformanceSummary();
 
       // Report summary metrics
-      Sentry.metrics.distribution('session.performance.score',
+      metrics.distribution('session.performance.score',
         summary.overallScore === 'good' ? 1 : summary.overallScore === 'needs-improvement' ? 0.5 : 0,
         {
           unit: 'none',
@@ -725,14 +724,14 @@ export function initSessionSummaryReporting(): void {
       );
 
       if (summary.budgetViolations.length > 0) {
-        Sentry.metrics.increment('session.budget_violations', summary.budgetViolations.length, {
+        metrics.increment('session.budget_violations', summary.budgetViolations.length, {
           tags: {
             user_segment: summary.userSegment,
           },
         });
       }
 
-      logger.info('Session performance summary', summary);
+      logger.info('Session performance summary', { ...summary });
     }
   });
 }

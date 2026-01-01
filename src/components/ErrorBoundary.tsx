@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { logError } from '@/lib/errors';
 import { captureError } from '@/lib/sentry';
 import { logger } from '@/lib/logger';

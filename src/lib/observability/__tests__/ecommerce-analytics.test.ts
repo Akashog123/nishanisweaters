@@ -25,7 +25,7 @@ vi.mock('@sentry/react', () => ({
   },
   addBreadcrumb: vi.fn(),
   captureMessage: vi.fn(),
-  startSpan: vi.fn((config: any, callback: any) => callback()),
+  startSpan: vi.fn((_config: any, callback: any) => callback()),
 }));
 
 // Mock logger
@@ -82,7 +82,6 @@ describe('E-Commerce Analytics Tests', () => {
   let mockSentryAddBreadcrumb: any;
   let mockSentryCaptureMessage: any;
   let mockSentryStartSpan: any;
-  let mockLogger: any;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -95,8 +94,6 @@ describe('E-Commerce Analytics Tests', () => {
     mockSentryCaptureMessage = (Sentry as any).captureMessage;
     mockSentryStartSpan = (Sentry as any).startSpan;
 
-    const { logger } = await import('@/lib/logger');
-    mockLogger = logger;
   });
 
   afterEach(() => {
@@ -345,7 +342,7 @@ describe('E-Commerce Analytics Tests', () => {
 
       // Should not have drop-off increment for sequential steps
       const dropOffCalls = mockSentryMetrics.increment.mock.calls.filter(
-        (call) => call[0] === 'ecommerce.funnel.drop_off'
+        (call: unknown[]) => call[0] === 'ecommerce.funnel.drop_off'
       );
 
       // Only last step might have drop-off check
@@ -529,7 +526,7 @@ describe('E-Commerce Analytics Tests', () => {
 
       // Should not track discount value for failed codes
       const distributionCalls = mockSentryMetrics.distribution.mock.calls.filter(
-        (call) => call[0] === 'ecommerce.promo_code.discount_value'
+        (call: unknown[]) => call[0] === 'ecommerce.promo_code.discount_value'
       );
       expect(distributionCalls).toHaveLength(0);
     });

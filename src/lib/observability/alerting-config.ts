@@ -7,7 +7,6 @@
  * Compatible with Sentry Alerts, Grafana Alerting, and PagerDuty.
  */
 
-import { SLO_DEFINITIONS, SLI_DEFINITIONS } from './sli-slo-definitions';
 
 // =============================================================================
 // Alert Types and Interfaces

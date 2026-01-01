@@ -350,3 +350,59 @@ export function createCircuitBreaker(serviceName: keyof typeof CIRCUIT_BREAKER_C
 // Pre-configured circuit breakers
 export const razorpayCircuitBreaker = createCircuitBreaker("razorpay");
 export const emailCircuitBreaker = createCircuitBreaker("email");
+
+// ============================================
+// TIMEOUT UTILITIES
+// ============================================
+
+/** Default timeout for external API calls (10 seconds) */
+export const DEFAULT_API_TIMEOUT_MS = 10000;
+
+/** Timeout for payment gateway operations (15 seconds - critical path) */
+export const PAYMENT_TIMEOUT_MS = 15000;
+
+/**
+ * Wrap a promise with a timeout.
+ * If the promise doesn't resolve within the specified time, it rejects with a timeout error.
+ *
+ * PERFORMANCE: Prevents slow external APIs from blocking user requests indefinitely.
+ * This is especially important for payment gateways where delays can cause poor UX.
+ */
+export async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  operationName = "Operation"
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout>;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${operationName} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  try {
+    const result = await Promise.race([promise, timeoutPromise]);
+    clearTimeout(timeoutId!);
+    return result;
+  } catch (error) {
+    clearTimeout(timeoutId!);
+    throw error;
+  }
+}
+
+/**
+ * Execute an operation with both circuit breaker protection and timeout.
+ * Use this for external API calls that need both resilience patterns.
+ */
+export async function withCircuitBreakerAndTimeout<T>(
+  ctx: ActionCtx,
+  config: CircuitBreakerConfig,
+  operation: () => Promise<T>,
+  timeoutMs: number = DEFAULT_API_TIMEOUT_MS,
+  operationName = "External API call"
+): Promise<{ success: true; result: T } | { success: false; error: string; circuitOpen: boolean }> {
+  return withCircuitBreaker(ctx, config, () =>
+    withTimeout(operation(), timeoutMs, operationName)
+  );
+}
