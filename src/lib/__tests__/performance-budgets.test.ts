@@ -279,7 +279,7 @@ function simulateChunkSize(chunkName: string, simulatedSize: number): number {
       if (chunk) {
         return chunk.size / 1024; // Convert bytes to KB
       }
-    } catch (error) {
+    } catch (_error) {
       // Fall back to simulated size
     }
   }

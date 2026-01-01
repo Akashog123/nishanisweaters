@@ -28,7 +28,6 @@ describe("Cart Module", () => {
   let mockQueryCtx: MockQueryCtx;
   const testProduct = createTestProduct();
   const testUser = createTestUser();
-  const testCart = createTestCart();
 
   beforeEach(() => {
     mockMutationCtx = createMockMutationCtx();
@@ -305,7 +304,7 @@ describe("Cart Module", () => {
       });
 
       // Mock: find guest cart and user cart
-      const mockQuery = vi.fn().mockImplementation((table: string) => {
+      const mockQuery = vi.fn().mockImplementation((_table: string) => {
         return {
           withIndex: vi.fn().mockReturnValue({
             first: vi.fn().mockImplementation(() => {

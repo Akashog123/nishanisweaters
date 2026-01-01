@@ -1,13 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import crypto from "crypto";
-import { ConvexError } from "convex/values";
 import { Id } from "../_generated/dataModel";
 import {
   createMockMutationCtx,
   createTestOrder,
   createTestProduct,
   createTestPromoCode,
-  createTestIdentity,
 } from "./testUtils";
 
 /**
@@ -66,7 +64,7 @@ describe("Payment Integration Tests", () => {
     it("should create Razorpay order and verify it's stored in DB", async () => {
       const ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
-      const order = createTestOrder({ _id: orderId, total: 1000 });
+      const _order = createTestOrder({ _id: orderId, total: 1000 });
 
       // Mock database query to return order
       const mockRunQuery = vi.fn().mockResolvedValue({
@@ -87,7 +85,7 @@ describe("Payment Integration Tests", () => {
         status: "created",
       });
 
-      const mockCtx = {
+      const _mockCtx = {
         ...ctx,
         runQuery: mockRunQuery,
         runMutation: mockRunMutation,
@@ -132,14 +130,14 @@ describe("Payment Integration Tests", () => {
     it("should apply valid promo code and create payment with discounted amount", async () => {
       const ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
-      const promoCode = createTestPromoCode({
+      const _promoCode = createTestPromoCode({
         code: "SAVE10",
         discountType: "percentage",
         discountValue: 10,
         isActive: true,
       });
 
-      const originalTotal = 1000;
+      const _originalTotal = 1000;
       const discountedTotal = 900; // 10% off
 
       const mockRunQuery = vi.fn().mockResolvedValue({
@@ -159,7 +157,7 @@ describe("Payment Integration Tests", () => {
         currency: "INR",
       });
 
-      const mockCtx = {
+      const _mockCtx = {
         ...ctx,
         runQuery: mockRunQuery,
         runMutation: mockRunMutation,
@@ -179,7 +177,7 @@ describe("Payment Integration Tests", () => {
     });
 
     it("should reject payment with invalid/expired promo code", async () => {
-      const ctx = createMockMutationCtx();
+      const _ctx = createMockMutationCtx();
       const expiredPromoCode = createTestPromoCode({
         code: "EXPIRED10",
         expiresAt: Date.now() - 86400000, // Expired yesterday
@@ -197,7 +195,7 @@ describe("Payment Integration Tests", () => {
     });
 
     it("should fail gracefully for out-of-stock item", async () => {
-      const ctx = createMockMutationCtx();
+      const _ctx = createMockMutationCtx();
       const product = createTestProduct({
         variants: [
           {
@@ -240,7 +238,7 @@ describe("Payment Integration Tests", () => {
 
       const mockRunMutation = vi.fn().mockResolvedValue(undefined);
 
-      const mockCtx = {
+      const _mockCtx = {
         ...ctx,
         runMutation: mockRunMutation,
       };
@@ -267,7 +265,7 @@ describe("Payment Integration Tests", () => {
     });
 
     it("should reject failed payment verification and keep order pending", async () => {
-      const ctx = createMockMutationCtx();
+      const _ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
       const razorpayOrderId = "order_razorpay123";
       const razorpayPaymentId = "pay_razorpay456";
@@ -340,8 +338,8 @@ describe("Payment Integration Tests", () => {
     });
 
     it("should handle duplicate payment verification (idempotency)", async () => {
-      const ctx = createMockMutationCtx();
-      const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
+      const _ctx = createMockMutationCtx();
+      const _orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       // Mock order already paid
       const mockRunQuery = vi.fn().mockResolvedValue({
@@ -366,7 +364,7 @@ describe("Payment Integration Tests", () => {
     const WEBHOOK_SECRET = "test_webhook_secret_PLACEHOLDER";
 
     it("should process payment.captured webhook and mark order as paid", async () => {
-      const ctx = createMockMutationCtx();
+      const _ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       const payload = JSON.stringify({
@@ -403,7 +401,7 @@ describe("Payment Integration Tests", () => {
     });
 
     it("should process payment.failed webhook and mark order as failed", async () => {
-      const ctx = createMockMutationCtx();
+      const _ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       const payload = JSON.stringify({
@@ -439,7 +437,7 @@ describe("Payment Integration Tests", () => {
     });
 
     it("should ignore duplicate webhook with same event ID", async () => {
-      const ctx = createMockMutationCtx();
+      const _ctx = createMockMutationCtx();
       const eventId = "evt_123456";
 
       // Mock existing event
@@ -489,8 +487,8 @@ describe("Payment Integration Tests", () => {
     });
 
     it("should handle webhook for non-existent order gracefully", async () => {
-      const ctx = createMockMutationCtx();
-      const nonExistentOrderId = "invalid_order_id_12345";
+      const _ctx = createMockMutationCtx();
+      const _nonExistentOrderId = "invalid_order_id_12345";
 
       // Mock order not found
       const mockRunQuery = vi.fn().mockResolvedValue(null);
@@ -507,8 +505,8 @@ describe("Payment Integration Tests", () => {
 
   describe("Edge Cases", () => {
     it("should handle concurrent payment requests for same order", async () => {
-      const ctx = createMockMutationCtx();
-      const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
+      const _ctx = createMockMutationCtx();
+      const _orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       // First request creates Razorpay order
       const mockRunQuery1 = vi.fn().mockResolvedValue({
@@ -537,7 +535,7 @@ describe("Payment Integration Tests", () => {
     });
 
     it("should handle payment timeout gracefully", async () => {
-      const ctx = createMockMutationCtx();
+      const _ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       // Mock Razorpay timeout
@@ -557,7 +555,7 @@ describe("Payment Integration Tests", () => {
     });
 
     it("should process partial refund correctly", async () => {
-      const ctx = createMockMutationCtx();
+      const _ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
       const orderTotal = 1000;
       const refundAmount = 500; // Partial refund
@@ -581,7 +579,7 @@ describe("Payment Integration Tests", () => {
     });
 
     it("should process full refund correctly", async () => {
-      const ctx = createMockMutationCtx();
+      const _ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
       const orderTotal = 1000;
       const refundAmount = 1000; // Full refund
@@ -607,8 +605,8 @@ describe("Payment Integration Tests", () => {
 
   describe("State Machine Tests", () => {
     it("should allow valid payment status transitions", async () => {
-      const ctx = createMockMutationCtx();
-      const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
+      const _ctx = createMockMutationCtx();
+      const _orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       // Valid transitions
       const validTransitions = [
@@ -619,15 +617,15 @@ describe("Payment Integration Tests", () => {
         { from: "pending", to: "failed" },
       ];
 
-      for (const transition of validTransitions) {
-        const isValidTransition = true; // All these are valid
-        expect(isValidTransition).toBe(true);
+      for (const _transition of validTransitions) {
+        const _isValidTransition = true; // All these are valid
+        expect(_isValidTransition).toBe(true);
       }
     });
 
     it("should reject invalid payment status transitions", async () => {
-      const ctx = createMockMutationCtx();
-      const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
+      const _ctx = createMockMutationCtx();
+      const _orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       // Invalid transitions
       const invalidTransitions = [
@@ -636,7 +634,7 @@ describe("Payment Integration Tests", () => {
         { from: "failed", to: "paid" }, // Cannot pay after failure
       ];
 
-      for (const transition of invalidTransitions) {
+      for (const _transition of invalidTransitions) {
         // These transitions should be rejected
         const shouldReject = true;
         expect(shouldReject).toBe(true);
@@ -644,8 +642,8 @@ describe("Payment Integration Tests", () => {
     });
 
     it("should allow valid order status transitions", async () => {
-      const ctx = createMockMutationCtx();
-      const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
+      const _ctx = createMockMutationCtx();
+      const _orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
         pending: ["confirmed", "cancelled"],
@@ -672,8 +670,8 @@ describe("Payment Integration Tests", () => {
     });
 
     it("should reject invalid order status transitions", async () => {
-      const ctx = createMockMutationCtx();
-      const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
+      const _ctx = createMockMutationCtx();
+      const _orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
         pending: ["confirmed", "cancelled"],
@@ -702,7 +700,7 @@ describe("Payment Integration Tests", () => {
 
   describe("Payment Flow Integration Scenarios", () => {
     it("should complete full payment flow: create → verify → webhook", async () => {
-      const ctx = createMockMutationCtx();
+      const _ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
       const keySecret = "test_secret_key_PLACEHOLDER";
 
@@ -720,7 +718,7 @@ describe("Payment Integration Tests", () => {
         currency: "INR",
       });
 
-      const orderStatus = await mockRunQuery();
+      const _orderStatus = await mockRunQuery();
       const razorpayOrder = await mockRazorpayCreate({
         amount: 100000,
         currency: "INR",
@@ -777,7 +775,7 @@ describe("Payment Integration Tests", () => {
     });
 
     it("should handle payment failure flow: create → fail → retry", async () => {
-      const ctx = createMockMutationCtx();
+      const _ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       // Step 1: Create Razorpay order
@@ -787,7 +785,7 @@ describe("Payment Integration Tests", () => {
         currency: "INR",
       });
 
-      const razorpayOrder = await mockRazorpayCreate({
+      const _razorpayOrder = await mockRazorpayCreate({
         amount: 100000,
         currency: "INR",
         receipt: orderId,

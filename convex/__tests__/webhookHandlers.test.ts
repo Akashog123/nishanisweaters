@@ -55,7 +55,7 @@ describe("Webhook Handler Tests", () => {
 
       const mockRunMutation = vi.fn().mockResolvedValue(undefined);
 
-      const mockCtx = {
+      const _mockCtx = {
         ...ctx,
         runQuery: mockRunQuery,
         runMutation: mockRunMutation,
@@ -83,7 +83,7 @@ describe("Webhook Handler Tests", () => {
       const ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
-      const event = {
+      const _event = {
         event: "payment.captured",
         created_at: Math.floor(Date.now() / 1000),
         payload: {
@@ -106,7 +106,7 @@ describe("Webhook Handler Tests", () => {
 
       const mockRunMutation = vi.fn();
 
-      const mockCtx = {
+      const _mockCtx = {
         ...ctx,
         runQuery: mockRunQuery,
         runMutation: mockRunMutation,
@@ -175,8 +175,8 @@ describe("Webhook Handler Tests", () => {
     });
 
     it("should handle order not found error", async () => {
-      const ctx = createMockMutationCtx();
-      const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
+      const _ctx = createMockMutationCtx();
+      const _orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       const mockRunQuery = vi.fn().mockResolvedValue(null);
 
@@ -194,7 +194,7 @@ describe("Webhook Handler Tests", () => {
       const ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
-      const event = {
+      const _event = {
         event: "payment.failed",
         created_at: Math.floor(Date.now() / 1000),
         payload: {
@@ -218,7 +218,7 @@ describe("Webhook Handler Tests", () => {
 
       const mockRunMutation = vi.fn().mockResolvedValue(undefined);
 
-      const mockCtx = {
+      const _mockCtx = {
         ...ctx,
         runQuery: mockRunQuery,
         runMutation: mockRunMutation,
@@ -242,7 +242,7 @@ describe("Webhook Handler Tests", () => {
 
     it("should not mark as failed if already paid (retry succeeded)", async () => {
       const ctx = createMockMutationCtx();
-      const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
+      const _orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       const mockRunQuery = vi.fn().mockResolvedValue({
         paymentStatus: "paid",
@@ -251,7 +251,7 @@ describe("Webhook Handler Tests", () => {
 
       const mockRunMutation = vi.fn();
 
-      const mockCtx = {
+      const _mockCtx = {
         ...ctx,
         runQuery: mockRunQuery,
         runMutation: mockRunMutation,
@@ -273,7 +273,7 @@ describe("Webhook Handler Tests", () => {
       const ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
-      const event = {
+      const _event = {
         event: "order.paid",
         created_at: Math.floor(Date.now() / 1000),
         payload: {
@@ -298,7 +298,7 @@ describe("Webhook Handler Tests", () => {
 
       const mockRunMutation = vi.fn().mockResolvedValue(undefined);
 
-      const mockCtx = {
+      const _mockCtx = {
         ...ctx,
         runQuery: mockRunQuery,
         runMutation: mockRunMutation,
@@ -321,8 +321,8 @@ describe("Webhook Handler Tests", () => {
     });
 
     it("should skip if order already paid (idempotency)", async () => {
-      const ctx = createMockMutationCtx();
-      const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
+      const _ctx = createMockMutationCtx();
+      const _orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       const mockRunQuery = vi.fn().mockResolvedValue({
         paymentStatus: "paid",
@@ -346,7 +346,7 @@ describe("Webhook Handler Tests", () => {
       const ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
-      const event = {
+      const _event = {
         event: "refund.created",
         created_at: Math.floor(Date.now() / 1000),
         payload: {
@@ -371,7 +371,7 @@ describe("Webhook Handler Tests", () => {
 
       const mockRunMutation = vi.fn().mockResolvedValue(undefined);
 
-      const mockCtx = {
+      const _mockCtx = {
         ...ctx,
         runQuery: mockRunQuery,
         runMutation: mockRunMutation,
@@ -394,8 +394,8 @@ describe("Webhook Handler Tests", () => {
     });
 
     it("should skip if already refunded (idempotency)", async () => {
-      const ctx = createMockMutationCtx();
-      const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
+      const _ctx = createMockMutationCtx();
+      const _orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       const mockRunQuery = vi.fn().mockResolvedValue({
         paymentStatus: "refunded",
@@ -416,10 +416,10 @@ describe("Webhook Handler Tests", () => {
 
   describe("refund.processed event", () => {
     it("should confirm refund completion", async () => {
-      const ctx = createMockMutationCtx();
+      const _ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
-      const event = {
+      const _event = {
         event: "refund.processed",
         created_at: Math.floor(Date.now() / 1000),
         payload: {
@@ -452,10 +452,10 @@ describe("Webhook Handler Tests", () => {
 
   describe("refund.failed event", () => {
     it("should update order to refund_failed status", async () => {
-      const ctx = createMockMutationCtx();
+      const _ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
-      const event = {
+      const _event = {
         event: "refund.failed",
         created_at: Math.floor(Date.now() / 1000),
         payload: {
@@ -488,7 +488,7 @@ describe("Webhook Handler Tests", () => {
 
   describe("payment.dispute.created event", () => {
     it("should update order with dispute status", async () => {
-      const ctx = createMockMutationCtx();
+      const _ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       const event = {
@@ -557,7 +557,7 @@ describe("Webhook Handler Tests", () => {
 
   describe("payment.dispute.won event", () => {
     it("should update dispute status to won", async () => {
-      const ctx = createMockMutationCtx();
+      const _ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       const event = {
@@ -594,7 +594,7 @@ describe("Webhook Handler Tests", () => {
     });
 
     it("should restore payment status to paid when dispute won", async () => {
-      const ctx = createMockMutationCtx();
+      const _ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       const mockRunMutation = vi.fn().mockResolvedValue(undefined);
@@ -618,7 +618,7 @@ describe("Webhook Handler Tests", () => {
 
   describe("payment.dispute.lost event", () => {
     it("should update dispute status to lost", async () => {
-      const ctx = createMockMutationCtx();
+      const _ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       const event = {
@@ -655,7 +655,7 @@ describe("Webhook Handler Tests", () => {
     });
 
     it("should update payment status to refunded when dispute lost", async () => {
-      const ctx = createMockMutationCtx();
+      const _ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       const mockRunMutation = vi.fn().mockResolvedValue(undefined);
@@ -679,7 +679,7 @@ describe("Webhook Handler Tests", () => {
 
   describe("payment.dispute.closed event", () => {
     it("should update dispute status to closed", async () => {
-      const ctx = createMockMutationCtx();
+      const _ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       const event = {
@@ -718,8 +718,8 @@ describe("Webhook Handler Tests", () => {
 
   describe("Idempotency handling", () => {
     it("should handle duplicate payment.captured events", async () => {
-      const ctx = createMockMutationCtx();
-      const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
+      const _ctx = createMockMutationCtx();
+      const _orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       const mockRunQuery = vi.fn().mockResolvedValue({
         paymentStatus: "paid",
@@ -739,8 +739,8 @@ describe("Webhook Handler Tests", () => {
     });
 
     it("should handle duplicate refund.created events", async () => {
-      const ctx = createMockMutationCtx();
-      const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
+      const _ctx = createMockMutationCtx();
+      const _orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       const mockRunQuery = vi.fn().mockResolvedValue({
         paymentStatus: "refunded",
@@ -760,8 +760,8 @@ describe("Webhook Handler Tests", () => {
     });
 
     it("should handle out-of-order webhook events", async () => {
-      const ctx = createMockMutationCtx();
-      const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
+      const _ctx = createMockMutationCtx();
+      const _orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       // Scenario: payment.failed arrives after payment.captured
       const mockRunQuery = vi.fn().mockResolvedValue({

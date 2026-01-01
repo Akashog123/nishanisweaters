@@ -26,7 +26,6 @@ describe("PromoCodes Module", () => {
   let mockQueryCtx: MockQueryCtx;
   const testPromoCode = createTestPromoCode();
   const testUser = createTestUser();
-  const testCart = createTestCart();
 
   beforeEach(() => {
     mockMutationCtx = createMockMutationCtx();
@@ -144,13 +143,13 @@ describe("PromoCodes Module", () => {
       );
 
       // Mock: user has already used this promo
-      const mockPromoQuery = vi.fn().mockReturnValue({
+      const _mockPromoQuery = vi.fn().mockReturnValue({
         withIndex: vi.fn().mockReturnValue({
           first: vi.fn().mockResolvedValue(perUserLimitPromo),
         }),
       });
 
-      const mockUsageQuery = vi.fn().mockReturnValue({
+      const _mockUsageQuery = vi.fn().mockReturnValue({
         withIndex: vi.fn().mockReturnValue({
           collect: vi.fn().mockResolvedValue([
             { userId: testUser.clerkId, promoCodeId: perUserLimitPromo._id },
@@ -263,7 +262,7 @@ describe("PromoCodes Module", () => {
         createTestIdentity(testUser.clerkId)
       );
 
-      const promoCode = createTestPromoCode();
+      const _promoCode = createTestPromoCode();
       const cart = createTestCart();
 
       const mockQuery = vi.fn().mockReturnValue({

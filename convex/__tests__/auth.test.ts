@@ -1,13 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { ConvexError } from "convex/values";
 import {
   createMockQueryCtx,
-  createMockMutationCtx,
   createTestUser,
   createTestAdminUser,
   createTestIdentity,
-  mockAuthenticatedUser,
-  mockGuestUser,
 } from "./testUtils";
 
 /**

@@ -1,11 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import crypto from "crypto";
-import { ConvexError } from "convex/values";
 import { Id } from "../_generated/dataModel";
 import {
   createMockMutationCtx,
-  createTestOrder,
-  createTestIdentity,
 } from "./testUtils";
 
 /**
@@ -76,7 +73,7 @@ describe("Payment Flow Tests", () => {
         currency: "INR",
       });
 
-      const mockCtx = {
+      const _mockCtx = {
         ...ctx,
         runQuery: mockRunQuery,
         runMutation: mockRunMutation,
@@ -120,7 +117,7 @@ describe("Payment Flow Tests", () => {
 
     it("should return existing Razorpay order (deduplication)", async () => {
       const ctx = createMockMutationCtx();
-      const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
+      const _orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       // Mock order already has Razorpay order ID (includes total for server-side amount)
       const mockRunQuery = vi.fn().mockResolvedValue({
@@ -130,7 +127,7 @@ describe("Payment Flow Tests", () => {
         total: 1000, // Order total in INR
       });
 
-      const mockCtx = {
+      const _mockCtx = {
         ...ctx,
         runQuery: mockRunQuery,
       };
@@ -143,8 +140,8 @@ describe("Payment Flow Tests", () => {
     });
 
     it("should throw error for already paid order", async () => {
-      const ctx = createMockMutationCtx();
-      const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
+      const _ctx = createMockMutationCtx();
+      const _orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       // Mock order is already paid (includes total for server-side amount)
       const mockRunQuery = vi.fn().mockResolvedValue({
@@ -165,8 +162,8 @@ describe("Payment Flow Tests", () => {
     });
 
     it("should throw error for cancelled order", async () => {
-      const ctx = createMockMutationCtx();
-      const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
+      const _ctx = createMockMutationCtx();
+      const _orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       // Mock order is cancelled (includes total for server-side amount)
       const mockRunQuery = vi.fn().mockResolvedValue({
@@ -187,8 +184,8 @@ describe("Payment Flow Tests", () => {
     });
 
     it("should throw error when order not found", async () => {
-      const ctx = createMockMutationCtx();
-      const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
+      const _ctx = createMockMutationCtx();
+      const _orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       // Mock order not found
       const mockRunQuery = vi.fn().mockResolvedValue(null);
@@ -205,7 +202,7 @@ describe("Payment Flow Tests", () => {
 
     it("should handle circuit breaker open state", async () => {
       const ctx = createMockMutationCtx();
-      const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
+      const _orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       // Mock circuit breaker returning open state
       const mockCircuitBreaker = {
@@ -229,7 +226,7 @@ describe("Payment Flow Tests", () => {
     });
 
     it("should handle Razorpay API failure", async () => {
-      const ctx = createMockMutationCtx();
+      const _ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
       // Mock Razorpay API failure
@@ -267,7 +264,7 @@ describe("Payment Flow Tests", () => {
       // Mock mutation to update payment status
       const mockRunMutation = vi.fn().mockResolvedValue(undefined);
 
-      const mockCtx = {
+      const _mockCtx = {
         ...ctx,
         runMutation: mockRunMutation,
       };
@@ -313,7 +310,7 @@ describe("Payment Flow Tests", () => {
       // Mock mutation to update payment status
       const mockRunMutation = vi.fn().mockResolvedValue(undefined);
 
-      const mockCtx = {
+      const _mockCtx = {
         ...ctx,
         runMutation: mockRunMutation,
       };
@@ -503,7 +500,7 @@ describe("Payment Flow Tests", () => {
       const now = Date.now();
       const oldTimestamp = Math.floor((now - WEBHOOK_MAX_AGE_MS - 1000) / 1000);
 
-      const payload = {
+      const _payload = {
         event: "payment.captured",
         created_at: oldTimestamp,
       };
@@ -518,7 +515,7 @@ describe("Payment Flow Tests", () => {
       const now = Date.now();
       const recentTimestamp = Math.floor((now - 1000) / 1000); // 1 second ago
 
-      const payload = {
+      const _payload = {
         event: "payment.captured",
         created_at: recentTimestamp,
       };

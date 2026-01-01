@@ -40,7 +40,7 @@ test.describe('Checkout - Accessibility', () => {
     await expect(radioGroup).toBeVisible();
   });
 
-  test('buttons should be keyboard accessible', async ({ page, checkoutPage }) => {
+  test('buttons should be keyboard accessible', async ({ page, _checkoutPage }) => {
     // Tab to the continue button and verify it's focusable
     await page.keyboard.press('Tab');
     await page.keyboard.press('Tab');
@@ -126,7 +126,7 @@ test.describe('Checkout - Error States', () => {
     await checkoutPage.goto();
 
     // Check if error alert exists (may or may not depending on cart state)
-    const errorAlert = page.locator('[role="alert"]');
+    const _errorAlert = page.locator('[role="alert"]');
     // Just verify the page loads correctly
     await expect(page.locator('h1:has-text("Checkout")')).toBeVisible();
   });
@@ -148,7 +148,7 @@ test.describe('Checkout - Performance', () => {
     await expect(page.locator('h1:has-text("Checkout")')).toBeVisible();
   });
 
-  test('should navigate between steps quickly', async ({ page, productPage, checkoutPage }) => {
+  test('should navigate between steps quickly', async ({ _page, productPage, checkoutPage }) => {
     await productPage.goto('any');
     await productPage.addToCart();
     await checkoutPage.goto();

@@ -1,4 +1,4 @@
-import { vi, MockedFunction, Mock } from "vitest";
+import { vi, Mock } from "vitest";
 import { Id } from "../_generated/dataModel";
 
 /**

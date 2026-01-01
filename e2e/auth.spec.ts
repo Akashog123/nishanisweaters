@@ -591,7 +591,7 @@ test.describe('Authentication - Loading States', () => {
 
     // Should see loading spinner briefly
     // Note: This may be very fast in tests
-    const spinner = page.locator('.animate-spin').first();
+    const _spinner = page.locator('.animate-spin').first();
 
     // Wait a bit for page to load
     await page.waitForLoadState('networkidle');

@@ -102,7 +102,7 @@ test.describe('Cart Operations', () => {
       expect(page.url()).toContain('/checkout');
     });
 
-    test('should preserve cart items in checkout', async ({ page, productPage, cartPage, checkoutPage }) => {
+    test('should preserve cart items in checkout', async ({ page, _productPage, cartPage, _checkoutPage }) => {
       await cartPage.goto();
 
       // Count items in cart

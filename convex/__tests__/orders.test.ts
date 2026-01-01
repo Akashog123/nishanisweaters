@@ -254,7 +254,7 @@ describe("Orders Module", () => {
   describe("deductInventory", () => {
     it("should deduct inventory for each order item", async () => {
       // Arrange
-      const orderWithItems = createTestOrder({
+      const _orderWithItems = createTestOrder({
         items: [
           {
             productId: testProduct._id,

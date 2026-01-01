@@ -9,7 +9,7 @@ import { test, expect, testAddresses } from './fixtures';
 
 test.describe('Checkout Flow', () => {
   test.describe('Step Navigation', () => {
-    test.beforeEach(async ({ page, productPage }) => {
+    test.beforeEach(async ({ _page, productPage }) => {
       // Add an item to cart before each test
       await productPage.goto('any');
       await productPage.addToCart();
@@ -252,7 +252,7 @@ test.describe('Checkout Flow', () => {
 });
 
 test.describe('Checkout - Authentication', () => {
-  test('should require authentication for checkout', async ({ page }) => {
+  test('should require authentication for checkout', async ({ _page }) => {
     // This test would need authentication setup
     // For now, we verify the redirect happens
     test.skip(true, 'Requires authentication mock setup');

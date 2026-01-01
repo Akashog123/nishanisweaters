@@ -15,8 +15,8 @@
  * 3. Set up appropriate mocks for your component's dependencies
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { screen, waitFor, within, act } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { screen, waitFor, act } from '@testing-library/react'
 import { renderHook } from '@testing-library/react'
 import {
   render,
@@ -213,8 +213,8 @@ describe.skip('Wholesale Registration Form - Validation', () => {
 
   it('should submit form with valid data', async () => {
     const user = userEvent.setup()
-    const mockSubmit = mockMutationResponse('wholesale.register',
-      async (data) => ({ success: true, id: '123' })
+    const _mockSubmit = mockMutationResponse('wholesale.register',
+      async (_data) => ({ success: true, id: '123' })
     )
 
     render(<WholesaleRegistrationForm />)
@@ -294,7 +294,7 @@ describe.skip('Product Card - Accessibility', () => {
 describe.skip('Order Submission - Error Handling', () => {
   it('should show error message when submission fails', async () => {
     const user = userEvent.setup()
-    const mockSubmit = mockMutationResponse('orders.create',
+    const _mockSubmit = mockMutationResponse('orders.create',
       async () => {
         throw new Error('Payment processing failed')
       }
@@ -314,7 +314,7 @@ describe.skip('Order Submission - Error Handling', () => {
     const user = userEvent.setup()
     let attemptCount = 0
 
-    const mockSubmit = mockMutationResponse('orders.create',
+    const _mockSubmit = mockMutationResponse('orders.create',
       async () => {
         attemptCount++
         if (attemptCount === 1) {
@@ -494,7 +494,7 @@ describe.skip('Complete Purchase Flow - Integration', () => {
     await user.type(screen.getByLabelText(/zip/i), '97201')
 
     // Submit order
-    const mockOrder = mockMutationResponse('orders.create',
+    const _mockOrder = mockMutationResponse('orders.create',
       async () => ({ orderId: 'ORDER-123', success: true })
     )
 
@@ -513,9 +513,9 @@ const ProductList = () => <div>Product List Component</div>
 const ProductDetail = () => <div>Product Detail Component</div>
 const CheckoutPage = () => <div>Checkout Page Component</div>
 const WholesaleRegistrationForm = () => <div>Wholesale Form Component</div>
-const ProductCard = ({ product }: any) => <article>Product Card</article>
+const ProductCard = ({ _product }: { _product: unknown }) => <article>Product Card</article>
 const CheckoutForm = () => <div>Checkout Form Component</div>
-const SearchBar = ({ onSearch }: any) => <input role="searchbox" />
+const SearchBar = ({ _onSearch }: { _onSearch: unknown }) => <input role="searchbox" />
 const Navigation = () => <nav>Navigation</nav>
 const Cart = () => <div>Cart Component</div>
 const Checkout = () => <div>Checkout Component</div>
