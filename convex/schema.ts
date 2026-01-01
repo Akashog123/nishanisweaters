@@ -139,30 +139,8 @@ export default defineSchema({
     // Role-based access
     role: v.union(
       v.literal("customer"),
-      v.literal("wholesale"),
       v.literal("admin")
     ),
-
-    // Wholesale-specific
-    companyName: v.optional(v.string()),
-    businessEmail: v.optional(v.string()),
-    gstNumber: v.optional(v.string()),
-    businessAddress: v.optional(v.object({
-      street: v.string(),
-      city: v.string(),
-      state: v.string(),
-      postalCode: v.string(),
-      country: v.string(),
-    })),
-    website: v.optional(v.string()),
-    wholesaleStatus: v.optional(v.union(
-      v.literal("pending"),
-      v.literal("approved"),
-      v.literal("rejected"),
-      v.literal("suspended")
-    )),
-    wholesaleApprovedAt: v.optional(v.number()),
-    wholesaleRejectionReason: v.optional(v.string()),
 
     // Addresses
     shippingAddresses: v.array(v.object({
@@ -187,60 +165,7 @@ export default defineSchema({
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_email", ["email"])
-    .index("by_role", ["role"])
-    .index("by_wholesale_status", ["wholesaleStatus"]),
-
-  // Wholesale Applications Table
-  wholesaleApplications: defineTable({
-    userId: v.optional(v.string()),
-    clerkId: v.string(),
-
-    // Business Information
-    companyName: v.string(),
-    businessEmail: v.optional(v.string()),
-    gstNumber: v.optional(v.string()),
-    businessAddress: v.object({
-      street: v.string(),
-      city: v.string(),
-      state: v.string(),
-      postalCode: v.string(),
-      country: v.string(),
-    }),
-    website: v.optional(v.string()),
-
-    // Documents
-    documents: v.optional(v.array(v.object({
-      type: v.union(
-        v.literal("reseller_certificate"),
-        v.literal("business_license"),
-        v.literal("gst_certificate"),
-        v.literal("other")
-      ),
-      url: v.string(),
-      storageId: v.string(),
-      uploadedAt: v.number(),
-    }))),
-
-    // Application Status
-    status: v.union(
-      v.literal("pending"),
-      v.literal("under_review"),
-      v.literal("approved"),
-      v.literal("rejected")
-    ),
-    // Admin Review
-    reviewedBy: v.optional(v.string()),
-    reviewedAt: v.optional(v.number()),
-    reviewNotes: v.optional(v.string()),
-    rejectionReason: v.optional(v.string()),
-
-    // Metadata
-    submittedAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_clerk_id", ["clerkId"])
-    .index("by_status", ["status"])
-    .index("by_status_submitted", ["status", "submittedAt"]),
+    .index("by_role", ["role"]),
 
   // Cart Table
   cart: defineTable({
@@ -771,6 +696,25 @@ export default defineSchema({
     .index("by_email", ["email"])
     .index("by_created_at", ["createdAt"])
     .index("by_status_created", ["status", "createdAt"]),
+
+  // Webhook Events Table - Idempotency tracking for Razorpay webhooks
+  // Stores processed event IDs to prevent duplicate processing
+  webhookEvents: defineTable({
+    // Razorpay's unique event ID from x-razorpay-event-id header
+    eventId: v.string(),
+    // Event type (e.g., "payment.captured", "order.paid")
+    eventType: v.string(),
+    // When the event was processed
+    processedAt: v.number(),
+    // Associated order (if applicable)
+    orderId: v.optional(v.id("orders")),
+    // Processing result
+    success: v.boolean(),
+    // Optional error message if processing failed
+    errorMessage: v.optional(v.string()),
+  })
+    .index("by_event_id", ["eventId"])
+    .index("by_processed_at", ["processedAt"]),
 
   // Rate Limits Table - Distributed rate limiting across Convex instances
   rateLimits: defineTable({

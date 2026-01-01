@@ -21,6 +21,9 @@ import {
   type SettingDefinition,
   type SettingCategory,
 } from "./lib/settingsRegistry";
+import { validateSettingValue } from "./lib/settingsValidation";
+import type { MutationCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 
 // ============================================
 // INTERNAL QUERIES (for other backend modules)
@@ -50,21 +53,30 @@ export const getSettingValue = internalQuery({
 
 /**
  * Get multiple settings at once - more efficient for bulk reads
+ * PERFORMANCE: Uses batch fetching and in-memory lookup instead of sequential queries
  */
 export const getSettingValues = internalQuery({
   args: { keys: v.array(v.string()) },
   handler: async (ctx, args) => {
     const result: Record<string, string> = {};
 
-    for (const key of args.keys) {
-      const setting = await ctx.db
-        .query("settings")
-        .withIndex("by_key", (q) => q.eq("key", key))
-        .first();
+    // PERFORMANCE: Batch fetch all settings at once instead of N sequential queries
+    // This reduces database round-trips from O(N) to O(1)
+    const allSettings = await ctx.db
+      .query("settings")
+      .withIndex("by_key")
+      .collect();
 
-      if (setting) {
-        result[key] = setting.value;
+    // Build a lookup map for O(1) access
+    const settingsMap = new Map(allSettings.map(s => [s.key, s.value]));
+
+    // Now lookup each key from the map
+    for (const key of args.keys) {
+      const value = settingsMap.get(key);
+      if (value !== undefined) {
+        result[key] = value;
       } else {
+        // Fallback to registry default
         const registryEntry = getSettingDefinition(key);
         if (registryEntry) {
           result[key] = registryEntry.defaultValue;
@@ -79,6 +91,7 @@ export const getSettingValues = internalQuery({
 /**
  * Get email configuration for actions
  * This is specifically designed for internalActions that need email settings
+ * PERFORMANCE: Uses batch fetching and in-memory lookup instead of sequential queries
  */
 export const getEmailConfig = internalQuery({
   args: {},
@@ -91,16 +104,22 @@ export const getEmailConfig = internalQuery({
       "EMAIL.SUPPORT_ADDRESS",
     ];
 
+    // PERFORMANCE: Batch fetch all email settings at once
+    // This reduces database round-trips from 5 to 1
+    const allSettings = await ctx.db
+      .query("settings")
+      .withIndex("by_key")
+      .collect();
+
+    // Build a lookup map for O(1) access
+    const settingsMap = new Map(allSettings.map(s => [s.key, s.value]));
+
     const result: Record<string, string> = {};
 
     for (const key of keys) {
-      const setting = await ctx.db
-        .query("settings")
-        .withIndex("by_key", (q) => q.eq("key", key))
-        .first();
-
-      if (setting) {
-        result[key] = setting.value;
+      const value = settingsMap.get(key);
+      if (value !== undefined) {
+        result[key] = value;
       } else {
         const registryEntry = getSettingDefinition(key);
         if (registryEntry) {
@@ -343,6 +362,107 @@ export const getRecentChanges = query({
 });
 
 // ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Admin user information for audit trail
+ */
+interface AdminInfo {
+  clerkId: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+/**
+ * Internal helper to update a single setting with validation and history tracking
+ * Shared by both updateSetting and updateSettings mutations
+ */
+async function updateSettingInternal(
+  ctx: MutationCtx,
+  key: string,
+  value: string,
+  admin: AdminInfo,
+  reason: string | undefined,
+  now: number
+): Promise<boolean> {
+  // Validate against registry
+  const registryEntry = getSettingDefinition(key);
+  if (!registryEntry) {
+    throw new ConvexError({
+      code: "NOT_FOUND",
+      message: `Setting ${key} not found in registry`,
+    });
+  }
+
+  // Validate value based on type
+  validateSettingValue(registryEntry, value);
+
+  // Get existing setting
+  const existing = await ctx.db
+    .query("settings")
+    .withIndex("by_key", (q) => q.eq("key", key))
+    .first();
+
+  const previousValue = existing?.value ?? registryEntry.defaultValue;
+
+  // Skip if value hasn't changed
+  if (previousValue === value) {
+    return false;
+  }
+
+  // Prepare admin name for history
+  const adminName =
+    `${admin.firstName ?? ""} ${admin.lastName ?? ""}`.trim() || undefined;
+
+  let settingId: Id<"settings">;
+
+  if (existing) {
+    // Update existing setting
+    await ctx.db.patch(existing._id, {
+      value,
+      updatedAt: now,
+      updatedBy: admin.clerkId,
+    });
+    settingId = existing._id;
+  } else {
+    // Create new setting entry
+    settingId = await ctx.db.insert("settings", {
+      key,
+      label: registryEntry.label,
+      description: registryEntry.description,
+      category: registryEntry.category,
+      valueType: registryEntry.valueType,
+      value,
+      defaultValue: registryEntry.defaultValue,
+      minValue: registryEntry.minValue,
+      maxValue: registryEntry.maxValue,
+      displayOrder: registryEntry.displayOrder,
+      affectedAreas: registryEntry.affectedAreas,
+      isActive: true,
+      updatedAt: now,
+      updatedBy: admin.clerkId,
+    });
+  }
+
+  // Record history
+  await ctx.db.insert("settingsHistory", {
+    settingId,
+    settingKey: key,
+    previousValue,
+    newValue: value,
+    changedBy: admin.clerkId,
+    changedByEmail: admin.email,
+    changedByName: adminName,
+    changeReason: reason,
+    timestamp: now,
+  });
+
+  return true;
+}
+
+// ============================================
 // ADMIN MUTATIONS
 // ============================================
 
@@ -359,87 +479,16 @@ export const updateSetting = mutation({
     const admin = await requireAdmin(ctx);
     const now = Date.now();
 
-    // Validate against registry
-    const registryEntry = getSettingDefinition(args.key);
-    if (!registryEntry) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: `Setting ${args.key} not found in registry`,
-      });
-    }
+    const changed = await updateSettingInternal(
+      ctx,
+      args.key,
+      args.value,
+      admin,
+      args.reason,
+      now
+    );
 
-    // Validate value based on type
-    validateSettingValue(registryEntry, args.value);
-
-    // Get existing setting
-    const existing = await ctx.db
-      .query("settings")
-      .withIndex("by_key", (q) => q.eq("key", args.key))
-      .first();
-
-    const previousValue = existing?.value ?? registryEntry.defaultValue;
-
-    // Skip if value hasn't changed
-    if (previousValue === args.value) {
-      return { success: true, changed: false };
-    }
-
-    if (existing) {
-      // Update existing
-      await ctx.db.patch(existing._id, {
-        value: args.value,
-        updatedAt: now,
-        updatedBy: admin.clerkId,
-      });
-
-      // Record history
-      await ctx.db.insert("settingsHistory", {
-        settingId: existing._id,
-        settingKey: args.key,
-        previousValue,
-        newValue: args.value,
-        changedBy: admin.clerkId,
-        changedByEmail: admin.email,
-        changedByName:
-          `${admin.firstName ?? ""} ${admin.lastName ?? ""}`.trim() || undefined,
-        changeReason: args.reason,
-        timestamp: now,
-      });
-    } else {
-      // Create new setting entry
-      const newId = await ctx.db.insert("settings", {
-        key: args.key,
-        label: registryEntry.label,
-        description: registryEntry.description,
-        category: registryEntry.category,
-        valueType: registryEntry.valueType,
-        value: args.value,
-        defaultValue: registryEntry.defaultValue,
-        minValue: registryEntry.minValue,
-        maxValue: registryEntry.maxValue,
-        displayOrder: registryEntry.displayOrder,
-        affectedAreas: registryEntry.affectedAreas,
-        isActive: true,
-        updatedAt: now,
-        updatedBy: admin.clerkId,
-      });
-
-      // Record history
-      await ctx.db.insert("settingsHistory", {
-        settingId: newId,
-        settingKey: args.key,
-        previousValue,
-        newValue: args.value,
-        changedBy: admin.clerkId,
-        changedByEmail: admin.email,
-        changedByName:
-          `${admin.firstName ?? ""} ${admin.lastName ?? ""}`.trim() || undefined,
-        changeReason: args.reason,
-        timestamp: now,
-      });
-    }
-
-    return { success: true, changed: true };
+    return { success: true, changed };
   },
 });
 
@@ -460,7 +509,7 @@ export const updateSettings = mutation({
     const admin = await requireAdmin(ctx);
     const now = Date.now();
 
-    // Validate all settings first
+    // Validate all settings first (fail fast before any updates)
     for (const update of args.updates) {
       const registryEntry = getSettingDefinition(update.key);
       if (!registryEntry) {
@@ -474,74 +523,20 @@ export const updateSettings = mutation({
 
     let updatedCount = 0;
 
-    // Apply all updates
+    // Apply all updates using the shared helper
     for (const update of args.updates) {
-      const registryEntry = getSettingDefinition(update.key)!;
+      const changed = await updateSettingInternal(
+        ctx,
+        update.key,
+        update.value,
+        admin,
+        args.reason,
+        now
+      );
 
-      const existing = await ctx.db
-        .query("settings")
-        .withIndex("by_key", (q) => q.eq("key", update.key))
-        .first();
-
-      const previousValue = existing?.value ?? registryEntry.defaultValue;
-
-      // Skip if value hasn't changed
-      if (previousValue === update.value) continue;
-
-      if (existing) {
-        await ctx.db.patch(existing._id, {
-          value: update.value,
-          updatedAt: now,
-          updatedBy: admin.clerkId,
-        });
-
-        await ctx.db.insert("settingsHistory", {
-          settingId: existing._id,
-          settingKey: update.key,
-          previousValue,
-          newValue: update.value,
-          changedBy: admin.clerkId,
-          changedByEmail: admin.email,
-          changedByName:
-            `${admin.firstName ?? ""} ${admin.lastName ?? ""}`.trim() ||
-            undefined,
-          changeReason: args.reason,
-          timestamp: now,
-        });
-      } else {
-        const newId = await ctx.db.insert("settings", {
-          key: update.key,
-          label: registryEntry.label,
-          description: registryEntry.description,
-          category: registryEntry.category,
-          valueType: registryEntry.valueType,
-          value: update.value,
-          defaultValue: registryEntry.defaultValue,
-          minValue: registryEntry.minValue,
-          maxValue: registryEntry.maxValue,
-          displayOrder: registryEntry.displayOrder,
-          affectedAreas: registryEntry.affectedAreas,
-          isActive: true,
-          updatedAt: now,
-          updatedBy: admin.clerkId,
-        });
-
-        await ctx.db.insert("settingsHistory", {
-          settingId: newId,
-          settingKey: update.key,
-          previousValue,
-          newValue: update.value,
-          changedBy: admin.clerkId,
-          changedByEmail: admin.email,
-          changedByName:
-            `${admin.firstName ?? ""} ${admin.lastName ?? ""}`.trim() ||
-            undefined,
-          changeReason: args.reason,
-          timestamp: now,
-        });
+      if (changed) {
+        updatedCount++;
       }
-
-      updatedCount++;
     }
 
     return { success: true, updatedCount };
@@ -662,118 +657,3 @@ export const resetCategory = mutation({
     return { success: true, resetCount };
   },
 });
-
-// ============================================
-// HELPER FUNCTIONS
-// ============================================
-
-function validateSettingValue(registry: SettingDefinition, value: string) {
-  const numValue = parseFloat(value);
-
-  switch (registry.valueType) {
-    case "number":
-    case "currency":
-    case "duration_ms":
-    case "duration_hours":
-      if (isNaN(numValue)) {
-        throw new ConvexError({
-          code: "VALIDATION_ERROR",
-          message: `${registry.label} must be a valid number`,
-        });
-      }
-      if (registry.minValue !== undefined && numValue < registry.minValue) {
-        throw new ConvexError({
-          code: "VALIDATION_ERROR",
-          message: `${registry.label} must be at least ${registry.minValue}`,
-        });
-      }
-      if (registry.maxValue !== undefined && numValue > registry.maxValue) {
-        throw new ConvexError({
-          code: "VALIDATION_ERROR",
-          message: `${registry.label} must be at most ${registry.maxValue}`,
-        });
-      }
-      break;
-
-    case "percentage":
-      if (isNaN(numValue) || numValue < 0 || numValue > 1) {
-        throw new ConvexError({
-          code: "VALIDATION_ERROR",
-          message: `${registry.label} must be a valid percentage (0-1)`,
-        });
-      }
-      if (registry.minValue !== undefined && numValue < registry.minValue) {
-        throw new ConvexError({
-          code: "VALIDATION_ERROR",
-          message: `${registry.label} must be at least ${registry.minValue * 100}%`,
-        });
-      }
-      if (registry.maxValue !== undefined && numValue > registry.maxValue) {
-        throw new ConvexError({
-          code: "VALIDATION_ERROR",
-          message: `${registry.label} must be at most ${registry.maxValue * 100}%`,
-        });
-      }
-      break;
-
-    case "email":
-      if (!value.includes("@") || !value.includes(".")) {
-        throw new ConvexError({
-          code: "VALIDATION_ERROR",
-          message: `${registry.label} must be a valid email address`,
-        });
-      }
-      break;
-
-    case "url":
-      // Allow empty URLs for optional fields (like social links)
-      if (value === "") break;
-      try {
-        const url = new URL(value);
-        // Only allow safe protocols to prevent XSS
-        if (!["http:", "https:"].includes(url.protocol)) {
-          throw new ConvexError({
-            code: "VALIDATION_ERROR",
-            message: `${registry.label} must use http or https protocol`,
-          });
-        }
-      } catch (e) {
-        if (e instanceof ConvexError) throw e;
-        throw new ConvexError({
-          code: "VALIDATION_ERROR",
-          message: `${registry.label} must be a valid URL`,
-        });
-      }
-      break;
-
-    case "boolean":
-      // Boolean values must be "true" or "false"
-      if (value !== "true" && value !== "false") {
-        throw new ConvexError({
-          code: "VALIDATION_ERROR",
-          message: `${registry.label} must be true or false`,
-        });
-      }
-      break;
-
-    case "phone":
-      // Basic phone validation - allow digits, spaces, +, -, ()
-      if (!/^[\d\s+\-()]+$/.test(value) || value.replace(/\D/g, "").length < 10) {
-        throw new ConvexError({
-          code: "VALIDATION_ERROR",
-          message: `${registry.label} must be a valid phone number`,
-        });
-      }
-      break;
-
-    case "string":
-      // String values just need to not be empty
-      if (!value.trim()) {
-        throw new ConvexError({
-          code: "VALIDATION_ERROR",
-          message: `${registry.label} cannot be empty`,
-        });
-      }
-      break;
-  }
-}
