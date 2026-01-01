@@ -14,30 +14,34 @@
 
       Directives explained:
       - default-src 'self': Only allow resources from same origin by default
-      - script-src: Allow scripts from self, inline (required for React/Vite), and Razorpay checkout
+      - script-src: Allow scripts from self, inline (required for React/Vite), Razorpay, Sentry, and Clerk
       - connect-src: Allow API calls to Convex, Clerk auth, Razorpay, and Sentry
       - img-src: Allow images from self, data URIs, HTTPS sources (CDNs, user avatars)
       - style-src: Allow styles from self, inline (required for styled-components/Tailwind)
       - font-src: Allow fonts from self and Google Fonts
-      - frame-src: Allow iframes only from Razorpay checkout (payment modal)
-      - frame-ancestors: Prevent this page from being embedded in iframes (clickjacking protection)
+      - frame-src: Allow iframes from Razorpay checkout and Clerk (for auth modals)
       - base-uri: Restrict base element to prevent base tag hijacking
       - form-action: Restrict form submissions to same origin
       - object-src: Disallow plugins (Flash, Java, etc.)
       - upgrade-insecure-requests: Auto-upgrade HTTP to HTTPS
+
+      IMPORTANT: frame-ancestors directive is NOT included here because it is
+      ignored when delivered via <meta> element (browser security restriction).
+      For clickjacking protection, configure frame-ancestors in your HTTP headers:
+        Content-Security-Policy: frame-ancestors 'self';
+      This should be set in your web server config (nginx, Vercel, etc.)
 
       Note: 'unsafe-inline' for scripts is required for Vite HMR in development.
       Consider using nonces or hashes in production for stricter CSP.
     -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
-      script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://browser.sentry-cdn.com;
-      connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://*.clerk.dev https://*.clerk.com https://api.razorpay.com https://*.sentry.io;
+      script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://browser.sentry-cdn.com https://*.clerk.accounts.dev;
+      connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://*.clerk.dev https://*.clerk.com https://*.clerk.accounts.dev https://api.razorpay.com https://*.sentry.io;
       img-src 'self' data: https: blob:;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
       font-src 'self' https://fonts.gstatic.com;
-      frame-src https://checkout.razorpay.com https://api.razorpay.com;
-      frame-ancestors 'none';
+      frame-src https://checkout.razorpay.com https://api.razorpay.com https://*.clerk.accounts.dev;
       base-uri 'self';
       form-action 'self';
       object-src 'none';
@@ -99,40 +103,21 @@
     <!--
       Hero Image LCP Optimization:
       =========================================================================
-      Primary hero image preload using imagesrcset for responsive loading.
-      This tells the browser to start loading the hero image immediately,
-      before the React bundle parses and renders the HeroSection component.
+      IMPORTANT: Preloading Vite-transformed images requires matching the exact
+      query parameters used in the component. During development, Vite serves
+      these via its dev server with the query string transformation.
 
-      The browser will pick the best format and size based on:
-      1. Format support (AVIF > WebP > JPG)
-      2. Viewport width and device pixel ratio
+      We preload the most common variant (desktop WebP 1920px) to optimize LCP.
+      The browser will use this preloaded resource when HeroSection renders.
 
-      Note: During development, Vite transforms these paths. In production,
-      the vite-plugin-html or similar should be used to inject hashed paths.
-      For now, we use the source paths which work in development mode.
+      Note: In production builds, consider using vite-plugin-html or a similar
+      plugin to inject the correct hashed asset paths dynamically.
     -->
     <link
       rel="preload"
       as="image"
-      href="/src/assets/hero-blockhaus.jpg"
-      imagesrcset="/src/assets/hero-blockhaus.jpg?w=480&format=avif 480w,
-                   /src/assets/hero-blockhaus.jpg?w=768&format=avif 768w,
-                   /src/assets/hero-blockhaus.jpg?w=1024&format=avif 1024w,
-                   /src/assets/hero-blockhaus.avif 1920w"
-      imagesizes="100vw"
-      type="image/avif"
-    />
-    <!-- WebP fallback preload for browsers without AVIF support -->
-    <link
-      rel="preload"
-      as="image"
-      href="/src/assets/hero-blockhaus.jpg"
-      imagesrcset="/src/assets/hero-blockhaus.jpg?w=480&format=webp 480w,
-                   /src/assets/hero-blockhaus.jpg?w=768&format=webp 768w,
-                   /src/assets/hero-blockhaus.jpg?w=1024&format=webp 1024w,
-                   /src/assets/hero-blockhaus.jpg?w=1920&format=webp 1920w"
-      imagesizes="100vw"
       type="image/webp"
+      href="/src/assets/hero-blockhaus.jpg?w=1920&format=webp"
     />
 
     <!-- Inline critical CSS for faster FCP -->

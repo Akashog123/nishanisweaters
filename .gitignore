@@ -88,3 +88,4 @@ test-results/
 # Keep GitHub workflows
 .github/*
 !.github/workflows/
+.vercel

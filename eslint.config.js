@@ -5,7 +5,7 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist"] },
+  { ignores: ["dist", "convex/_generated/**", "e2e/**"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
@@ -30,7 +30,20 @@ export default tseslint.config(
   },
   // Relaxed rules for test files
   {
-    files: ["**/test/**/*.{ts,tsx}", "**/*.test.{ts,tsx}"],
+    files: ["**/test/**/*.{ts,tsx}", "**/*.test.{ts,tsx}", "**/__tests__/**/*.{ts,tsx}", "**/testUtils.{ts,tsx}"],
+    rules: {
+      "react-refresh/only-export-components": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
+  // Components that legitimately export both components and utilities
+  {
+    files: [
+      "**/context/**/*.{ts,tsx}",
+      "**/ui/**/*.{ts,tsx}",
+      "**/components/routes/**/*.{ts,tsx}",
+      "**/components/admin/**/*.{ts,tsx}",
+    ],
     rules: {
       "react-refresh/only-export-components": "off",
     },
