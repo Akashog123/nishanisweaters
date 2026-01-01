@@ -37,6 +37,5 @@ export { renderRoutes, RouteElement } from "./RouteRenderer";
 // Component-based route wrappers (legacy, still usable)
 export { AdminRoute } from "./AdminRoute";
 export { ProtectedUserRoute } from "./ProtectedUserRoute";
-export { WholesaleRoute } from "./WholesaleRoute";
 export { PublicRoute } from "./PublicRoute";
 export { PageLoader } from "./PageLoader";

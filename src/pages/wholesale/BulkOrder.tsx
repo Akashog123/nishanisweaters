@@ -1,13 +1,11 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useUser } from "@clerk/clerk-react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Card,
@@ -17,14 +15,6 @@ import {
   CardTitle,
   CardFooter,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
@@ -45,7 +35,6 @@ import {
   Package,
   AlertCircle,
   Loader2,
-  Building2,
   CheckCircle,
   Phone,
   MessageCircle,
@@ -66,7 +55,6 @@ interface BulkOrderItem {
 
 export default function BulkOrder() {
   const navigate = useNavigate();
-  const { user, isLoaded: isUserLoaded, isSignedIn } = useUser();
   const { addToCart } = useCart();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -74,25 +62,22 @@ export default function BulkOrder() {
   const [bulkItems, setBulkItems] = useState<BulkOrderItem[]>([]);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
-  // SECURITY: Use server-side identity verification - never pass client clerkId
-  const userProfile = useQuery(
-    api.users.getUserByClerkId,
-    user ? {} : "skip"
-  );
-
   // Get all products for bulk ordering
   const productsData = useQuery(api.products.listProducts, { limit: 100 });
   const products = productsData?.products || [];
 
-  // Get filter options
-  const filterOptions = useQuery(api.products.getFilterOptions, {});
+  // Get unique categories from products
+  const categories = useMemo(() => {
+    const categorySet = new Set(products.map(p => p.category));
+    return Array.from(categorySet).sort();
+  }, [products]);
 
   // Filter products based on search and category
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
       const matchesSearch = !searchTerm ||
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.sku?.toLowerCase().includes(searchTerm.toLowerCase());
+        product.variants.some(v => v.sku.toLowerCase().includes(searchTerm.toLowerCase()));
 
       const matchesCategory = selectedCategory === "all" ||
         product.category === selectedCategory;
@@ -137,6 +122,15 @@ export default function BulkOrder() {
     } else {
       // Add new item (use wholesale price if available, otherwise retail)
       const price = product.wholesalePrice || product.retailPrice;
+      // Auto-fill quantity to MOQ (minimum order quantity) or default to 1
+      const initialQuantity = product.minOrderQuantity || 1;
+      // Ensure we don't exceed stock
+      const safeQuantity = Math.min(initialQuantity, variant.stockQuantity);
+
+      if (safeQuantity < initialQuantity) {
+        toast.warning(`Only ${variant.stockQuantity} units available, but MOQ is ${initialQuantity}`);
+      }
+
       setBulkItems([
         ...bulkItems,
         {
@@ -147,7 +141,7 @@ export default function BulkOrder() {
           size: variant.size,
           color: variant.color,
           unitPrice: price,
-          quantity: 1,
+          quantity: safeQuantity,
           stockQuantity: variant.stockQuantity,
           minOrderQuantity: product.minOrderQuantity,
         },
@@ -158,12 +152,16 @@ export default function BulkOrder() {
 
   // Update item quantity
   const updateQuantity = (index: number, newQuantity: number) => {
-    if (newQuantity < 1) {
+    const item = bulkItems[index];
+    const minQty = item.minOrderQuantity || 1;
+
+    // If quantity goes below MOQ, remove the item (user clicked minus too many times)
+    if (newQuantity < minQty) {
       removeItem(index);
+      toast.info(`Removed ${item.productName} (minimum order is ${minQty} units)`);
       return;
     }
 
-    const item = bulkItems[index];
     if (newQuantity > item.stockQuantity) {
       toast.error(`Only ${item.stockQuantity} units available`);
       return;
@@ -228,8 +226,8 @@ export default function BulkOrder() {
     }
   };
 
-  // Loading state
-  if (!isUserLoaded) {
+  // Loading state for products
+  if (productsData === undefined) {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-12">
@@ -241,49 +239,51 @@ export default function BulkOrder() {
     );
   }
 
-  // Not signed in or not wholesale
-  if (!isSignedIn || (userProfile && userProfile.role !== "wholesale")) {
-    return (
-      <Layout>
-        <div className="container mx-auto px-4 py-12">
-          <Card className="max-w-lg mx-auto">
-            <CardHeader className="text-center">
-              <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <CardTitle>Wholesale Access Required</CardTitle>
-              <CardDescription>
-                Bulk ordering is only available for approved wholesale customers.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center">
-              <Button onClick={() => navigate("/wholesale/register")}>
-                Apply for Wholesale
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </Layout>
-    );
-  }
-
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Bulk Order</h1>
+          <h1 className="text-3xl font-bold mb-2">Bulk Purchase</h1>
           <p className="text-muted-foreground">
-            Add multiple products to your order quickly with exclusive wholesale pricing.
-            Need custom bulk pricing?{" "}
-            <a
-              href={WHATSAPP_BULK_PRICING_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-green-600 hover:text-green-700 font-medium"
-            >
-              Contact us on WhatsApp
-            </a>.
+            Get great prices on bulk orders. Select products below or contact us directly for customisation quotes.
           </p>
         </div>
+
+        {/* Contact CTA Banner */}
+        <Card className="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+          <CardContent className="py-6">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-green-100 rounded-full">
+                  <MessageCircle className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-green-900">Need a Custom Quote?</h3>
+                  <p className="text-sm text-green-700">For large orders or special pricing, contact us directly</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Button asChild className="bg-green-600 hover:bg-green-700">
+                  <a
+                    href={WHATSAPP_BULK_PRICING_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    WhatsApp Us
+                  </a>
+                </Button>
+                <Button asChild variant="outline" className="border-green-600 text-green-700 hover:bg-green-50">
+                  <a href="tel:+917458816343">
+                    <Phone className="h-4 w-4 mr-2" />
+                    Call Now
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Product Selection */}
@@ -307,7 +307,7 @@ export default function BulkOrder() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Categories</SelectItem>
-                      {filterOptions?.categories.map((cat) => (
+                      {categories.map((cat) => (
                         <SelectItem key={cat} value={cat}>
                           {cat}
                         </SelectItem>
@@ -348,6 +348,12 @@ export default function BulkOrder() {
                         />
                         <div className="flex-1">
                           <h4 className="font-medium line-clamp-1">{product.name}</h4>
+                          {/* Show MSRP (Regular Price) if higher than retail */}
+                          {product.compareAtPrice && product.compareAtPrice > product.retailPrice && (
+                            <p className="text-xs text-muted-foreground/60 line-through">
+                              Regular: {formatCurrency(product.compareAtPrice)}
+                            </p>
+                          )}
                           {product.wholesalePrice ? (
                             <>
                               <p className="text-lg font-bold text-green-600">
@@ -455,7 +461,7 @@ export default function BulkOrder() {
                                 value={item.quantity}
                                 onChange={(e) => updateQuantity(index, parseInt(e.target.value) || 0)}
                                 className="h-6 w-14 text-center text-sm px-1"
-                                min={1}
+                                min={item.minOrderQuantity || 1}
                                 max={item.stockQuantity}
                               />
                               <Button

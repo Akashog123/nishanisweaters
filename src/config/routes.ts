@@ -9,7 +9,7 @@
 import { lazy, LazyExoticComponent, ComponentType } from 'react';
 
 // User roles matching the ProtectedRoute requirements
-export type UserRole = 'customer' | 'wholesale' | 'admin';
+export type UserRole = 'customer' | 'admin';
 
 /**
  * Route configuration interface
@@ -64,6 +64,16 @@ export const publicRoutes: RouteConfig[] = [
     component: lazy(() => import('@/pages/ContactUs')),
     isLazy: true,
   },
+  {
+    path: '/about-us',
+    component: lazy(() => import('@/pages/AboutUs')),
+    isLazy: true,
+  },
+  {
+    path: '/bulk-purchase',
+    component: lazy(() => import('@/pages/wholesale/BulkOrder')),
+    isLazy: true,
+  },
 ];
 
 /**
@@ -109,35 +119,6 @@ export const protectedRoutes: RouteConfig[] = [
   },
 ];
 
-/**
- * Wholesale registration - Requires auth but no specific role
- */
-export const wholesaleRegistrationRoutes: RouteConfig[] = [
-  {
-    path: '/wholesale/register',
-    component: lazy(() => import('@/pages/wholesale/WholesaleRegistration')),
-    isLazy: true,
-  },
-];
-
-/**
- * Wholesale routes - Requires wholesale role
- * These routes are for approved wholesale customers
- */
-export const wholesaleRoutes: RouteConfig[] = [
-  {
-    path: '/wholesale/dashboard',
-    component: lazy(() => import('@/pages/wholesale/WholesaleDashboard')),
-    requiredRole: 'wholesale',
-    isLazy: true,
-  },
-  {
-    path: '/wholesale/bulk-order',
-    component: lazy(() => import('@/pages/wholesale/BulkOrder')),
-    requiredRole: 'wholesale',
-    isLazy: true,
-  },
-];
 
 /**
  * Admin routes - Requires admin role
@@ -180,13 +161,6 @@ export const adminRoutes: RouteConfig[] = [
     isLazy: true,
   },
   {
-    path: '/admin/wholesale',
-    component: lazy(() => import('@/pages/admin/AdminWholesale')),
-    requiredRole: 'admin',
-    showErrorDetails: true,
-    isLazy: true,
-  },
-  {
     path: '/admin/reviews',
     component: lazy(() => import('@/pages/admin/AdminReviews')),
     requiredRole: 'admin',
@@ -223,7 +197,5 @@ export const allRoutes = [
   ...publicRoutes,
   ...cartRoutes,
   ...protectedRoutes,
-  ...wholesaleRegistrationRoutes,
-  ...wholesaleRoutes,
   ...adminRoutes,
 ];
