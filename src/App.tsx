@@ -7,6 +7,7 @@ import NotFound from "./pages/NotFound";
 import { CartProvider } from "@/context/CartContext";
 import { useSmoothScroll } from "@/hooks/use-smooth-scroll";
 import { useUserSync } from "@/components/auth/useUserSync";
+import { useAuthObservability } from "@/hooks/useAuthObservability";
 import { queryClient } from "@/lib/queryClient";
 
 // Import route configurations
@@ -14,8 +15,6 @@ import {
   publicRoutes,
   cartRoutes,
   protectedRoutes,
-  wholesaleRegistrationRoutes,
-  wholesaleRoutes,
   adminRoutes,
 } from "@/config/routes";
 
@@ -26,6 +25,8 @@ import { renderRoutes } from "@/components/routes/RouteRenderer";
 function AppContent() {
   useSmoothScroll();
   useUserSync();
+  // OBSERVABILITY: Set user segment for performance tracking (retail/wholesale/anonymous)
+  useAuthObservability();
 
   return (
     <Routes>
@@ -37,12 +38,6 @@ function AppContent() {
 
       {/* Protected Routes - Requires authentication */}
       {renderRoutes(protectedRoutes, { requireAuth: true })}
-
-      {/* Wholesale Registration - Requires auth but no specific role */}
-      {renderRoutes(wholesaleRegistrationRoutes, { requireAuth: true })}
-
-      {/* Wholesale Routes - Requires wholesale role */}
-      {renderRoutes(wholesaleRoutes)}
 
       {/* Admin Routes - Requires admin role with detailed error display */}
       {renderRoutes(adminRoutes)}

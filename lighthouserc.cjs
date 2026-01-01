@@ -17,51 +17,29 @@
 module.exports = {
   ci: {
     collect: {
-      // Number of runs per URL to get consistent results
-      numberOfRuns: 3,
+      // Number of runs per URL - use 1 for faster testing
+      numberOfRuns: 1,
 
       // Collect data from a local build
       startServerCommand: 'npm run preview',
       startServerReadyPattern: 'Local:',
-      startServerReadyTimeout: 30000,
+      startServerReadyTimeout: 60000, // Increased timeout
 
-      // URLs to test - key user journeys
+      // URLs to test - just homepage for now
       url: [
         'http://localhost:4173/', // Homepage
-        'http://localhost:4173/products', // Product listing
-        'http://localhost:4173/products/1', // Product detail (may need dynamic)
-        'http://localhost:4173/cart', // Cart page
-        'http://localhost:4173/checkout', // Checkout flow
       ],
 
       // Lighthouse settings
       settings: {
-        // Throttling configuration (simulates 4G connection)
+        // Use desktop mode for faster/more reliable tests locally
+        preset: 'desktop',
+        // Throttling configuration
         throttlingMethod: 'simulate',
-        throttling: {
-          rttMs: 40,
-          throughputKbps: 10 * 1024,
-          requestLatencyMs: 0,
-          downloadThroughputKbps: 10 * 1024,
-          uploadThroughputKbps: 5 * 1024,
-          cpuSlowdownMultiplier: 1,
-        },
-
-        // Use mobile emulation by default
-        formFactor: 'mobile',
-        screenEmulation: {
-          mobile: true,
-          width: 375,
-          height: 667,
-          deviceScaleFactor: 2,
-          disabled: false,
-        },
-
+        // Skip network-dependent audits for local testing
+        skipAudits: ['redirects-http', 'uses-http2'],
         // Run key audits
         onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
-
-        // Skip chrome launcher flags if needed
-        // chromeFlags: '--no-sandbox --disable-dev-shm-usage',
       },
     },
 

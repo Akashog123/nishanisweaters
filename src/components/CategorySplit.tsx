@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import productHoodie1 from "@/assets/product-hoodie-1.jpg";
 import productHoodie2 from "@/assets/product-hoodie-2.jpg";

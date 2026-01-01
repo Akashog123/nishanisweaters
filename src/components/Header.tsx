@@ -1,12 +1,12 @@
-import { ShoppingCart, Heart, Menu, Package, Settings, Building2, Phone, MapPin, Bell } from "lucide-react";
-import { useState, memo } from "react";
+import { ShoppingCart, Heart, Menu, Package, Settings, Phone, MapPin, Bell } from "lucide-react";
+import { useState, memo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/clerk-react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
-import { useCartItems } from "@/context/cart/hooks";
 import CartDrawer from "@/components/CartDrawer";
+import CartBadge from "@/components/CartBadge";
 import SearchBar from "@/components/SearchBar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ContactInfoPage } from "@/components/account/ContactInfoPage";
@@ -19,14 +19,13 @@ const NAV_LINKS = [
   { name: "MENS", href: "/shop/mens" },
   { name: "WOMENS", href: "/shop/womens" },
   { name: "KIDS", href: "/shop/kids" },
-  { name: "BULK PURCHASE", href: "/wholesale/register" },
+  { name: "BULK PURCHASE", href: "/bulk-purchase" },
   { name: "ABOUT US", href: "/about-us" },
 ] as const;
 
 const Header = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { totalItems } = useCartItems();
   const { isSignedIn, isLoaded } = useUser();
 
   // SECURITY: Use server-side identity verification - never pass client clerkId
@@ -36,7 +35,19 @@ const Header = () => {
   );
 
   const isAdmin = dbUser?.role === "admin";
-  const isWholesale = dbUser?.role === "wholesale";
+
+  // PERFORMANCE: Prefetch routes on hover for faster navigation
+  const prefetchRoute = useCallback((href: string) => {
+    if (href.startsWith("/shop")) {
+      import("@/pages/Shop");
+    } else if (href === "/bulk-purchase") {
+      import("@/pages/wholesale/BulkOrder");
+    } else if (href === "/about-us") {
+      import("@/pages/AboutUs");
+    } else if (href === "/contact-us") {
+      import("@/pages/ContactUs");
+    }
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 bg-background border-b border-border">
@@ -83,15 +94,6 @@ const Header = () => {
                           </Link>
                         </>
                       )}
-                      {isWholesale && (
-                        <Link
-                          to="/wholesale/dashboard"
-                          className="flex items-center gap-2 py-2 hover:text-primary"
-                          onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                          <Building2 className="h-4 w-4" /> Wholesale Dashboard
-                        </Link>
-                      )}
                       {isAdmin && (
                         <Link
                           to="/admin"
@@ -132,6 +134,7 @@ const Header = () => {
                 key={link.name}
                 to={link.href}
                 className="text-sm font-medium hover:text-primary transition-colors"
+                onMouseEnter={() => prefetchRoute(link.href)}
               >
                 {link.name}
               </Link>
@@ -154,6 +157,8 @@ const Header = () => {
             )}
 
             {/* Cart - Hidden for admin users */}
+            {/* PERFORMANCE: CartBadge is a separate memoized component */}
+            {/* This prevents Header re-renders when cart changes */}
             {!isAdmin && (
               <Button
                 variant="ghost"
@@ -162,15 +167,7 @@ const Header = () => {
                 onClick={() => setIsCartOpen(true)}
               >
                 <ShoppingCart className="h-5 w-5" />
-                {/* Always render badge to prevent CLS - use opacity for show/hide transition */}
-                <span
-                  className={`absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium transition-opacity duration-150 ${
-                    totalItems > 0 ? "opacity-100" : "opacity-0 pointer-events-none"
-                  }`}
-                  aria-hidden={totalItems === 0}
-                >
-                  {totalItems > 0 ? totalItems : 0}
-                </span>
+                <CartBadge />
               </Button>
             )}
 
@@ -217,13 +214,6 @@ const Header = () => {
                           label="Order History"
                           labelIcon={<Package className="h-4 w-4" />}
                           href="/orders"
-                        />
-                      )}
-                      {isWholesale && (
-                        <UserButton.Link
-                          label="Wholesale Dashboard"
-                          labelIcon={<Building2 className="h-4 w-4" />}
-                          href="/wholesale/dashboard"
                         />
                       )}
                       {isAdmin && (

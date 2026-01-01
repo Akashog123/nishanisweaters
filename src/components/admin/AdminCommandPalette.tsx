@@ -82,8 +82,7 @@ export function AdminCommandPalette({ open, onOpenChange }: AdminCommandPaletteP
       .filter(
         (o) =>
           o.orderNumber?.toLowerCase().includes(searchLower) ||
-          o.shippingAddress?.firstName?.toLowerCase().includes(searchLower) ||
-          o.shippingAddress?.lastName?.toLowerCase().includes(searchLower)
+          o.shippingAddress?.name?.toLowerCase().includes(searchLower)
       )
       .slice(0, 5);
   }, [orders, search]);
@@ -145,7 +144,7 @@ export function AdminCommandPalette({ open, onOpenChange }: AdminCommandPaletteP
                   <span className="font-medium">{product.name}</span>
                 </div>
                 <span className="text-xs font-semibold text-muted-foreground bg-muted px-2 py-1">
-                  {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(product.price)}
+                  {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(product.retailPrice)}
                 </span>
               </CommandItem>
             ))}
@@ -169,7 +168,7 @@ export function AdminCommandPalette({ open, onOpenChange }: AdminCommandPaletteP
                   <div className="flex-1 min-w-0">
                     <span className="font-medium">{order.orderNumber}</span>
                     <span className="text-xs text-muted-foreground ml-2">
-                      {order.shippingAddress?.firstName} {order.shippingAddress?.lastName}
+                      {order.shippingAddress?.name}
                     </span>
                   </div>
                 </CommandItem>

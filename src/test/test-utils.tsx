@@ -153,11 +153,20 @@ export {
 /**
  * Helper function to create a mock cart item
  */
-export const createMockCartItem = (overrides = {}) => ({
+export const createMockCartItem = (overrides: Partial<{
+  productId: string;
+  name: string;
+  price: number;
+  originalPrice: number;
+  image: string;
+  size: string;
+  color: string;
+  quantity: number;
+}> = {}) => ({
   productId: 'test-product-1',
   name: 'Test Product',
-  price: '99.99',
-  originalPrice: '129.99',
+  price: 99.99,
+  originalPrice: 129.99,
   image: '/test-image.jpg',
   size: 'M',
   color: 'Black',

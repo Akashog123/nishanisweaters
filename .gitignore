@@ -22,13 +22,61 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-# Environment filee
+
+# =========================================================================
+# SECURITY: Environment and Secret Files
+# =========================================================================
+# CRITICAL: Never commit secrets, API keys, or credentials to version control
+# These patterns ensure sensitive configuration files are excluded
+
+# Environment files (all variations)
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 .env*.local
+.env.development
+.env.production
+.env.staging
+
+# Secret and credential files
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.jks
+*.keystore
+secrets.json
+credentials.json
+service-account*.json
+*-credentials.json
+*.secret
+*.secrets
+
+# API keys and tokens (common naming patterns)
+api-keys.json
+tokens.json
+auth.json
+
+# Cloud provider credential files
+.aws/
+.azure/
+.gcp/
+google-credentials.json
+firebase-adminsdk*.json
+
+# SSH keys (if accidentally placed in project)
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+*.ppk
+
+# Convex deployment secrets
+.convex/
+convex.json
 
 # Testing
 coverage/

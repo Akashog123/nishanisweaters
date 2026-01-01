@@ -102,4 +102,22 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Fix: Prevent background scrolling when modals/sheets/dialogs are open */
+  /* Radix UI adds data-scroll-locked attribute to html element */
+  html[data-scroll-locked],
+  html[data-scroll-locked] body {
+    overflow: hidden !important;
+    touch-action: none !important;
+    -webkit-overflow-scrolling: none !important;
+  }
+
+  /* Ensure modal content can scroll while blocking background */
+  [data-radix-dialog-content],
+  [role="dialog"] {
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    touch-action: pan-y !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
 }

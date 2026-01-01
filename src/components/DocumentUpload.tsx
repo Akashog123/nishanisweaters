@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,7 @@ import {
   FileText,
   Trash2,
   CheckCircle,
-  AlertCircle,
   Loader2,
-  X,
 } from "lucide-react";
 import { MAX_FILE_SIZE_BYTES, ALLOWED_DOCUMENT_TYPES } from "@/lib/constants";
 
@@ -34,7 +32,6 @@ interface UploadedDocument {
 }
 
 interface DocumentUploadProps {
-  applicationId?: Id<"wholesaleApplications">;
   onDocumentUploaded?: (doc: UploadedDocument) => void;
   onDocumentRemoved?: (storageId: string) => void;
   existingDocuments?: UploadedDocument[];
@@ -50,7 +47,6 @@ const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
 };
 
 export function DocumentUpload({
-  applicationId,
   onDocumentUploaded,
   onDocumentRemoved,
   existingDocuments = [],
@@ -64,7 +60,7 @@ export function DocumentUpload({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const generateUploadUrl = useMutation(api.fileStorage.generateUploadUrl);
-  const saveDocument = useMutation(api.fileStorage.saveDocument);
+  const saveDocument = useAction(api.fileStorage.saveDocument);
   const deleteFile = useMutation(api.fileStorage.deleteFile);
 
   const validateFile = (file: File): { valid: boolean; error?: string } => {
@@ -136,7 +132,7 @@ export function DocumentUpload({
       const result = await saveDocument({
         storageId,
         documentType: selectedType,
-        applicationId,
+        contentType: file.type,
       });
 
       setUploadProgress(100);
@@ -160,13 +156,12 @@ export function DocumentUpload({
       setIsUploading(false);
       setUploadProgress(0);
     }
-  }, [generateUploadUrl, saveDocument, selectedType, applicationId, uploadedDocs.length, maxDocuments, onDocumentUploaded]);
+  }, [generateUploadUrl, saveDocument, selectedType, uploadedDocs.length, maxDocuments, onDocumentUploaded]);
 
   const handleRemoveDocument = useCallback(async (storageId: string) => {
     try {
       await deleteFile({
         storageId: storageId as Id<"_storage">,
-        applicationId,
       });
 
       setUploadedDocs((prev) => prev.filter((doc) => doc.storageId !== storageId));
@@ -177,7 +172,7 @@ export function DocumentUpload({
         error instanceof Error ? error.message : "Failed to remove document"
       );
     }
-  }, [deleteFile, applicationId, onDocumentRemoved]);
+  }, [deleteFile, onDocumentRemoved]);
 
   return (
     <div className="space-y-4">

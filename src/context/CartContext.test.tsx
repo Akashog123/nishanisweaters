@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { CartProvider, useCart, CartItem } from '@/context/CartContext'
+import { CartProvider, useCart } from '@/context/CartContext'
 import { createMockCartItem } from '@/test/test-utils'
 
 // Mock Clerk to avoid ClerkProvider requirement
@@ -210,10 +210,10 @@ describe('CartContext', () => {
   describe('subtotal calculation', () => {
     it('should calculate subtotal correctly', () => {
       const { result } = renderHook(() => useCart(), { wrapper })
-      const item1 = createMockCartItem({ price: '50.00', quantity: 2 })
+      const item1 = createMockCartItem({ price: 50.00, quantity: 2 })
       const item2 = createMockCartItem({
         productId: '2',
-        price: '25.00',
+        price: 25.00,
         quantity: 3,
         size: 'L'
       })
@@ -229,7 +229,7 @@ describe('CartContext', () => {
 
     it('should update subtotal when quantity changes', () => {
       const { result } = renderHook(() => useCart(), { wrapper })
-      const item = createMockCartItem({ price: '100.00', quantity: 1 })
+      const item = createMockCartItem({ price: 100.00, quantity: 1 })
 
       act(() => {
         result.current.addToCart(item)

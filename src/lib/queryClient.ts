@@ -9,8 +9,9 @@ import { QueryClient, QueryClientConfig } from "@tanstack/react-query";
 
 /**
  * Default query client options
+ * Using DefaultOptions type for proper type inference
  */
-const defaultOptions: QueryClientConfig["defaultOptions"] = {
+const defaultOptions = {
   queries: {
     // Stale time: How long data is considered fresh (5 minutes)
     staleTime: 5 * 60 * 1000,

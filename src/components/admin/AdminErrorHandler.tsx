@@ -19,7 +19,7 @@ export function AdminErrorHandler({
   action = 'perform this action',
   onRetry,
 }: AdminErrorHandlerProps) {
-  const { handleError } = useConvexError();
+  useConvexError();
 
   // Handle permission errors specially in admin context
   const isPermissionError =

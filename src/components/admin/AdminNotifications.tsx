@@ -17,13 +17,12 @@ import {
   ShoppingCart,
   Package,
   AlertTriangle,
-  Building2,
   Clock,
 } from "lucide-react";
 
 interface Notification {
   id: string;
-  type: "order" | "stock" | "dispute" | "wholesale";
+  type: "order" | "stock" | "dispute";
   title: string;
   message: string;
   href: string;
@@ -35,10 +34,6 @@ export function AdminNotifications() {
 
   // Fetch dashboard stats to derive notifications
   const dashboardOverview = useQuery(api.analytics.getDashboardOverview);
-  const wholesaleApplications = useQuery(api.wholesaleApplications.listApplications, {
-    status: "pending",
-    limit: 5,
-  });
 
   // Build notifications from dashboard data
   const notifications = useMemo<Notification[]>(() => {
@@ -82,20 +77,8 @@ export function AdminNotifications() {
       }
     }
 
-    // Pending wholesale applications
-    if (wholesaleApplications && wholesaleApplications.length > 0) {
-      items.push({
-        id: "wholesale-pending",
-        type: "wholesale",
-        title: `${wholesaleApplications.length} Wholesale Application${wholesaleApplications.length !== 1 ? "s" : ""}`,
-        message: "Applications awaiting review",
-        href: "/admin/wholesale?status=pending",
-        urgent: false,
-      });
-    }
-
     return items;
-  }, [dashboardOverview, wholesaleApplications]);
+  }, [dashboardOverview]);
 
   const urgentCount = notifications.filter((n) => n.urgent).length;
   const totalCount = notifications.length;
@@ -108,8 +91,6 @@ export function AdminNotifications() {
         return <Package className="h-4 w-4 text-amber-500" />;
       case "dispute":
         return <AlertTriangle className="h-4 w-4 text-destructive" />;
-      case "wholesale":
-        return <Building2 className="h-4 w-4 text-violet-500" />;
       default:
         return <Clock className="h-4 w-4 text-muted-foreground" />;
     }
@@ -123,8 +104,6 @@ export function AdminNotifications() {
         return "bg-amber-500/10";
       case "dispute":
         return "bg-destructive/10";
-      case "wholesale":
-        return "bg-violet-500/10";
       default:
         return "bg-muted";
     }

@@ -7,6 +7,43 @@
     <meta name="description" content="Redefine your look with BLOCKHAUS premium streetwear. Shop the latest collection with 25% off signatures." />
     <meta name="author" content="BLOCKHAUS" />
 
+    <!--
+      SECURITY: Content Security Policy (CSP)
+      =========================================================================
+      CSP provides defense-in-depth against XSS and data injection attacks.
+
+      Directives explained:
+      - default-src 'self': Only allow resources from same origin by default
+      - script-src: Allow scripts from self, inline (required for React/Vite), and Razorpay checkout
+      - connect-src: Allow API calls to Convex, Clerk auth, Razorpay, and Sentry
+      - img-src: Allow images from self, data URIs, HTTPS sources (CDNs, user avatars)
+      - style-src: Allow styles from self, inline (required for styled-components/Tailwind)
+      - font-src: Allow fonts from self and Google Fonts
+      - frame-src: Allow iframes only from Razorpay checkout (payment modal)
+      - frame-ancestors: Prevent this page from being embedded in iframes (clickjacking protection)
+      - base-uri: Restrict base element to prevent base tag hijacking
+      - form-action: Restrict form submissions to same origin
+      - object-src: Disallow plugins (Flash, Java, etc.)
+      - upgrade-insecure-requests: Auto-upgrade HTTP to HTTPS
+
+      Note: 'unsafe-inline' for scripts is required for Vite HMR in development.
+      Consider using nonces or hashes in production for stricter CSP.
+    -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://browser.sentry-cdn.com;
+      connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://*.clerk.dev https://*.clerk.com https://api.razorpay.com https://*.sentry.io;
+      img-src 'self' data: https: blob:;
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src 'self' https://fonts.gstatic.com;
+      frame-src https://checkout.razorpay.com https://api.razorpay.com;
+      frame-ancestors 'none';
+      base-uri 'self';
+      form-action 'self';
+      object-src 'none';
+      upgrade-insecure-requests;
+    " />
+
     <meta property="og:title" content="BLOCKHAUS - Modern Streetwear Collection" />
     <meta property="og:description" content="Redefine your look with BLOCKHAUS premium streetwear" />
     <meta property="og:type" content="website" />
@@ -60,19 +97,43 @@
     </noscript>
 
     <!--
-      Hero Image LCP Optimization Note:
-      The hero image is loaded via Vite's asset pipeline which applies content hashing.
-      Preloading /src/assets/* paths won't work in production builds.
-      Instead, we rely on:
-      1. fetchpriority="high" on the img element in HeroSection.tsx
-      2. loading="eager" and decoding="sync" attributes
-      3. The <picture> element with modern format sources (AVIF/WebP)
+      Hero Image LCP Optimization:
+      =========================================================================
+      Primary hero image preload using imagesrcset for responsive loading.
+      This tells the browser to start loading the hero image immediately,
+      before the React bundle parses and renders the HeroSection component.
 
-      For production LCP optimization, consider:
-      - Using a CDN with edge caching (configured in vercel.json)
-      - Generating responsive images at build time with vite-imagetools
-      - Injecting the hashed asset path during build
+      The browser will pick the best format and size based on:
+      1. Format support (AVIF > WebP > JPG)
+      2. Viewport width and device pixel ratio
+
+      Note: During development, Vite transforms these paths. In production,
+      the vite-plugin-html or similar should be used to inject hashed paths.
+      For now, we use the source paths which work in development mode.
     -->
+    <link
+      rel="preload"
+      as="image"
+      href="/src/assets/hero-blockhaus.jpg"
+      imagesrcset="/src/assets/hero-blockhaus.jpg?w=480&format=avif 480w,
+                   /src/assets/hero-blockhaus.jpg?w=768&format=avif 768w,
+                   /src/assets/hero-blockhaus.jpg?w=1024&format=avif 1024w,
+                   /src/assets/hero-blockhaus.avif 1920w"
+      imagesizes="100vw"
+      type="image/avif"
+    />
+    <!-- WebP fallback preload for browsers without AVIF support -->
+    <link
+      rel="preload"
+      as="image"
+      href="/src/assets/hero-blockhaus.jpg"
+      imagesrcset="/src/assets/hero-blockhaus.jpg?w=480&format=webp 480w,
+                   /src/assets/hero-blockhaus.jpg?w=768&format=webp 768w,
+                   /src/assets/hero-blockhaus.jpg?w=1024&format=webp 1024w,
+                   /src/assets/hero-blockhaus.jpg?w=1920&format=webp 1920w"
+      imagesizes="100vw"
+      type="image/webp"
+    />
 
     <!-- Inline critical CSS for faster FCP -->
     <style>

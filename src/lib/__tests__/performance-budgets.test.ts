@@ -33,17 +33,7 @@ const PERFORMANCE_BUDGETS = {
   'index': 250, // Main application code
 } as const;
 
-/**
- * Critical budget - total size for critical path resources
- * Should be under 350KB gzipped for good LCP on 3G
- */
-const CRITICAL_PATH_BUDGET = 350; // KB gzipped
 
-/**
- * Total budget for all JS
- * Mobile devices parse ~1MB/s, so keep total under 1MB
- */
-const TOTAL_JS_BUDGET = 1024; // KB gzipped
 
 describe('Performance Budgets', () => {
   describe('Bundle Size Limits', () => {
@@ -177,7 +167,7 @@ describe('Performance Budgets', () => {
       // Verify no single chunk is too large
       const MAX_SINGLE_CHUNK = 350; // KB gzipped
 
-      Object.entries(PERFORMANCE_BUDGETS).forEach(([chunk, limit]) => {
+      Object.entries(PERFORMANCE_BUDGETS).forEach(([, limit]) => {
         expect(limit).toBeLessThanOrEqual(MAX_SINGLE_CHUNK);
       });
     });
@@ -249,7 +239,7 @@ describe('Performance Budgets', () => {
     });
 
     it('should have reasonable budget limits', () => {
-      Object.entries(PERFORMANCE_BUDGETS).forEach(([chunk, limit]) => {
+      Object.entries(PERFORMANCE_BUDGETS).forEach(([, limit]) => {
         // All limits should be positive
         expect(limit).toBeGreaterThan(0);
 

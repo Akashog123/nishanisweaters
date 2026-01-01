@@ -120,6 +120,21 @@ export default defineConfig(({ mode }) => ({
               id.includes("tailwind-merge")) {
             return "vendor-utils";
           }
+
+          // PERFORMANCE: Carousel library - used on product pages, isolated for caching
+          if (id.includes("embla-carousel")) {
+            return "vendor-carousel";
+          }
+
+          // PERFORMANCE: Smooth scroll library - only needed on specific pages
+          if (id.includes("lenis") || id.includes("@studio-freight")) {
+            return "vendor-scroll";
+          }
+
+          // PERFORMANCE: Toast notifications - loaded after initial render
+          if (id.includes("sonner")) {
+            return "vendor-toast";
+          }
         },
 
         // Optimize chunk file naming for better caching

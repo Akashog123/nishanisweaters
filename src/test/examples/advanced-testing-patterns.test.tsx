@@ -407,10 +407,10 @@ describe.skip('useCart Hook - Custom Hook Testing', () => {
     const { result } = renderHook(() => useCart(), { wrapper })
 
     act(() => {
-      result.current.addToCart(createMockCartItem({ price: '50.00', quantity: 2 }))
+      result.current.addToCart(createMockCartItem({ price: 50.00, quantity: 2 }))
       result.current.addToCart(createMockCartItem({
         productId: '2',
-        price: '25.00',
+        price: 25.00,
         quantity: 3,
         size: 'L'
       }))

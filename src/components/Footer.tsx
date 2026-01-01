@@ -96,14 +96,14 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Follow Us - Dynamic Social Links */}
-          <div>
-            <h4 className="font-bold mb-4 lg:mb-6 text-xs lg:text-sm text-gray-400 uppercase tracking-wider">
-              FOLLOW US
-            </h4>
-            <ul className="space-y-2 lg:space-y-3">
-              {socialLinks && socialLinks.length > 0 ? (
-                socialLinks
+          {/* Follow Us - Dynamic Social Links (only shown when links are configured) */}
+          {socialLinks && socialLinks.length > 0 && (
+            <div>
+              <h4 className="font-bold mb-4 lg:mb-6 text-xs lg:text-sm text-gray-400 uppercase tracking-wider">
+                FOLLOW US
+              </h4>
+              <ul className="space-y-2 lg:space-y-3">
+                {socialLinks
                   .filter((link) => isSafeUrl(link.url))
                   .map((link) => (
                     <li key={link.platform}>
@@ -116,14 +116,10 @@ const Footer = () => {
                         {link.label}
                       </a>
                     </li>
-                  ))
-              ) : (
-                <li className="text-sm text-gray-500">
-                  No social links configured
-                </li>
-              )}
-            </ul>
-          </div>
+                  ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         {/* Background Text */}

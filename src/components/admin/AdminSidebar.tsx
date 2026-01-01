@@ -24,13 +24,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
   Package,
   ShoppingCart,
   Users,
-  Building2,
   Star,
   Tag,
   FileText,
@@ -46,7 +44,7 @@ interface NavItem {
   name: string;
   href: string;
   icon: LucideIcon;
-  badge?: "orders" | "wholesale" | "lowStock";
+  badge?: "orders" | "lowStock";
 }
 
 interface NavGroup {
@@ -82,7 +80,6 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Customers",
     items: [
       { name: "All Customers", href: "/admin/customers", icon: Users },
-      { name: "Wholesale", href: "/admin/wholesale", icon: Building2, badge: "wholesale" },
     ],
   },
   {
@@ -100,10 +97,6 @@ export function AdminSidebar() {
 
   // Fetch dashboard stats for badges
   const dashboardOverview = useQuery(api.analytics.getDashboardOverview);
-  const wholesaleApplications = useQuery(api.wholesaleApplications.listApplications, {
-    status: "pending",
-    limit: 10,
-  });
 
   const isActive = (href: string) => {
     if (href === "/admin") {
@@ -118,8 +111,6 @@ export function AdminSidebar() {
     switch (badge) {
       case "orders":
         return dashboardOverview?.pendingOrders || null;
-      case "wholesale":
-        return wholesaleApplications?.length || null;
       case "lowStock":
         return dashboardOverview?.lowStockCount || null;
       default:

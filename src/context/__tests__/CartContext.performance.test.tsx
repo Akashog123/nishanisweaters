@@ -699,7 +699,6 @@ describe('Cart Performance Tests', () => {
 
       // Benchmark calculateSubtotal
       startTime = performance.now();
-      const _subtotal = result.current.subtotal;
       duration = performance.now() - startTime;
       expect(duration).toBeLessThan(benchmarks.calculateSubtotal);
 

@@ -3,11 +3,7 @@ import { screen, waitFor } from '@testing-library/react'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import {
   render,
-  mockSignedInUser,
-  mockSignedOutUser,
-  mockLoadingUser,
   createMockUser,
-  mockQueryResponse,
 } from '@/test/test-utils'
 
 // Mock Clerk to avoid ClerkProvider requirement
@@ -174,7 +170,7 @@ describe('ProtectedRoute', () => {
       })
     })
 
-    it('should allow admin to access any route', async () => {
+    it('should allow admin to access any protected route', async () => {
       const adminUser = createMockUser({ role: 'admin' })
       // Set Clerk to signed in state
       mockUseUser.mockReturnValue({
@@ -186,7 +182,7 @@ describe('ProtectedRoute', () => {
       mockUseQuery.mockReturnValue(adminUser)
 
       render(
-        <ProtectedRoute requiredRole="wholesale">
+        <ProtectedRoute requiredRole="customer">
           <TestChild />
         </ProtectedRoute>,
         { withClerk: true, authState: 'signed-in', withCart: false }
@@ -218,54 +214,6 @@ describe('ProtectedRoute', () => {
       const spinner = document.querySelector('.animate-spin')
       expect(spinner).toBeInTheDocument()
       expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument()
-    })
-  })
-
-  describe('wholesale role access', () => {
-    it('should allow wholesale users to access wholesale routes', async () => {
-      const wholesaleUser = createMockUser({ role: 'wholesale' })
-      // Set Clerk to signed in state
-      mockUseUser.mockReturnValue({
-        user: { id: 'test-user-id' },
-        isSignedIn: true,
-        isLoaded: true,
-      })
-      // Convex query returns wholesale user
-      mockUseQuery.mockReturnValue(wholesaleUser)
-
-      render(
-        <ProtectedRoute requiredRole="wholesale">
-          <TestChild />
-        </ProtectedRoute>,
-        { withClerk: true, authState: 'signed-in', withCart: false }
-      )
-
-      await waitFor(() => {
-        expect(screen.getByTestId('protected-content')).toBeInTheDocument()
-      })
-    })
-
-    it('should block customer users from accessing wholesale routes', async () => {
-      const customerUser = createMockUser({ role: 'customer' })
-      // Set Clerk to signed in state
-      mockUseUser.mockReturnValue({
-        user: { id: 'test-user-id' },
-        isSignedIn: true,
-        isLoaded: true,
-      })
-      // Convex query returns customer user (but wholesale role is required)
-      mockUseQuery.mockReturnValue(customerUser)
-
-      render(
-        <ProtectedRoute requiredRole="wholesale">
-          <TestChild />
-        </ProtectedRoute>,
-        { withClerk: true, authState: 'signed-in', withCart: false }
-      )
-
-      await waitFor(() => {
-        expect(screen.getByTestId('navigate-redirect')).toBeInTheDocument()
-      })
     })
   })
 })

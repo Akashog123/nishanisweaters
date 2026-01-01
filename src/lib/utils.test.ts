@@ -48,8 +48,8 @@ describe('Utils', () => {
     })
 
     it('should handle complex class combinations', () => {
-      const variant = 'primary'
-      const size = 'lg'
+      const variant: string = 'primary'
+      const size: string = 'lg'
       const isDisabled = false
 
       const result = cn(

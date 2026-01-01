@@ -352,49 +352,6 @@ export interface InventoryLogEntry {
 }
 
 // ============================================================================
-// Wholesale Application Types
-// ============================================================================
-
-/** Document types for wholesale applications */
-export type WholesaleDocumentType =
-  | "reseller_certificate"
-  | "business_license"
-  | "gst_certificate"
-  | "other";
-
-/** Wholesale application status */
-export type WholesaleApplicationStatus = "pending" | "under_review" | "approved" | "rejected";
-
-/** Document attached to wholesale application */
-export interface WholesaleDocument {
-  type: WholesaleDocumentType;
-  url: string;
-  storageId: string;
-  uploadedAt: number;
-}
-
-/** Complete wholesale application from Convex database */
-export interface ConvexWholesaleApplication {
-  _id: Id<"wholesaleApplications">;
-  _creationTime: number;
-  userId?: string;
-  clerkId: string;
-  companyName: string;
-  businessEmail?: string;
-  gstNumber?: string;
-  businessAddress: BusinessAddress;
-  website?: string;
-  documents?: WholesaleDocument[];
-  status: WholesaleApplicationStatus;
-  reviewedBy?: string;
-  reviewedAt?: number;
-  reviewNotes?: string;
-  rejectionReason?: string;
-  submittedAt: number;
-  updatedAt: number;
-}
-
-// ============================================================================
 // Review Types
 // ============================================================================
 

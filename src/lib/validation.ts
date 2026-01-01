@@ -285,12 +285,6 @@ export function validateImageUrl(url: string): boolean {
   // Check if it's a valid URL
   if (!validateUrl(url)) return false;
 
-  // Common image extensions (optional, some CDNs don't use extensions)
-  const imageExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".avif"];
-  const hasImageExtension = imageExtensions.some((ext) =>
-    url.toLowerCase().includes(ext)
-  );
-
   // Allow URLs without extensions (CDN-style)
   return true;
 }

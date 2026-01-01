@@ -9,8 +9,8 @@ interface ProtectedRouteProps {
   blockAdminAccess?: boolean;
 }
 
-export function ProtectedRoute({ children, requiredRole, blockAdminAccess }: ProtectedRouteProps) {
-  const { isSignedIn, user, isLoaded } = useUser();
+export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
+  const { isSignedIn, isLoaded } = useUser();
   const location = useLocation();
 
   // SECURITY: Use server-side identity verification - never pass client clerkId
