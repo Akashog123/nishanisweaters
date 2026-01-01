@@ -61,33 +61,35 @@ ChartContainer.displayName = "Chart";
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   const colorConfig = Object.entries(config).filter(([_, config]) => config.theme || config.color);
 
-  if (!colorConfig.length) {
-    return null;
-  }
-
   // Generate CSS safely without dangerouslySetInnerHTML
   // The id and config values are controlled by the component props and validated
-  const cssText = Object.entries(THEMES)
-    .map(([theme, prefix]) => {
-      const selector = prefix ? `${prefix} [data-chart="${id}"]` : `[data-chart="${id}"]`;
-      const rules = colorConfig
-        .map(([key, itemConfig]) => {
-          const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
-          // Sanitize key to prevent CSS injection - only allow alphanumeric and hyphens
-          const sanitizedKey = key.replace(/[^a-zA-Z0-9-]/g, '');
-          // Validate color format (hex, rgb, hsl, or CSS color names)
-          if (color && /^(#[0-9A-Fa-f]{3,8}|rgb\(|rgba\(|hsl\(|hsla\(|[a-z]+)/.test(color)) {
-            return `  --color-${sanitizedKey}: ${color};`;
-          }
-          return null;
-        })
-        .filter(Boolean)
-        .join("\n");
+  const cssText = React.useMemo(() => {
+    if (!colorConfig.length) {
+      return "";
+    }
 
-      return rules ? `${selector} {\n${rules}\n}` : null;
-    })
-    .filter(Boolean)
-    .join("\n");
+    return Object.entries(THEMES)
+      .map(([theme, prefix]) => {
+        const selector = prefix ? `${prefix} [data-chart="${id}"]` : `[data-chart="${id}"]`;
+        const rules = colorConfig
+          .map(([key, itemConfig]) => {
+            const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
+            // Sanitize key to prevent CSS injection - only allow alphanumeric and hyphens
+            const sanitizedKey = key.replace(/[^a-zA-Z0-9-]/g, '');
+            // Validate color format (hex, rgb, hsl, or CSS color names)
+            if (color && /^(#[0-9A-Fa-f]{3,8}|rgb\(|rgba\(|hsl\(|hsla\(|[a-z]+)/.test(color)) {
+              return `  --color-${sanitizedKey}: ${color};`;
+            }
+            return null;
+          })
+          .filter(Boolean)
+          .join("\n");
+
+        return rules ? `${selector} {\n${rules}\n}` : null;
+      })
+      .filter(Boolean)
+      .join("\n");
+  }, [colorConfig, id]);
 
   // Use React's built-in style element with textContent instead of dangerouslySetInnerHTML
   const styleRef = React.useRef<HTMLStyleElement>(null);
@@ -97,6 +99,10 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
       styleRef.current.textContent = cssText;
     }
   }, [cssText]);
+
+  if (!cssText) {
+    return null;
+  }
 
   return <style ref={styleRef} />;
 };

@@ -88,11 +88,6 @@ const Footer = () => {
                   CONTACT US
                 </Link>
               </li>
-              <li>
-                <Link to="/blog" className="text-sm lg:text-base text-gray-900 hover:underline transition-colors">
-                  BLOG
-                </Link>
-              </li>
             </ul>
           </div>
 

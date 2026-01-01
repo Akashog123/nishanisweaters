@@ -73,7 +73,7 @@ export function useProductMutations() {
       try {
         await deleteProduct({ productId });
         toast.success("Product deleted successfully");
-      } catch (error) {
+      } catch (_error) {
         toast.error("Failed to delete product");
       }
     },

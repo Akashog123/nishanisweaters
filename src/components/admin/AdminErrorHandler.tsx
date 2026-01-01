@@ -98,6 +98,7 @@ export function AdminErrorHandler({
 /**
  * Wrapper for admin mutations with error handling
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic mutation type requires any for flexibility
 export function useAdminMutation<T extends (...args: any[]) => Promise<any>>(
   mutation: T,
   options?: {

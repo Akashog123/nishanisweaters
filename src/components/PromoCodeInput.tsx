@@ -78,7 +78,7 @@ export function PromoCodeInput({
         description: "The discount has been removed from your cart.",
       });
       onPromoRemoved?.();
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to remove promo code. Please try again.",

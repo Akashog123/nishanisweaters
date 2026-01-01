@@ -25,7 +25,7 @@ type GalleryItem =
  * should handle format conversion at the CDN/storage level.
  * For local assets, appends format=webp query parameter for Vite imagetools.
  */
-function getWebPUrl(src: string): string | null {
+function _getWebPUrl(src: string): string | null {
   // If already WebP, return as-is
   if (src.endsWith(".webp")) {
     return src;
@@ -47,7 +47,7 @@ function getWebPUrl(src: string): string | null {
 /**
  * Loading skeleton for gallery images
  */
-const GalleryImageSkeleton = memo(function GalleryImageSkeleton() {
+const _GalleryImageSkeleton = memo(function GalleryImageSkeleton() {
   return (
     <div className="absolute inset-0 bg-secondary animate-pulse flex items-center justify-center">
       <div className="h-8 w-8 border-2 border-muted-foreground/20 border-t-muted-foreground rounded-full animate-spin" />
@@ -57,16 +57,16 @@ const GalleryImageSkeleton = memo(function GalleryImageSkeleton() {
 
 const ProductGallery = ({ images, videos = [], productName }: ProductGalleryProps) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [mainImageLoaded, setMainImageLoaded] = useState(false);
+  const [_mainImageLoaded, _setMainImageLoaded] = useState(false);
 
   // Reset loading state when selected image changes
   const handleImageChange = useCallback((index: number) => {
     setSelectedIndex(index);
-    setMainImageLoaded(false);
+    _setMainImageLoaded(false);
   }, []);
 
-  const handleMainImageLoad = useCallback(() => {
-    setMainImageLoaded(true);
+  const _handleMainImageLoad = useCallback(() => {
+    _setMainImageLoaded(true);
   }, []);
 
   // Create unified gallery items array (images first, then videos)

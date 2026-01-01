@@ -1,40 +1,49 @@
-import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Star } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 const Testimonials = () => {
-  const [currentTestimonial, setCurrentTestimonial] = useState(0);
-
   const testimonials = [
     {
       id: 1,
       quote: "WE BOUGHT 10 PIECES AND IT IS THE BEST PURCHASE EVER!",
       author: "Jeanice Woodley",
+      role: "Verified Buyer",
     },
     {
       id: 2,
       quote: "AMAZING QUALITY AND PERFECT FIT. HIGHLY RECOMMEND!",
       author: "Marcus Johnson",
+      role: "Fashion Enthusiast",
     },
     {
       id: 3,
       quote: "THE FABRIC IS INCREDIBLE AND THE STYLE IS UNMATCHED!",
       author: "Sarah Williams",
+      role: "Loyal Customer",
+    },
+    {
+      id: 4,
+      quote: "ABSOLUTELY LOVE THE ATTENTION TO DETAIL. WILL BUY AGAIN!",
+      author: "Emily Chen",
+      role: "Designer",
+    },
+    {
+      id: 5,
+      quote: "FAST SHIPPING AND BEAUTIFUL PACKAGING. A+ EXPERIENCE!",
+      author: "David Miller",
+      role: "Verified Buyer",
     },
   ];
 
-  const nextTestimonial = () => {
-    setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
-  };
-
-  const prevTestimonial = () => {
-    setCurrentTestimonial(
-      (prev) => (prev - 1 + testimonials.length) % testimonials.length
-    );
-  };
-
   return (
-    <section className="py-16 lg:py-24 bg-gray-50 relative overflow-hidden">
+    <section className="py-20 lg:py-32 bg-secondary/20 relative overflow-hidden">
       {/* Background Text */}
       <div className="absolute bottom-0 left-0 right-0 flex items-end justify-center opacity-[0.06] pointer-events-none select-none">
         <h2 className="text-[6rem] lg:text-[8rem] xl:text-[10rem] font-bold whitespace-nowrap tracking-tight leading-none">
@@ -43,103 +52,57 @@ const Testimonials = () => {
       </div>
 
       <div className="container mx-auto px-4 lg:px-8 relative">
-        {/* Navigation Buttons - Desktop */}
-        <div className="hidden lg:flex items-center justify-between mb-16">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={prevTestimonial}
-            className="w-14 h-14 rounded-full border-2 hover:bg-gray-100"
-            aria-label="Previous testimonial"
+        <div className="max-w-6xl mx-auto">
+          <Carousel
+            opts={{
+              align: "start",
+              loop: true,
+            }}
+            className="w-full"
           >
-            <ChevronLeft className="w-6 h-6" />
-          </Button>
-
-          {/* Stars */}
-          <div className="flex gap-2">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <svg
-                key={star}
-                className="w-10 h-10 fill-blue-600"
-                viewBox="0 0 24 24"
-              >
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-              </svg>
-            ))}
-          </div>
-
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={nextTestimonial}
-            className="w-14 h-14 rounded-full border-2 hover:bg-gray-100"
-            aria-label="Next testimonial"
-          >
-            <ChevronRight className="w-6 h-6" />
-          </Button>
-        </div>
-
-        {/* Stars - Mobile */}
-        <div className="flex lg:hidden justify-center gap-2 mb-8">
-          {[1, 2, 3, 4, 5].map((star) => (
-            <svg
-              key={star}
-              className="w-8 h-8 fill-blue-600"
-              viewBox="0 0 24 24"
-            >
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-            </svg>
-          ))}
-        </div>
-
-        {/* Testimonial Content */}
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center space-y-8">
-            <blockquote className="text-3xl lg:text-5xl xl:text-6xl font-bold leading-tight px-4">
-              "{testimonials[currentTestimonial].quote}"
-            </blockquote>
-            <p className="text-xl text-gray-600">
-              {testimonials[currentTestimonial].author}
-            </p>
-          </div>
-
-          {/* Dots Indicator */}
-          <div className="flex justify-center gap-2 mt-12">
-            {testimonials.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentTestimonial(index)}
-                className={`h-2 rounded-full transition-all ${
-                  index === currentTestimonial
-                    ? "bg-blue-600 w-12"
-                    : "bg-gray-300 w-2"
-                }`}
-                aria-label={`Go to testimonial ${index + 1}`}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Navigation Buttons - Mobile */}
-        <div className="flex lg:hidden items-center justify-center gap-4 mt-8">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={prevTestimonial}
-            className="w-12 h-12 rounded-full border-2"
-            aria-label="Previous testimonial"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={nextTestimonial}
-            className="w-12 h-12 rounded-full border-2"
-            aria-label="Next testimonial"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </Button>
+            <CarouselContent className="-ml-2 md:-ml-4">
+              {testimonials.map((testimonial) => (
+                <CarouselItem key={testimonial.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3">
+                  <div className="p-1 h-full">
+                    <Card className="h-full border-none shadow-md bg-background/60 backdrop-blur-sm hover:bg-background/80 transition-colors duration-300">
+                      <CardContent className="flex flex-col justify-between p-8 h-full">
+                        <div>
+                          <div className="flex gap-1 mb-6">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className="w-5 h-5 fill-primary text-primary"
+                              />
+                            ))}
+                          </div>
+                          <blockquote className="text-lg font-medium leading-relaxed mb-6">
+                            "{testimonial.quote}"
+                          </blockquote>
+                        </div>
+                        <div className="flex items-center gap-3 mt-auto pt-4 border-t border-border/50">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
+                            {testimonial.author.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-foreground">
+                              {testimonial.author}
+                            </p>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                              {testimonial.role}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <div className="flex justify-center gap-4 mt-12">
+              <CarouselPrevious className="static translate-y-0 h-12 w-12 border-2 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-300" />
+              <CarouselNext className="static translate-y-0 h-12 w-12 border-2 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-300" />
+            </div>
+          </Carousel>
         </div>
       </div>
     </section>
