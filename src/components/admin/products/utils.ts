@@ -38,11 +38,11 @@ export function filterProducts(
       categoryFilter === "all" || product.category === categoryFilter;
 
     let matchesStock = true;
-    if (stockFilter === "low") {
+    if (stockFilter === "low_stock") {
       matchesStock = hasLowStock(product.variants);
-    } else if (stockFilter === "out") {
+    } else if (stockFilter === "out_of_stock") {
       matchesStock = isOutOfStock(product.variants);
-    } else if (stockFilter === "in") {
+    } else if (stockFilter === "in_stock") {
       matchesStock = isInStock(product.variants);
     }
 

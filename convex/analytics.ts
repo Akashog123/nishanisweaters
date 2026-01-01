@@ -64,15 +64,14 @@ export const getTopSellingProducts = query({
     // Require admin authorization
     await requireAdmin(ctx);
 
+    // PERFORMANCE: Use compound index instead of filter for paid orders
+    // This avoids a full table scan on the orders table
     const orders = await ctx.db
       .query("orders")
-      .filter((q) =>
-        q.and(
-          q.gte(q.field("createdAt"), args.startDate),
-          q.lte(q.field("createdAt"), args.endDate),
-          q.eq(q.field("paymentStatus"), "paid")
-        )
+      .withIndex("by_payment_created", (q) =>
+        q.eq("paymentStatus", "paid").gte("createdAt", args.startDate)
       )
+      .filter((q) => q.lte(q.field("createdAt"), args.endDate))
       .collect();
 
     // Aggregate sales by product
@@ -116,14 +115,12 @@ export const getOrderTypeBreakdown = query({
     // Require admin authorization
     await requireAdmin(ctx);
 
+    // PERFORMANCE: Use by_created_at index instead of filter
+    // This avoids a full table scan when filtering by date range
     const orders = await ctx.db
       .query("orders")
-      .filter((q) =>
-        q.and(
-          q.gte(q.field("createdAt"), args.startDate),
-          q.lte(q.field("createdAt"), args.endDate)
-        )
-      )
+      .withIndex("by_created_at", (q) => q.gte("createdAt", args.startDate))
+      .filter((q) => q.lte(q.field("createdAt"), args.endDate))
       .collect();
 
     const retail = orders.filter(o => o.orderType === "retail");
@@ -157,7 +154,6 @@ export const getDashboardOverview = query({
       recentOrders,
       pendingOrdersList,
       lowStockProducts,
-      pendingApplicationsList,
       paidOrdersLast30Days,
       disputedOrdersList,
     ] = await Promise.all([
@@ -178,12 +174,6 @@ export const getDashboardOverview = query({
       ctx.db
         .query("products")
         .withIndex("by_has_low_stock", (q) => q.eq("hasLowStock", true))
-        .collect(),
-
-      // Pending wholesale applications - use index
-      ctx.db
-        .query("wholesaleApplications")
-        .withIndex("by_status", (q) => q.eq("status", "pending"))
         .collect(),
 
       // Paid orders in last 30 days - use compound index
@@ -208,7 +198,6 @@ export const getDashboardOverview = query({
       recentOrders,
       pendingOrders: pendingOrdersList.length,
       lowStockCount: lowStockProducts.length,
-      pendingApplications: pendingApplicationsList.length,
       totalRevenue,
       totalOrders: paidOrdersLast30Days.length,
       disputedOrders: disputedOrdersList.length,

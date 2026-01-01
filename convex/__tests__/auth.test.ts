@@ -5,7 +5,6 @@ import {
   createMockMutationCtx,
   createTestUser,
   createTestAdminUser,
-  createTestWholesaleUser,
   createTestIdentity,
   mockAuthenticatedUser,
   mockGuestUser,
@@ -17,10 +16,8 @@ import {
  * Comprehensive tests for authentication and authorization middleware:
  * - requireAuth: Authenticated user verification
  * - requireAdmin: Admin role verification
- * - requireWholesale: Wholesale role verification
  * - requireOwnership: Resource ownership verification
  * - requireOwnershipOrAdmin: Owner or admin access verification
- * - requireApprovedWholesale: Approved wholesale status verification
  */
 
 describe("Auth Middleware Tests", () => {
@@ -147,31 +144,6 @@ describe("Auth Middleware Tests", () => {
       expect(isAdmin).toBe(false);
     });
 
-    it("should deny access for wholesale user", async () => {
-      const ctx = createMockQueryCtx();
-      const wholesaleUser = createTestWholesaleUser();
-      const identity = createTestIdentity(wholesaleUser.clerkId);
-
-      ctx.auth.getUserIdentity.mockResolvedValue(identity);
-      ctx.db.query.mockReturnValue({
-        withIndex: vi.fn().mockReturnValue({
-          first: vi.fn().mockResolvedValue(wholesaleUser),
-        }),
-      });
-
-      const userIdentity = await ctx.auth.getUserIdentity();
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_clerk_id", (q: any) => q.eq("clerkId", userIdentity?.subject))
-        .first();
-
-      expect(user?.role).toBe("wholesale");
-
-      // Should throw FORBIDDEN error (wholesale < admin in hierarchy)
-      const isAdmin = user?.role === "admin";
-      expect(isAdmin).toBe(false);
-    });
-
     it("should throw error when user not found in database", async () => {
       const ctx = createMockQueryCtx();
       const identity = createTestIdentity("user_notfound");
@@ -194,92 +166,6 @@ describe("Auth Middleware Tests", () => {
       // Should throw USER_NOT_FOUND error
       const shouldThrow = user === null;
       expect(shouldThrow).toBe(true);
-    });
-  });
-
-  describe("requireWholesale", () => {
-    it("should allow access for wholesale user", async () => {
-      const ctx = createMockQueryCtx();
-      const wholesaleUser = createTestWholesaleUser();
-      const identity = createTestIdentity(wholesaleUser.clerkId);
-
-      ctx.auth.getUserIdentity.mockResolvedValue(identity);
-      ctx.db.query.mockReturnValue({
-        withIndex: vi.fn().mockReturnValue({
-          first: vi.fn().mockResolvedValue(wholesaleUser),
-        }),
-      });
-
-      const userIdentity = await ctx.auth.getUserIdentity();
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_clerk_id", (q: any) => q.eq("clerkId", userIdentity?.subject))
-        .first();
-
-      expect(user?.role).toBe("wholesale");
-
-      // Role hierarchy: customer(0) < wholesale(1) < admin(2)
-      const ROLE_HIERARCHY = { customer: 0, wholesale: 1, admin: 2 };
-      const userRoleLevel = ROLE_HIERARCHY[user?.role as keyof typeof ROLE_HIERARCHY];
-      const requiredRoleLevel = ROLE_HIERARCHY.wholesale;
-
-      expect(userRoleLevel).toBeGreaterThanOrEqual(requiredRoleLevel);
-    });
-
-    it("should allow access for admin user (higher privilege)", async () => {
-      const ctx = createMockQueryCtx();
-      const adminUser = createTestAdminUser();
-      const identity = createTestIdentity(adminUser.clerkId);
-
-      ctx.auth.getUserIdentity.mockResolvedValue(identity);
-      ctx.db.query.mockReturnValue({
-        withIndex: vi.fn().mockReturnValue({
-          first: vi.fn().mockResolvedValue(adminUser),
-        }),
-      });
-
-      const userIdentity = await ctx.auth.getUserIdentity();
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_clerk_id", (q: any) => q.eq("clerkId", userIdentity?.subject))
-        .first();
-
-      expect(user?.role).toBe("admin");
-
-      // Admin has higher privilege than wholesale
-      const ROLE_HIERARCHY = { customer: 0, wholesale: 1, admin: 2 };
-      const userRoleLevel = ROLE_HIERARCHY[user?.role as keyof typeof ROLE_HIERARCHY];
-      const requiredRoleLevel = ROLE_HIERARCHY.wholesale;
-
-      expect(userRoleLevel).toBeGreaterThanOrEqual(requiredRoleLevel);
-    });
-
-    it("should deny access for customer user", async () => {
-      const ctx = createMockQueryCtx();
-      const customerUser = createTestUser({ role: "customer" });
-      const identity = createTestIdentity(customerUser.clerkId);
-
-      ctx.auth.getUserIdentity.mockResolvedValue(identity);
-      ctx.db.query.mockReturnValue({
-        withIndex: vi.fn().mockReturnValue({
-          first: vi.fn().mockResolvedValue(customerUser),
-        }),
-      });
-
-      const userIdentity = await ctx.auth.getUserIdentity();
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_clerk_id", (q: any) => q.eq("clerkId", userIdentity?.subject))
-        .first();
-
-      expect(user?.role).toBe("customer");
-
-      // Customer has lower privilege than wholesale
-      const ROLE_HIERARCHY = { customer: 0, wholesale: 1, admin: 2 };
-      const userRoleLevel = ROLE_HIERARCHY[user?.role as keyof typeof ROLE_HIERARCHY];
-      const requiredRoleLevel = ROLE_HIERARCHY.wholesale;
-
-      expect(userRoleLevel).toBeLessThan(requiredRoleLevel);
     });
   });
 
@@ -423,169 +309,24 @@ describe("Auth Middleware Tests", () => {
     });
   });
 
-  describe("requireApprovedWholesale", () => {
-    it("should allow access for approved wholesale user", async () => {
-      const ctx = createMockQueryCtx();
-      const wholesaleUser = createTestWholesaleUser({ wholesaleStatus: "approved" });
-      const identity = createTestIdentity(wholesaleUser.clerkId);
-
-      ctx.auth.getUserIdentity.mockResolvedValue(identity);
-      ctx.db.query.mockReturnValue({
-        withIndex: vi.fn().mockReturnValue({
-          first: vi.fn().mockResolvedValue(wholesaleUser),
-        }),
-      });
-
-      const userIdentity = await ctx.auth.getUserIdentity();
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_clerk_id", (q: any) => q.eq("clerkId", userIdentity?.subject))
-        .first();
-
-      expect(user?.role).toBe("wholesale");
-      expect(user?.wholesaleStatus).toBe("approved");
-
-      // Verify both role and status
-      const isWholesale = user?.role === "wholesale";
-      const isApproved = user?.wholesaleStatus === "approved";
-
-      expect(isWholesale && isApproved).toBe(true);
-    });
-
-    it("should deny access for pending wholesale user", async () => {
-      const ctx = createMockQueryCtx();
-      const wholesaleUser = createTestWholesaleUser({ wholesaleStatus: "pending" });
-      const identity = createTestIdentity(wholesaleUser.clerkId);
-
-      ctx.auth.getUserIdentity.mockResolvedValue(identity);
-      ctx.db.query.mockReturnValue({
-        withIndex: vi.fn().mockReturnValue({
-          first: vi.fn().mockResolvedValue(wholesaleUser),
-        }),
-      });
-
-      const userIdentity = await ctx.auth.getUserIdentity();
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_clerk_id", (q: any) => q.eq("clerkId", userIdentity?.subject))
-        .first();
-
-      expect(user?.role).toBe("wholesale");
-      expect(user?.wholesaleStatus).toBe("pending");
-
-      // Should throw FORBIDDEN error with status message
-      const isApproved = user?.wholesaleStatus === "approved";
-      expect(isApproved).toBe(false);
-    });
-
-    it("should deny access for rejected wholesale user", async () => {
-      const ctx = createMockQueryCtx();
-      const wholesaleUser = createTestWholesaleUser({ wholesaleStatus: "rejected" });
-      const identity = createTestIdentity(wholesaleUser.clerkId);
-
-      ctx.auth.getUserIdentity.mockResolvedValue(identity);
-      ctx.db.query.mockReturnValue({
-        withIndex: vi.fn().mockReturnValue({
-          first: vi.fn().mockResolvedValue(wholesaleUser),
-        }),
-      });
-
-      const userIdentity = await ctx.auth.getUserIdentity();
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_clerk_id", (q: any) => q.eq("clerkId", userIdentity?.subject))
-        .first();
-
-      expect(user?.role).toBe("wholesale");
-      expect(user?.wholesaleStatus).toBe("rejected");
-
-      // Should throw FORBIDDEN error with status message
-      const isApproved = user?.wholesaleStatus === "approved";
-      expect(isApproved).toBe(false);
-    });
-
-    it("should deny access for customer user", async () => {
-      const ctx = createMockQueryCtx();
-      const customerUser = createTestUser({ role: "customer" });
-      const identity = createTestIdentity(customerUser.clerkId);
-
-      ctx.auth.getUserIdentity.mockResolvedValue(identity);
-      ctx.db.query.mockReturnValue({
-        withIndex: vi.fn().mockReturnValue({
-          first: vi.fn().mockResolvedValue(customerUser),
-        }),
-      });
-
-      const userIdentity = await ctx.auth.getUserIdentity();
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_clerk_id", (q: any) => q.eq("clerkId", userIdentity?.subject))
-        .first();
-
-      expect(user?.role).toBe("customer");
-
-      // Should throw FORBIDDEN error (not wholesale role)
-      const isWholesale = user?.role === "wholesale";
-      expect(isWholesale).toBe(false);
-    });
-
-    it("should allow access for admin user (bypass wholesale check)", async () => {
-      const ctx = createMockQueryCtx();
-      const adminUser = createTestAdminUser();
-      const identity = createTestIdentity(adminUser.clerkId);
-
-      ctx.auth.getUserIdentity.mockResolvedValue(identity);
-      ctx.db.query.mockReturnValue({
-        withIndex: vi.fn().mockReturnValue({
-          first: vi.fn().mockResolvedValue(adminUser),
-        }),
-      });
-
-      const userIdentity = await ctx.auth.getUserIdentity();
-      const user = await ctx.db
-        .query("users")
-        .withIndex("by_clerk_id", (q: any) => q.eq("clerkId", userIdentity?.subject))
-        .first();
-
-      expect(user?.role).toBe("admin");
-
-      // Admin has higher privilege than wholesale
-      const ROLE_HIERARCHY = { customer: 0, wholesale: 1, admin: 2 };
-      const userRoleLevel = ROLE_HIERARCHY[user?.role as keyof typeof ROLE_HIERARCHY];
-      const requiredRoleLevel = ROLE_HIERARCHY.wholesale;
-
-      expect(userRoleLevel).toBeGreaterThanOrEqual(requiredRoleLevel);
-    });
-  });
-
   describe("Role Hierarchy", () => {
     it("should enforce correct role hierarchy levels", () => {
       const ROLE_HIERARCHY = {
         customer: 0,
-        wholesale: 1,
-        admin: 2,
+        admin: 1,
       };
 
-      expect(ROLE_HIERARCHY.customer).toBeLessThan(ROLE_HIERARCHY.wholesale);
-      expect(ROLE_HIERARCHY.wholesale).toBeLessThan(ROLE_HIERARCHY.admin);
       expect(ROLE_HIERARCHY.customer).toBeLessThan(ROLE_HIERARCHY.admin);
     });
 
     it("should validate role comparison logic", () => {
       const ROLE_HIERARCHY = {
         customer: 0,
-        wholesale: 1,
-        admin: 2,
+        admin: 1,
       };
 
-      // Customer cannot access wholesale resources
-      expect(ROLE_HIERARCHY.customer).toBeLessThan(ROLE_HIERARCHY.wholesale);
-
-      // Wholesale can access wholesale resources
-      expect(ROLE_HIERARCHY.wholesale).toBeGreaterThanOrEqual(ROLE_HIERARCHY.wholesale);
-
-      // Admin can access wholesale resources
-      expect(ROLE_HIERARCHY.admin).toBeGreaterThanOrEqual(ROLE_HIERARCHY.wholesale);
+      // Customer cannot access admin resources
+      expect(ROLE_HIERARCHY.customer).toBeLessThan(ROLE_HIERARCHY.admin);
 
       // Admin can access admin resources
       expect(ROLE_HIERARCHY.admin).toBeGreaterThanOrEqual(ROLE_HIERARCHY.admin);
@@ -609,13 +350,6 @@ describe("Auth Middleware Tests", () => {
       const errorMessage = "User profile not found. Please complete registration.";
       expect(errorMessage).toContain("User profile not found");
       expect(errorMessage).toContain("complete registration");
-    });
-
-    it("should provide clear error message for wholesale approval", () => {
-      const status = "pending";
-      const errorMessage = `Wholesale account approval required. Your application status: ${status}`;
-      expect(errorMessage).toContain("Wholesale account approval required");
-      expect(errorMessage).toContain("pending");
     });
   });
 });

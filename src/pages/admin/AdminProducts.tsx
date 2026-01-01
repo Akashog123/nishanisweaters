@@ -52,6 +52,7 @@ const AdminProducts = () => {
       shortDescription: product.shortDescription || "",
       category: product.category,
       retailPrice: product.retailPrice,
+      compareAtPrice: product.compareAtPrice || 0,
       wholesalePrice: product.wholesalePrice || 0,
       minOrderQuantity: product.minOrderQuantity || 1,
       featured: product.featured,

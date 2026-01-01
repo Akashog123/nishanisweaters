@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
@@ -50,7 +50,7 @@ export function ProductMediaUpload({
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   const generateUploadUrl = useMutation(api.fileStorage.generateAdminUploadUrl);
-  const saveImage = useMutation(api.fileStorage.saveProductImage);
+  const saveImage = useAction(api.fileStorage.saveProductImage);
   const deleteImage = useMutation(api.fileStorage.deleteProductImage);
   const saveYouTubeVideo = useMutation(api.fileStorage.saveYouTubeVideo);
   const deleteYouTubeVideo = useMutation(api.fileStorage.deleteYouTubeVideo);

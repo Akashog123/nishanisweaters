@@ -5,7 +5,6 @@ import {
   createTestPromoCode,
   createTestCart,
   createTestUser,
-  createTestWholesaleUser,
   createTestIdentity,
   MockMutationCtx,
   MockQueryCtx,
@@ -193,23 +192,6 @@ describe("PromoCodes Module", () => {
 
       // Should reject as cart total is below minimum
       expect(cartTotal).toBeLessThan(minOrderPromo.minOrderAmount!);
-    });
-
-    it("should reject wholesale users when excludeWholesale is true", async () => {
-      // Arrange
-      const retailOnlyPromo = createTestPromoCode({
-        excludeWholesale: true,
-      });
-
-      const wholesaleUser = createTestWholesaleUser();
-
-      mockQueryCtx.auth.getUserIdentity.mockResolvedValue(
-        createTestIdentity(wholesaleUser.clerkId)
-      );
-
-      // Should reject for wholesale users
-      expect(retailOnlyPromo.excludeWholesale).toBe(true);
-      expect(wholesaleUser.role).toBe("wholesale");
     });
   });
 

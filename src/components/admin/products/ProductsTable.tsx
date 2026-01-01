@@ -37,10 +37,8 @@ interface ProductsTableProps {
 
 export function ProductsTable({
   products,
-  totalCount,
   currentPage,
   totalPages,
-  itemsPerPage,
   onPageChange,
   onEdit,
   onDelete,

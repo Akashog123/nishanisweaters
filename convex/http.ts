@@ -13,11 +13,49 @@ import { validateIpAddress } from "./lib/validation";
 
 const http = httpRouter();
 
-// Security headers for all responses
+/**
+ * Security Headers for HTTP Responses
+ *
+ * These headers implement defense-in-depth security controls following OWASP recommendations.
+ * Applied to all HTTP responses from the Convex backend.
+ *
+ * Header explanations:
+ * - X-Content-Type-Options: Prevents MIME-sniffing attacks (IE/Chrome)
+ * - X-Frame-Options: Prevents clickjacking by disallowing framing (legacy browsers)
+ * - Cache-Control: Prevents caching of sensitive API responses
+ * - X-XSS-Protection: Enables XSS filter in legacy browsers (IE, older Chrome/Safari)
+ * - Referrer-Policy: Controls referrer information leakage; strict-origin-when-cross-origin
+ *   sends full referrer for same-origin, only origin for cross-origin (HTTPS->HTTPS)
+ * - Permissions-Policy: Restricts access to browser features (geolocation, camera, mic)
+ *   to prevent potential abuse if XSS occurs
+ * - Strict-Transport-Security: Forces HTTPS for 1 year, including subdomains
+ *   Note: Only effective when served over HTTPS
+ */
 const SECURITY_HEADERS = {
+  // Prevent MIME-type sniffing - forces browser to respect declared Content-Type
   "X-Content-Type-Options": "nosniff",
+
+  // Clickjacking protection - prevents embedding in iframes (legacy header)
   "X-Frame-Options": "DENY",
+
+  // Prevent caching of sensitive API data
   "Cache-Control": "no-store, no-cache, must-revalidate, private",
+
+  // XSS protection for legacy browsers (IE, older Chrome/Safari)
+  // Modern browsers ignore this in favor of CSP, but it provides defense-in-depth
+  "X-XSS-Protection": "1; mode=block",
+
+  // Control referrer information sent with requests
+  // strict-origin-when-cross-origin: Full URL for same-origin, origin only for cross-origin
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+
+  // Restrict access to browser features to minimize attack surface
+  // Disabling geolocation, microphone, and camera prevents abuse if XSS occurs
+  "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
+
+  // Force HTTPS for all future requests (1 year = 31536000 seconds)
+  // includeSubDomains ensures all subdomains are also HTTPS-only
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
 };
 
 // Maximum webhook payload size (1MB)
@@ -99,6 +137,10 @@ http.route({
       );
     }
 
+    // Extract event ID for idempotency tracking
+    // Razorpay sends a unique ID with each webhook event
+    const eventId = request.headers.get("x-razorpay-event-id") || undefined;
+
     // Get raw payload for signature verification
     const payload = await request.text();
 
@@ -118,6 +160,7 @@ http.route({
       const result = await ctx.runAction(internal.payments.handlePaymentWebhook, {
         payload,
         signature,
+        eventId, // Pass event ID for idempotency tracking
       });
 
       if (result.success) {

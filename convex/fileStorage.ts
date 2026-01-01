@@ -110,7 +110,7 @@ export const generateUploadUrl = mutation({
   },
 });
 
-// Store document reference after upload (for wholesale applications)
+// Store document reference after upload
 export const saveDocument = action({
   args: {
     storageId: v.id("_storage"),
@@ -120,7 +120,6 @@ export const saveDocument = action({
       v.literal("gst_certificate"),
       v.literal("other")
     ),
-    applicationId: v.optional(v.id("wholesaleApplications")),
     contentType: v.string(), // Required for validation
   },
   handler: async (ctx, args): Promise<{
@@ -141,7 +140,7 @@ export const saveDocument = action({
 
     // Validate file content matches declared content-type (magic byte validation)
     // Actions have access to ctx.storage.get()
-    await validateFileContent(args.storageId, args.contentType, ctx);
+    await validateFileContent(args.storageId, args.contentType, ctx as StorageContext);
 
     // Get the file and validate size
     const blob = await ctx.storage.get(args.storageId);
@@ -162,20 +161,12 @@ export const saveDocument = action({
       });
     }
 
-    // Call internal mutation to save to database
-    // Type assertion needed to break circular type reference with internal API
-    const result = await (ctx.runMutation as any)(internal.fileStorageInternal.internalSaveDocument, {
-      clerkId,
+    // Return the document info
+    return {
+      success: true,
+      documentUrl: url,
       storageId: args.storageId,
       documentType: args.documentType,
-      applicationId: args.applicationId,
-      url,
-    });
-    return result as {
-      success: boolean;
-      documentUrl: string;
-      documentType?: "reseller_certificate" | "business_license" | "gst_certificate" | "other";
-      storageId?: Id<"_storage">;
     };
   },
 });
@@ -194,75 +185,15 @@ export const getFileUrl = query({
 export const deleteFile = mutation({
   args: {
     storageId: v.id("_storage"),
-    applicationId: v.optional(v.id("wholesaleApplications")),
   },
   handler: async (ctx, args) => {
-    const { clerkId } = await requireAuth(ctx);
-
-    // If tied to an application, remove the reference first
-    if (args.applicationId) {
-      const application = await ctx.db.get(args.applicationId);
-      if (!application) {
-        throw new ConvexError({
-          code: "NOT_FOUND",
-          message: "Application not found",
-        });
-      }
-
-      // Verify ownership
-      if (application.clerkId !== clerkId) {
-        throw new ConvexError({
-          code: "FORBIDDEN",
-          message: "You can only delete documents from your own application",
-        });
-      }
-
-      // Remove document from array
-      const updatedDocuments = (application.documents || []).filter(
-        (doc) => doc.storageId !== args.storageId
-      );
-
-      await ctx.db.patch(args.applicationId, {
-        documents: updatedDocuments,
-        updatedAt: Date.now(),
-      });
-    }
+    // Require authentication
+    await requireAuth(ctx);
 
     // Delete the file from storage
     await ctx.storage.delete(args.storageId);
 
     return { success: true };
-  },
-});
-
-// Admin: Get all documents for an application
-export const getApplicationDocuments = query({
-  args: {
-    applicationId: v.id("wholesaleApplications"),
-  },
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx);
-
-    const application = await ctx.db.get(args.applicationId);
-    if (!application) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "Application not found",
-      });
-    }
-
-    // Get URLs for all documents
-    const documentsWithUrls = await Promise.all(
-      (application.documents || []).map(async (doc) => {
-        const url = await ctx.storage.getUrl(doc.storageId as Id<"_storage">);
-        return {
-          ...doc,
-          url: url || doc.url,
-        };
-      })
-    );
-
-    return documentsWithUrls;
   },
 });
 
@@ -292,12 +223,21 @@ export const saveProductImage = action({
     success: boolean;
     imageUrl: string;
   }> => {
-    // Verify admin access via auth identity
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
+    // SECURITY: Verify admin role via server-side identity
+    // This uses Clerk's verified identity, never trusting client-provided IDs
+    const user = await ctx.runQuery(api.users.getCurrentUser, {});
+
+    if (!user) {
       throw new ConvexError({
         code: "UNAUTHORIZED",
         message: "Authentication required. Please sign in to continue.",
+      });
+    }
+
+    if (user.role !== "admin") {
+      throw new ConvexError({
+        code: "FORBIDDEN",
+        message: "Access denied. Admin role required.",
       });
     }
 
@@ -311,7 +251,7 @@ export const saveProductImage = action({
 
     // Validate file content matches declared content-type (magic byte validation)
     // Actions have access to ctx.storage.get()
-    await validateFileContent(args.storageId, args.contentType, ctx);
+    await validateFileContent(args.storageId, args.contentType, ctx as StorageContext);
 
     // Get the file and validate size
     const blob = await ctx.storage.get(args.storageId);
@@ -333,18 +273,14 @@ export const saveProductImage = action({
     }
 
     // Call internal mutation to save to database
-    // Type assertion needed to break circular type reference with internal API
-    const result = await (ctx.runMutation as any)(internal.fileStorageInternal.internalSaveProductImage, {
+    const result = await ctx.runMutation(internal.fileStorageInternal.internalSaveProductImage, {
       storageId: args.storageId,
       productId: args.productId,
       alt: args.alt,
       order: args.order,
       url,
     });
-    return result as {
-      success: boolean;
-      imageUrl: string;
-    };
+    return result;
   },
 });
 

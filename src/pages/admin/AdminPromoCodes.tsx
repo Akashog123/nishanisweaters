@@ -381,7 +381,7 @@ export default function AdminPromoCodes() {
 
   const promoCodes = useQuery(api.promoCodes.listPromoCodes, {
     limit: 100,
-    isActive: filterStatus === "all" ? undefined : filterStatus === "active",
+    status: filterStatus === "all" ? undefined : filterStatus,
   });
 
   const createPromoCode = useMutation(api.promoCodes.createPromoCode);
@@ -404,7 +404,7 @@ export default function AdminPromoCodes() {
     try {
       if (editingPromoCode) {
         await updatePromoCode({
-          id: editingPromoCode._id,
+          promoCodeId: editingPromoCode._id,
           ...data,
         });
         toast.success("Promo code updated successfully");
@@ -424,7 +424,7 @@ export default function AdminPromoCodes() {
     if (!confirm("Are you sure you want to delete this promo code?")) return;
 
     try {
-      await deletePromoCode({ id });
+      await deletePromoCode({ promoCodeId: id });
       toast.success("Promo code deleted successfully");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete promo code");
@@ -433,7 +433,7 @@ export default function AdminPromoCodes() {
 
   const handleToggleStatus = async (id: Id<"promoCodes">) => {
     try {
-      await toggleStatus({ id });
+      await toggleStatus({ promoCodeId: id });
       toast.success("Status updated");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update status");

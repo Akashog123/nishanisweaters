@@ -8,7 +8,7 @@ import Razorpay from "razorpay";
 import crypto from "crypto";
 import { logger } from "./lib/logger";
 import { Id } from "./_generated/dataModel";
-import { razorpayCircuitBreaker } from "./lib/circuitBreaker";
+import { razorpayCircuitBreaker, withTimeout, PAYMENT_TIMEOUT_MS } from "./lib/circuitBreaker";
 import { webhookHandlers, RazorpayEvent } from "./lib/webhookHandlers";
 
 // Constants for security
@@ -130,10 +130,10 @@ function getRazorpayInstance() {
 // Action: Create Razorpay order
 // RESILIENCE: Uses circuit breaker pattern to prevent cascading failures
 // DEDUPLICATION: Checks for existing Razorpay order to prevent duplicate payments
+// SECURITY: Amount is fetched from database, not client-provided
 export const createRazorpayOrder = action({
   args: {
     orderId: v.id("orders"),
-    amount: v.number(), // Amount in paise (INR * 100)
     currency: v.optional(v.string()),
     receipt: v.optional(v.string()),
     idempotencyKey: v.optional(v.string()), // Client-provided key for deduplication
@@ -156,6 +156,9 @@ export const createRazorpayOrder = action({
       });
     }
 
+    // SECURITY: Use server-side amount from database (not client-provided)
+    const amountInPaise = Math.round(existingOrder.total * 100);
+
     // If Razorpay order already exists, return it (idempotent behavior)
     if (existingOrder.razorpayOrderId) {
       logger.info("Returning existing Razorpay order (deduplication)", {
@@ -165,7 +168,7 @@ export const createRazorpayOrder = action({
 
       return {
         razorpayOrderId: existingOrder.razorpayOrderId,
-        amount: Math.round(args.amount),
+        amount: amountInPaise,
         currency: args.currency || "INR",
         keyId: process.env.RAZORPAY_KEY_ID!,
       };
@@ -189,17 +192,22 @@ export const createRazorpayOrder = action({
     // Get Razorpay instance
     const razorpay = getRazorpayInstance();
 
-    // Use circuit breaker for Razorpay API call
+    // Use circuit breaker with timeout for Razorpay API call
+    // PERFORMANCE: Timeout prevents slow Razorpay responses from blocking users
     const result = await razorpayCircuitBreaker.execute(ctx, async () => {
-      return await razorpay.orders.create({
-        amount: Math.round(args.amount), // Amount in paise
-        currency: args.currency || "INR",
-        receipt: args.receipt || args.orderId,
-        notes: {
-          convexOrderId: args.orderId,
-          idempotencyKey: args.idempotencyKey || args.orderId,
-        },
-      });
+      return withTimeout(
+        razorpay.orders.create({
+          amount: amountInPaise, // Amount in paise from database
+          currency: args.currency || "INR",
+          receipt: args.receipt || args.orderId,
+          notes: {
+            convexOrderId: args.orderId,
+            idempotencyKey: args.idempotencyKey || args.orderId,
+          },
+        }),
+        PAYMENT_TIMEOUT_MS,
+        "Razorpay order creation"
+      );
     });
 
     if (!result.success) {
@@ -321,6 +329,7 @@ export const handlePaymentWebhook = internalAction({
   args: {
     payload: v.string(),
     signature: v.string(),
+    eventId: v.optional(v.string()), // x-razorpay-event-id for idempotency
   },
   handler: async (ctx, args): Promise<{ success: boolean; message?: string }> => {
     const webhookSecret = getWebhookSecret();
@@ -357,6 +366,21 @@ export const handlePaymentWebhook = internalAction({
       return { success: false, message: "Invalid signature" };
     }
 
+    // IDEMPOTENCY CHECK: If event ID provided, check if already processed
+    if (args.eventId) {
+      const existingEvent = await ctx.runQuery(internal.webhookEventsInternal.getByEventId, {
+        eventId: args.eventId,
+      });
+
+      if (existingEvent) {
+        logger.debug("Webhook event already processed, skipping", {
+          eventId: args.eventId,
+          processedAt: existingEvent.processedAt,
+        });
+        return { success: true, message: "Event already processed (idempotent)" };
+      }
+    }
+
     // Parse payload with validation
     let event: RazorpayEvent;
 
@@ -390,10 +414,31 @@ export const handlePaymentWebhook = internalAction({
     const handler = webhookHandlers[event.event];
 
     if (handler) {
-      return await handler(ctx, event, logger);
+      const result = await handler(ctx, event, logger);
+
+      // Record processed event for idempotency (if event ID was provided)
+      if (args.eventId) {
+        await ctx.runMutation(internal.webhookEventsInternal.recordProcessedEvent, {
+          eventId: args.eventId,
+          eventType: event.event,
+          success: result.success,
+          errorMessage: result.success ? undefined : result.message,
+        });
+      }
+
+      return result;
     }
 
-    // Handle unknown event type
+    // Handle unknown event type - still record it if event ID provided
+    if (args.eventId) {
+      await ctx.runMutation(internal.webhookEventsInternal.recordProcessedEvent, {
+        eventId: args.eventId,
+        eventType: event.event,
+        success: true,
+        errorMessage: undefined,
+      });
+    }
+
     logger.debug("Unhandled webhook event", { eventType: event.event });
     return { success: true, message: `Unhandled event: ${event.event}` };
   },

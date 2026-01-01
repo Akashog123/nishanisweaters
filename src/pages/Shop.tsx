@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, memo } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -8,6 +8,47 @@ import ProductCard from "@/components/ProductCard";
 import ProductSkeleton from "@/components/ProductSkeleton";
 import { ProductFilters, FilterState } from "@/components/ProductFilters";
 
+// PERFORMANCE: Move static data outside component to prevent recreation
+const CATEGORY_TITLES: Record<string, string> = {
+  "new-arrival": "NEW ARRIVAL",
+  "mens": "MEN'S COLLECTION",
+  "womens": "WOMEN'S COLLECTION",
+  "kids": "KIDS COLLECTION",
+};
+
+// PERFORMANCE: Pure function moved outside component
+function getCategoryFilter(category: string | undefined) {
+  if (!category) return {};
+
+  switch (category) {
+    case "new-arrival":
+      return { newArrival: true };
+    case "mens":
+      return { category: "men" };
+    case "womens":
+      return { category: "women" };
+    case "kids":
+      return { category: "kids" };
+    default:
+      return { category };
+  }
+}
+
+// PERFORMANCE: Pure function moved outside component
+function getCategoryString(category: string | undefined): string | undefined {
+  if (!category) return undefined;
+  switch (category) {
+    case "mens":
+      return "men";
+    case "womens":
+      return "women";
+    case "kids":
+      return "kids";
+    default:
+      return undefined;
+  }
+}
+
 const Shop = () => {
   const { category } = useParams<{ category: string }>();
   const [filters, setFilters] = useState<FilterState>({
@@ -15,64 +56,26 @@ const Shop = () => {
     colors: [],
   });
 
-  const categoryTitles: Record<string, string> = {
-    "new-arrival": "NEW ARRIVAL",
-    "mens": "MEN'S COLLECTION",
-    "womens": "WOMEN'S COLLECTION",
-    "kids": "KIDS COLLECTION",
-  };
+  // PERFORMANCE: Memoize category filter to prevent object recreation
+  const categoryFilter = useMemo(() => getCategoryFilter(category), [category]);
+  const categoryString = useMemo(() => getCategoryString(category), [category]);
 
-  // Map URL categories to Convex query parameters
-  const getCategoryFilter = () => {
-    if (!category) return {};
-
-    switch (category) {
-      case "new-arrival":
-        return { newArrival: true };
-      case "mens":
-        return { category: "men" };
-      case "womens":
-        return { category: "women" };
-      case "kids":
-        return { category: "kids" };
-      default:
-        return { category };
-    }
-  };
-
-  // Get the category string for filter options
-  const getCategoryString = () => {
-    if (!category) return undefined;
-    switch (category) {
-      case "mens":
-        return "men";
-      case "womens":
-        return "women";
-      case "kids":
-        return "kids";
-      default:
-        return undefined;
-    }
-  };
-
-  const categoryFilter = getCategoryFilter();
-
-  // Build query arguments with filters
-  const queryArgs = {
+  // PERFORMANCE: Memoize query arguments to prevent unnecessary re-queries
+  const queryArgs = useMemo(() => ({
     ...categoryFilter,
     sizes: filters.sizes.length > 0 ? filters.sizes : undefined,
     colors: filters.colors.length > 0 ? filters.colors : undefined,
     minPrice: filters.minPrice,
     maxPrice: filters.maxPrice,
     sortBy: filters.sortBy,
-  };
+  }), [categoryFilter, filters]);
 
   const productsResult = useQuery(api.products.listProducts, queryArgs);
   const filterOptions = useQuery(api.products.getFilterOptions, {
-    category: getCategoryString(),
+    category: categoryString,
   });
 
-  const title = category ? categoryTitles[category] || "SHOP" : "SHOP";
+  const title = category ? CATEGORY_TITLES[category] || "SHOP" : "SHOP";
   const products = productsResult?.products;
 
   // Loading state
@@ -157,4 +160,5 @@ const Shop = () => {
   );
 };
 
-export default Shop;
+// PERFORMANCE: Memoize the Shop component to prevent unnecessary re-renders
+export default memo(Shop);

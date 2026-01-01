@@ -1,6 +1,26 @@
 import { query, mutation, internalMutation, QueryCtx, MutationCtx } from "./_generated/server";
-import { v, ConvexError } from "convex/values";
+import { v } from "convex/values";
 import { requireAdmin, getCurrentUser } from "./lib/auth";
+
+// Shared types and validators
+import { discountTypeValidator, promoCodeStatusValidator } from "./lib/types";
+
+// Error factory
+import { notFound, cartNotFound, promoCodeError } from "./lib/errors";
+
+// Promo code service (extracted business logic)
+import {
+  findPromoCodeByCode,
+  validatePromoCodeEligibility,
+  validateCartRequirements,
+  calculatePromoDiscount,
+  validatePromoCodeCreation,
+  validateDiscountValue,
+  checkDuplicateCode,
+  computePromoCodeStatus,
+  isUsageLimitReached,
+  type Cart,
+} from "./lib/promoCodeService";
 
 // ============================================
 // HELPER FUNCTIONS
@@ -37,7 +57,7 @@ async function findCart(ctx: QueryCtx | MutationCtx, userId?: string, sessionId?
 // Query: List all promo codes (admin only)
 export const listPromoCodes = query({
   args: {
-    status: v.optional(v.union(v.literal("active"), v.literal("inactive"), v.literal("expired"))),
+    status: v.optional(promoCodeStatusValidator),
     limit: v.optional(v.number()),
     offset: v.optional(v.number()),
   },
@@ -46,27 +66,18 @@ export const listPromoCodes = query({
 
     const limit = args.limit ?? 20;
     const offset = args.offset ?? 0;
-    const now = Date.now();
 
     let promoCodesQuery = ctx.db.query("promoCodes");
 
     // Get all promo codes (we'll filter in memory for status since it's computed)
     const allPromoCodes = await promoCodesQuery.collect();
 
-    // Filter by computed status
+    // Filter by computed status using extracted helper
     let filteredPromoCodes = allPromoCodes;
     if (args.status) {
       filteredPromoCodes = allPromoCodes.filter((code) => {
-        if (args.status === "expired") {
-          return code.expiresAt && code.expiresAt < now;
-        }
-        if (args.status === "active") {
-          return code.isActive && (!code.expiresAt || code.expiresAt >= now);
-        }
-        if (args.status === "inactive") {
-          return !code.isActive;
-        }
-        return true;
+        const status = computePromoCodeStatus(code);
+        return status === args.status;
       });
     }
 
@@ -76,16 +87,16 @@ export const listPromoCodes = query({
     // Paginate
     const paginatedPromoCodes = filteredPromoCodes.slice(offset, offset + limit);
 
-    // Add computed fields
+    // Add computed fields using extracted helpers
     const promoCodesWithStatus = paginatedPromoCodes.map((code) => {
-      const isExpired = code.expiresAt ? code.expiresAt < now : false;
-      const isLimitReached = code.usageLimit ? code.currentUsageCount >= code.usageLimit : false;
+      const computedStatus = computePromoCodeStatus(code);
+      const isLimitReached = isUsageLimitReached(code);
 
       return {
         ...code,
-        isExpired,
+        isExpired: computedStatus === "expired",
         isLimitReached,
-        computedStatus: isExpired ? "expired" : !code.isActive ? "inactive" : "active",
+        computedStatus,
       };
     });
 
@@ -107,10 +118,7 @@ export const getPromoCode = query({
 
     const promoCode = await ctx.db.get(args.promoCodeId);
     if (!promoCode) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "Promo code not found",
-      });
+      throw notFound("Promo code");
     }
 
     // Get usage statistics
@@ -135,17 +143,19 @@ export const getPromoCodeStats = query({
   handler: async (ctx) => {
     await requireAdmin(ctx);
 
-    const now = Date.now();
     const allPromoCodes = await ctx.db.query("promoCodes").collect();
     const allUsage = await ctx.db.query("promoCodeUsage").collect();
 
+    // Use extracted helpers for status computation
     const active = allPromoCodes.filter(
-      (code) => code.isActive && (!code.expiresAt || code.expiresAt >= now)
+      (code) => computePromoCodeStatus(code) === "active"
     ).length;
     const expired = allPromoCodes.filter(
-      (code) => code.expiresAt && code.expiresAt < now
+      (code) => computePromoCodeStatus(code) === "expired"
     ).length;
-    const inactive = allPromoCodes.filter((code) => !code.isActive).length;
+    const inactive = allPromoCodes.filter(
+      (code) => computePromoCodeStatus(code) === "inactive"
+    ).length;
 
     const totalDiscountGiven = allUsage.reduce((sum, u) => sum + u.discountApplied, 0);
     const totalUsageCount = allUsage.length;
@@ -166,6 +176,7 @@ export const getPromoCodeStats = query({
 // ============================================
 
 // Mutation: Validate and apply promo code to cart
+// REFACTORED: Uses extracted service functions for cleaner, testable code
 export const validatePromoCode = mutation({
   args: {
     code: v.string(),
@@ -175,141 +186,26 @@ export const validatePromoCode = mutation({
     // Get cart identifier
     const { userId, sessionId } = await getCartIdentifier(ctx, args.sessionId);
 
-    // Find the promo code (case-insensitive)
-    const normalizedCode = args.code.toUpperCase().trim();
-    const promoCode = await ctx.db
-      .query("promoCodes")
-      .withIndex("by_code", (q) => q.eq("code", normalizedCode))
-      .first();
+    // Find and validate promo code using extracted service
+    const promoCode = await findPromoCodeByCode(ctx, args.code);
 
-    // Validate existence
-    if (!promoCode) {
-      throw new ConvexError({
-        code: "INVALID_CODE",
-        message: "Invalid promo code",
-      });
-    }
+    // Validate eligibility (active status, time constraints, usage limits)
+    await validatePromoCodeEligibility(ctx, promoCode, userId);
 
-    // Validate active status
-    if (!promoCode.isActive) {
-      throw new ConvexError({
-        code: "INACTIVE_CODE",
-        message: "This promo code is no longer active",
-      });
-    }
-
-    // Validate time constraints
-    const now = Date.now();
-    if (promoCode.startsAt > now) {
-      throw new ConvexError({
-        code: "NOT_STARTED",
-        message: "This promo code is not yet valid",
-      });
-    }
-    if (promoCode.expiresAt && promoCode.expiresAt < now) {
-      throw new ConvexError({
-        code: "EXPIRED",
-        message: "This promo code has expired",
-      });
-    }
-
-    // Validate total usage limit
-    if (promoCode.usageLimit && promoCode.currentUsageCount >= promoCode.usageLimit) {
-      throw new ConvexError({
-        code: "LIMIT_REACHED",
-        message: "This promo code has reached its usage limit",
-      });
-    }
-
-    // Validate per-user usage limit
-    if (promoCode.usagePerUser && userId) {
-      const userUsage = await ctx.db
-        .query("promoCodeUsage")
-        .withIndex("by_promo_user", (q) =>
-          q.eq("promoCodeId", promoCode._id).eq("userId", userId)
-        )
-        .collect();
-
-      if (userUsage.length >= promoCode.usagePerUser) {
-        throw new ConvexError({
-          code: "USER_LIMIT",
-          message: "You have already used this promo code",
-        });
-      }
-    }
-
-    // Get cart and validate minimum order amount
+    // Find cart
     const cart = await findCart(ctx, userId, sessionId);
-    if (!cart || cart.items.length === 0) {
-      throw new ConvexError({
-        code: "EMPTY_CART",
-        message: "Your cart is empty",
-      });
-    }
 
-    // Calculate cart subtotal
-    const cartSubtotal = cart.items.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
+    // Validate cart requirements (minimum order, categories)
+    const cartSubtotal = await validateCartRequirements(ctx, promoCode, cart as Cart | null);
 
-    if (promoCode.minOrderAmount && cartSubtotal < promoCode.minOrderAmount) {
-      throw new ConvexError({
-        code: "MIN_NOT_MET",
-        message: `Minimum order of ₹${promoCode.minOrderAmount.toLocaleString()} required`,
-      });
-    }
-
-    // Validate wholesale exclusion
-    if (promoCode.excludeWholesale) {
-      const user = await getCurrentUser(ctx);
-      if (user?.role === "wholesale") {
-        throw new ConvexError({
-          code: "WHOLESALE_EXCLUDED",
-          message: "This promo code is not valid for wholesale orders",
-        });
-      }
-    }
-
-    // Validate category restrictions if applicable
-    if (promoCode.applicableCategories && promoCode.applicableCategories.length > 0) {
-      // Get all products in cart to check categories
-      const productIds = [...new Set(cart.items.map((item) => item.productId))];
-      const products = await Promise.all(productIds.map((id) => ctx.db.get(id)));
-
-      const hasApplicableProduct = products.some(
-        (product) => product && promoCode.applicableCategories!.includes(product.category)
-      );
-
-      if (!hasApplicableProduct) {
-        throw new ConvexError({
-          code: "CATEGORY_NOT_APPLICABLE",
-          message: `This promo code is only valid for: ${promoCode.applicableCategories.join(", ")}`,
-        });
-      }
-    }
-
-    // Calculate discount
-    let discount = 0;
-    if (promoCode.discountType === "percentage") {
-      discount = cartSubtotal * (promoCode.discountValue / 100);
-      // Cap at maxDiscountAmount if specified
-      if (promoCode.maxDiscountAmount) {
-        discount = Math.min(discount, promoCode.maxDiscountAmount);
-      }
-    } else {
-      // Fixed discount - cap at cart subtotal
-      discount = Math.min(promoCode.discountValue, cartSubtotal);
-    }
-
-    // Round to 2 decimal places
-    discount = Math.round(discount * 100) / 100;
+    // Calculate discount using extracted function
+    const discount = calculatePromoDiscount(promoCode, cartSubtotal);
 
     // Apply to cart
-    await ctx.db.patch(cart._id, {
+    await ctx.db.patch(cart!._id, {
       appliedPromoCode: promoCode.code,
       promoDiscount: discount,
-      lastModified: now,
+      lastModified: Date.now(),
     });
 
     return {
@@ -335,10 +231,7 @@ export const removePromoCode = mutation({
     // Find cart
     const cart = await findCart(ctx, userId, sessionId);
     if (!cart) {
-      throw new ConvexError({
-        code: "CART_NOT_FOUND",
-        message: "Cart not found",
-      });
+      throw cartNotFound();
     }
 
     // Remove promo code
@@ -357,11 +250,12 @@ export const removePromoCode = mutation({
 // ============================================
 
 // Mutation: Create new promo code (admin only)
+// REFACTORED: Uses extracted validation functions
 export const createPromoCode = mutation({
   args: {
     code: v.string(),
     description: v.string(),
-    discountType: v.union(v.literal("percentage"), v.literal("fixed")),
+    discountType: discountTypeValidator,
     discountValue: v.number(),
     minOrderAmount: v.optional(v.number()),
     maxDiscountAmount: v.optional(v.number()),
@@ -376,52 +270,17 @@ export const createPromoCode = mutation({
   handler: async (ctx, args) => {
     const admin = await requireAdmin(ctx);
 
-    // Normalize and validate code
-    const normalizedCode = args.code.toUpperCase().trim();
-    if (normalizedCode.length < 3 || normalizedCode.length > 20) {
-      throw new ConvexError({
-        code: "INVALID_CODE_FORMAT",
-        message: "Promo code must be between 3 and 20 characters",
-      });
-    }
+    // Validate and normalize code using extracted function
+    const normalizedCode = validatePromoCodeCreation({
+      code: args.code,
+      discountType: args.discountType,
+      discountValue: args.discountValue,
+      startsAt: args.startsAt,
+      expiresAt: args.expiresAt,
+    });
 
     // Check for duplicate code
-    const existingCode = await ctx.db
-      .query("promoCodes")
-      .withIndex("by_code", (q) => q.eq("code", normalizedCode))
-      .first();
-
-    if (existingCode) {
-      throw new ConvexError({
-        code: "DUPLICATE_CODE",
-        message: "A promo code with this code already exists",
-      });
-    }
-
-    // Validate discount value
-    if (args.discountType === "percentage") {
-      if (args.discountValue <= 0 || args.discountValue > 100) {
-        throw new ConvexError({
-          code: "INVALID_DISCOUNT",
-          message: "Percentage discount must be between 1 and 100",
-        });
-      }
-    } else {
-      if (args.discountValue <= 0) {
-        throw new ConvexError({
-          code: "INVALID_DISCOUNT",
-          message: "Fixed discount must be greater than 0",
-        });
-      }
-    }
-
-    // Validate dates
-    if (args.expiresAt && args.expiresAt <= args.startsAt) {
-      throw new ConvexError({
-        code: "INVALID_DATES",
-        message: "Expiry date must be after start date",
-      });
-    }
+    await checkDuplicateCode(ctx, normalizedCode);
 
     const now = Date.now();
 
@@ -450,11 +309,12 @@ export const createPromoCode = mutation({
 });
 
 // Mutation: Update promo code (admin only)
+// REFACTORED: Uses extracted validation and shared types
 export const updatePromoCode = mutation({
   args: {
     promoCodeId: v.id("promoCodes"),
     description: v.optional(v.string()),
-    discountType: v.optional(v.union(v.literal("percentage"), v.literal("fixed"))),
+    discountType: v.optional(discountTypeValidator),
     discountValue: v.optional(v.number()),
     minOrderAmount: v.optional(v.number()),
     maxDiscountAmount: v.optional(v.number()),
@@ -471,10 +331,7 @@ export const updatePromoCode = mutation({
 
     const promoCode = await ctx.db.get(args.promoCodeId);
     if (!promoCode) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "Promo code not found",
-      });
+      throw notFound("Promo code");
     }
 
     // Build update object
@@ -495,25 +352,10 @@ export const updatePromoCode = mutation({
     if (args.excludeWholesale !== undefined) updates.excludeWholesale = args.excludeWholesale;
     if (args.isActive !== undefined) updates.isActive = args.isActive;
 
-    // Validate new discount value if provided
+    // Validate discount value using extracted function
     const discountType = args.discountType ?? promoCode.discountType;
     const discountValue = args.discountValue ?? promoCode.discountValue;
-
-    if (discountType === "percentage") {
-      if (discountValue <= 0 || discountValue > 100) {
-        throw new ConvexError({
-          code: "INVALID_DISCOUNT",
-          message: "Percentage discount must be between 1 and 100",
-        });
-      }
-    } else {
-      if (discountValue <= 0) {
-        throw new ConvexError({
-          code: "INVALID_DISCOUNT",
-          message: "Fixed discount must be greater than 0",
-        });
-      }
-    }
+    validateDiscountValue(discountType, discountValue);
 
     await ctx.db.patch(args.promoCodeId, updates);
 
@@ -531,10 +373,7 @@ export const deletePromoCode = mutation({
 
     const promoCode = await ctx.db.get(args.promoCodeId);
     if (!promoCode) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "Promo code not found",
-      });
+      throw notFound("Promo code");
     }
 
     // Soft delete - just deactivate
@@ -557,10 +396,7 @@ export const togglePromoCodeStatus = mutation({
 
     const promoCode = await ctx.db.get(args.promoCodeId);
     if (!promoCode) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "Promo code not found",
-      });
+      throw notFound("Promo code");
     }
 
     await ctx.db.patch(args.promoCodeId, {

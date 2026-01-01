@@ -59,11 +59,12 @@ describe("Payment Flow Tests", () => {
       const ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
-      // Mock order exists and is pending
+      // Mock order exists and is pending (includes total for server-side amount calculation)
       const mockRunQuery = vi.fn().mockResolvedValue({
         razorpayOrderId: undefined,
         paymentStatus: "pending",
         orderStatus: "pending",
+        total: 1000, // Order total in INR (will be converted to 100000 paise)
       });
 
       const mockRunMutation = vi.fn().mockResolvedValue(undefined);
@@ -121,11 +122,12 @@ describe("Payment Flow Tests", () => {
       const ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
-      // Mock order already has Razorpay order ID
+      // Mock order already has Razorpay order ID (includes total for server-side amount)
       const mockRunQuery = vi.fn().mockResolvedValue({
         razorpayOrderId: "order_existing123",
         paymentStatus: "pending",
         orderStatus: "pending",
+        total: 1000, // Order total in INR
       });
 
       const mockCtx = {
@@ -144,11 +146,12 @@ describe("Payment Flow Tests", () => {
       const ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
-      // Mock order is already paid
+      // Mock order is already paid (includes total for server-side amount)
       const mockRunQuery = vi.fn().mockResolvedValue({
         razorpayOrderId: undefined,
         paymentStatus: "paid",
         orderStatus: "confirmed",
+        total: 1000, // Order total in INR
       });
 
       const orderStatus = await mockRunQuery();
@@ -165,11 +168,12 @@ describe("Payment Flow Tests", () => {
       const ctx = createMockMutationCtx();
       const orderId = "j573gq2c4rv8qzk9qxr3t7h67d6jtq95" as Id<"orders">;
 
-      // Mock order is cancelled
+      // Mock order is cancelled (includes total for server-side amount)
       const mockRunQuery = vi.fn().mockResolvedValue({
         razorpayOrderId: undefined,
         paymentStatus: "pending",
         orderStatus: "cancelled",
+        total: 1000, // Order total in INR
       });
 
       const orderStatus = await mockRunQuery();

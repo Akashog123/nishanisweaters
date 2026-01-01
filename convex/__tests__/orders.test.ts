@@ -5,7 +5,6 @@ import {
   createTestOrder,
   createTestProduct,
   createTestUser,
-  createTestWholesaleUser,
   createTestAdminUser,
   createTestCart,
   createTestIdentity,
@@ -83,24 +82,6 @@ describe("Orders Module", () => {
       expect(subtotal).toBe(3497);
       expect(tax).toBe(629);
       expect(total).toBe(4226);
-    });
-
-    it("should apply wholesale pricing for wholesale users", async () => {
-      // Arrange
-      const wholesaleUser = createTestWholesaleUser();
-      mockMutationCtx.auth.getUserIdentity.mockResolvedValue(
-        createTestIdentity(wholesaleUser.clerkId)
-      );
-
-      const productWithWholesale = createTestProduct({
-        retailPrice: 999,
-        wholesalePrice: 799,
-      });
-
-      // Wholesale users should get wholesale pricing
-      expect(productWithWholesale.wholesalePrice).toBeLessThan(
-        productWithWholesale.retailPrice
-      );
     });
 
     it("should validate stock before creating order", async () => {

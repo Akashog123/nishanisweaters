@@ -246,6 +246,24 @@ function ProductDetailsForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
+          <Label htmlFor="compareAtPrice">Regular Price / MSRP (INR)</Label>
+          <Input
+            id="compareAtPrice"
+            type="number"
+            value={formData.compareAtPrice || ""}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                compareAtPrice: parseFloat(e.target.value) || 0,
+              })
+            }
+            placeholder="2999 (optional)"
+          />
+          <p className="text-xs text-muted-foreground">
+            Original price before discount (shown as strikethrough)
+          </p>
+        </div>
+        <div className="space-y-2">
           <Label htmlFor="wholesalePrice">Wholesale Price (INR)</Label>
           <Input
             id="wholesalePrice"
@@ -260,6 +278,9 @@ function ProductDetailsForm({
             placeholder="1799"
           />
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="minOrderQuantity">Min. Order Qty (Wholesale)</Label>
           <Input

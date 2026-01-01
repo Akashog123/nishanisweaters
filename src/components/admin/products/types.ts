@@ -12,6 +12,7 @@ export interface Product {
   shortDescription?: string; // Optional to match Convex return type
   category: string;
   retailPrice: number;
+  compareAtPrice?: number; // Regular Price / MSRP - shown as strikethrough
   wholesalePrice?: number;
   minOrderQuantity?: number;
   images: ProductImage[];
@@ -31,6 +32,7 @@ export interface ProductFormData {
   shortDescription: string;
   category: string;
   retailPrice: number;
+  compareAtPrice: number; // Regular Price / MSRP
   wholesalePrice: number;
   minOrderQuantity: number;
   featured: boolean;
@@ -45,6 +47,7 @@ export const initialFormData: ProductFormData = {
   shortDescription: "",
   category: "mens",
   retailPrice: 0,
+  compareAtPrice: 0,
   wholesalePrice: 0,
   minOrderQuantity: 1,
   featured: false,

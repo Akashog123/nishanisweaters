@@ -77,14 +77,6 @@ interface PendingChange {
   valueType: string;
 }
 
-interface CategoryInfo {
-  key: string;
-  label: string;
-  description: string;
-  icon: string;
-  settingsCount: number;
-  modifiedCount: number;
-}
 
 // ============================================
 // ICON MAPPING
@@ -617,9 +609,6 @@ export default function AdminSettings() {
       </AdminLayout>
     );
   }
-
-  // Get settings for active category
-  const categorySettings = settings.filter((s) => s.category === activeTab);
 
   return (
     <AdminLayout breadcrumbs={[{ label: "Settings" }]}>

@@ -1,8 +1,15 @@
 import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAuth, requireAdmin, requireOwnership, getCurrentUser as getCurrentUserFromAuth } from "./lib/auth";
-import { ConvexError } from "convex/values";
 import { internal } from "./_generated/api";
+
+// Shared types and validators
+import { userRoleValidator, addressValidator } from "./lib/types";
+
+// Error factory
+import { notFound, userNotFound, unauthorized } from "./lib/errors";
+
+// Validation utilities
 import {
   validatePhone,
   validatePostalCode,
@@ -64,10 +71,7 @@ export const upsertUser = mutation({
     const identity = await ctx.auth.getUserIdentity();
 
     if (!identity) {
-      throw new ConvexError({
-        code: "UNAUTHORIZED",
-        message: "You must be signed in to sync your profile",
-      });
+      throw unauthorized("You must be signed in to sync your profile");
     }
 
     // Use verified identity data - never trust client-provided values
@@ -185,10 +189,7 @@ export const updateUserProfile = mutation({
       .first();
 
     if (!user) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "User not found",
-      });
+      throw notFound("User");
     }
 
     await ctx.db.patch(user._id, args);
@@ -228,10 +229,7 @@ export const addShippingAddress = mutation({
       .first();
 
     if (!user) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "User not found",
-      });
+      throw notFound("User");
     }
 
     const newAddress = {
@@ -288,19 +286,13 @@ export const updateShippingAddress = mutation({
       .first();
 
     if (!user) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "User not found",
-      });
+      throw notFound("User");
     }
 
     // Verify address belongs to user
     const addressExists = user.shippingAddresses.some(addr => addr.id === args.addressId);
     if (!addressExists) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "Address not found",
-      });
+      throw notFound("Address");
     }
 
     const updatedAddresses = user.shippingAddresses.map(addr => {
@@ -343,10 +335,7 @@ export const deleteShippingAddress = mutation({
       .first();
 
     if (!user) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "User not found",
-      });
+      throw notFound("User");
     }
 
     const updatedAddresses = user.shippingAddresses.filter(
@@ -361,11 +350,7 @@ export const deleteShippingAddress = mutation({
 // PERFORMANCE: Uses pagination and role index instead of full table scan
 export const listUsers = query({
   args: {
-    role: v.optional(v.union(
-      v.literal("customer"),
-      v.literal("wholesale"),
-      v.literal("admin")
-    )),
+    role: v.optional(userRoleValidator),
     limit: v.optional(v.number()),
     cursor: v.optional(v.string()),
   },
@@ -380,7 +365,7 @@ export const listUsers = query({
     if (args.role) {
       query = ctx.db
         .query("users")
-        .withIndex("by_role", (q) => q.eq("role", args.role as "customer" | "wholesale" | "admin"));
+        .withIndex("by_role", (q) => q.eq("role", args.role as "customer" | "admin"));
     } else {
       query = ctx.db.query("users");
     }
@@ -403,62 +388,12 @@ export const listUsers = query({
 export const updateUserRole = mutation({
   args: {
     userId: v.id("users"),
-    role: v.union(v.literal("customer"), v.literal("wholesale"), v.literal("admin")),
+    role: userRoleValidator,
   },
   handler: async (ctx, args) => {
     // Require admin authorization
     await requireAdmin(ctx);
 
     await ctx.db.patch(args.userId, { role: args.role });
-  },
-});
-
-// Mutation: Approve wholesale application (Admin only)
-// Note: Wholesale tier system has been removed. Wholesale users get a flat wholesalePrice.
-export const approveWholesale = mutation({
-  args: {
-    userId: v.id("users"),
-    status: v.union(v.literal("approved"), v.literal("rejected")),
-    rejectionReason: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    // Require admin authorization
-    await requireAdmin(ctx);
-
-    // Fetch the user to update
-    const user = await ctx.db.get(args.userId);
-
-    if (!user) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "User not found",
-      });
-    }
-
-    // Validate that user has a pending wholesale application
-    if (user.wholesaleStatus !== "pending") {
-      throw new ConvexError({
-        code: "INVALID_STATE",
-        message: `Cannot process wholesale application: user status is '${user.wholesaleStatus || "none"}', expected 'pending'`,
-      });
-    }
-
-    // Update user based on approval status
-    if (args.status === "approved") {
-      await ctx.db.patch(args.userId, {
-        wholesaleStatus: "approved",
-        role: "wholesale",
-        wholesaleApprovedAt: Date.now(),
-      });
-    } else {
-      // Rejected - keep role as customer
-      await ctx.db.patch(args.userId, {
-        wholesaleStatus: "rejected",
-        role: "customer",
-        wholesaleRejectionReason: args.rejectionReason,
-      });
-    }
-
-    return { success: true, status: args.status };
   },
 });

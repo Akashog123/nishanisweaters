@@ -239,20 +239,6 @@ export function createTestUser(overrides: Partial<any> = {}) {
 }
 
 /**
- * Create a test wholesale user
- */
-export function createTestWholesaleUser(overrides: Partial<any> = {}) {
-  return createTestUser({
-    role: "wholesale" as const,
-    wholesaleStatus: "approved" as const,
-    companyName: "Test Wholesale Co.",
-    businessEmail: "business@example.com",
-    gstNumber: "27AABCT1234C1Z5",
-    ...overrides,
-  });
-}
-
-/**
  * Create a test admin user
  */
 export function createTestAdminUser(overrides: Partial<any> = {}) {
