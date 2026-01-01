@@ -508,8 +508,9 @@ export default function AdminSettings() {
   }>({ open: false, key: "", label: "" });
 
   // Initialize local values from server data
-  const settings = settingsData?.settings ?? [];
-  const categories = settingsData?.categories ?? [];
+  // Memoize to prevent dependency array issues in child hooks
+  const settings = useMemo(() => settingsData?.settings ?? [], [settingsData?.settings]);
+  const categories = useMemo(() => settingsData?.categories ?? [], [settingsData?.categories]);
 
   // Calculate pending changes
   const pendingChanges = useMemo((): PendingChange[] => {

@@ -65,61 +65,62 @@ const AboutUs = () => {
   return (
     <Layout>
       {/* Hero Section */}
-      <section className="bg-primary text-primary-foreground py-16 lg:py-24">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center">
-            <Badge variant="secondary" className="mb-6">
-              OUR STORY
+      <section className="relative bg-zinc-900 text-white py-24 lg:py-32 overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1605218427368-35b866509a25?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-30" />
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 to-transparent" />
+        
+        <div className="container relative mx-auto px-4 lg:px-8">
+          <div className="max-w-4xl mx-auto text-center space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+            <Badge variant="outline" className="text-white border-white/30 backdrop-blur-sm px-4 py-1.5 text-sm tracking-widest uppercase">
+              Established 2013
             </Badge>
-            <h1 className="text-4xl lg:text-5xl xl:text-6xl font-bold mb-6 tracking-tight">
-              Crafting Warmth Since 2013
+            <h1 className="text-5xl lg:text-7xl font-bold tracking-tight text-white leading-tight">
+              Weaving Stories in <span className="text-primary-foreground italic">Wool</span>
             </h1>
-            <p className="text-lg lg:text-xl text-primary-foreground/80 leading-relaxed">
-              From the heart of Ludhiana, Punjab — India's woolen capital — we
-              bring you premium handcrafted woolens that blend tradition with
-              contemporary style.
+            <p className="text-xl lg:text-2xl text-zinc-300 leading-relaxed max-w-2xl mx-auto font-light">
+              From the heart of Ludhiana to your wardrobe, bringing you premium woolens that blend heritage with modern elegance.
             </p>
           </div>
         </div>
       </section>
 
       {/* Our Story Section */}
-      <section className="py-12 lg:py-20">
+      <section className="py-20 lg:py-32 bg-background">
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center max-w-7xl mx-auto">
             {/* Image/Visual Side */}
-            <div className="relative order-2 lg:order-1">
-              <Card className="overflow-hidden">
-                <div className="aspect-[4/3] bg-secondary relative">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <Sparkles className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                      <p className="text-sm text-muted-foreground font-medium">
-                        Heritage Since 2013
-                      </p>
-                    </div>
-                  </div>
-                  {/* Decorative grid overlay */}
-                  <div
-                    className="absolute inset-0 opacity-10"
-                    style={{
-                      backgroundImage:
-                        "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)",
-                      backgroundSize: "40px 40px",
-                    }}
+            <div className="relative order-2 lg:order-1 group">
+              <div className="absolute -inset-4 bg-gradient-to-tr from-primary/20 to-transparent rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              <div className="relative rounded-3xl overflow-hidden border border-border/50 shadow-2xl">
+                <div className="aspect-[4/5] relative bg-muted">
+                  <img 
+                    src="https://images.unsplash.com/photo-1574201635302-388dd92a4c3f?q=80&w=1965&auto=format&fit=crop"
+                    alt="Artisan working with wool"
+                    className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-105"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <div className="absolute bottom-8 left-8 text-white">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Sparkles className="h-5 w-5 text-yellow-200" />
+                      <span className="text-sm font-medium tracking-wider uppercase text-yellow-200">Heritage</span>
+                    </div>
+                    <p className="text-2xl font-serif italic">"Quality is not an act, it is a habit."</p>
+                  </div>
                 </div>
-              </Card>
+              </div>
             </div>
 
             {/* Content Side */}
-            <div className="space-y-6 order-1 lg:order-2">
-              <Badge variant="outline">OUR JOURNEY</Badge>
-              <h2 className="text-3xl lg:text-4xl font-bold">
+            <div className="space-y-8 order-1 lg:order-2">
+              <div className="space-y-4">
+                <h2 className="text-3xl lg:text-5xl font-bold tracking-tight">
                 A Legacy Woven in Wool
-              </h2>
-              <div className="space-y-4 text-muted-foreground leading-relaxed">
-                <p>
+                </h2>
+                <div className="w-20 h-1 bg-primary rounded-full" />
+              </div>
+              
+              <div className="space-y-6 text-lg text-muted-foreground leading-relaxed">
+                <p className="drop-cap first-letter:text-5xl first-letter:font-serif first-letter:mr-3 first-letter:float-left first-letter:text-primary">
                   Nishani Woolera was founded in 2013 in Ludhiana, Punjab — the
                   heart of India's woolen textile industry. What began as a
                   small family workshop has grown into a trusted name in premium
@@ -131,11 +132,20 @@ const AboutUs = () => {
                   time-honored techniques with modern designs to create pieces
                   that are both timeless and contemporary.
                 </p>
-                <p>
-                  Today, we serve customers across India and beyond, bringing
-                  the warmth and quality of Ludhiana's finest woolens to homes
-                  everywhere.
-                </p>
+                <div className="flex items-center gap-4 pt-4">
+                  <div className="pl-4 border-l-2 border-primary">
+                    <p className="font-semibold text-foreground">10K+</p>
+                    <p className="text-sm">Happy Customers</p>
+                  </div>
+                  <div className="pl-4 border-l-2 border-primary">
+                    <p className="font-semibold text-foreground">40+</p>
+                    <p className="text-sm">Years Experience</p>
+                  </div>
+                  <div className="pl-4 border-l-2 border-primary">
+                    <p className="font-semibold text-foreground">100%</p>
+                    <p className="text-sm">Quality Guarantee</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -143,18 +153,15 @@ const AboutUs = () => {
       </section>
 
       {/* Mission & Values Section */}
-      <section className="py-12 lg:py-20 bg-secondary/30">
+      <section className="py-20 lg:py-32 bg-zinc-50 dark:bg-zinc-900/50">
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-7xl mx-auto">
             {/* Section Header */}
-            <div className="text-center mb-12">
-              <Badge variant="outline" className="mb-4">
-                WHAT WE STAND FOR
-              </Badge>
-              <h2 className="text-2xl lg:text-3xl font-bold mb-4">
+            <div className="text-center mb-16 max-w-3xl mx-auto">
+              <h2 className="text-3xl lg:text-5xl font-bold mb-6 tracking-tight">
                 Our Mission & Values
               </h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
+              <p className="text-lg text-muted-foreground leading-relaxed">
                 Every thread we weave carries our commitment to quality,
                 sustainability, and the preservation of traditional
                 craftsmanship.
@@ -162,17 +169,17 @@ const AboutUs = () => {
             </div>
 
             {/* Values Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {values.map((value, index) => (
-                <Card key={index} className="h-full">
+                <Card key={index} className="h-full border-none shadow-lg hover:shadow-xl transition-shadow duration-300 bg-background/50 backdrop-blur-sm">
                   <CardHeader>
-                    <div className="p-3 bg-primary rounded-lg w-fit mb-2">
-                      <value.icon className="h-6 w-6 text-primary-foreground" />
+                    <div className="p-4 bg-primary/5 rounded-2xl w-fit mb-4">
+                      <value.icon className="h-8 w-8 text-primary" />
                     </div>
-                    <CardTitle className="text-lg">{value.title}</CardTitle>
+                    <CardTitle className="text-xl font-bold">{value.title}</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-muted-foreground text-sm leading-relaxed">
+                    <p className="text-muted-foreground leading-relaxed">
                       {value.description}
                     </p>
                   </CardContent>
@@ -182,26 +189,27 @@ const AboutUs = () => {
           </div>
         </div>
       </section>
-
       {/* Call-to-Action Section */}
-      <section className="py-16 lg:py-24 bg-primary text-primary-foreground">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-6">
+      <section className="relative py-24 lg:py-32 overflow-hidden">
+        <div className="absolute inset-0 bg-primary" />
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1556905055-8f358a7a47b2?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-fixed opacity-10 mix-blend-overlay" />
+        
+        <div className="container mx-auto px-4 lg:px-8 relative">
+          <div className="max-w-4xl mx-auto text-center space-y-8">
+            <h2 className="text-4xl lg:text-6xl font-bold text-white tracking-tight">
               Experience the Nishani Difference
             </h2>
-            <p className="text-lg text-primary-foreground/80 mb-8 leading-relaxed">
+            <p className="text-xl text-primary-foreground/90 leading-relaxed max-w-2xl mx-auto font-light">
               Discover our collection of premium woolens, crafted with care in
               Ludhiana and delivered to your doorstep. Join thousands of
               satisfied customers who trust Nishani Woolera for quality and
               style.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Button
                 asChild
                 size="lg"
-                variant="secondary"
-                className="font-semibold"
+                className="bg-white text-primary hover:bg-zinc-100 font-semibold h-14 px-8 text-lg rounded-full"
               >
                 <Link to="/shop">
                   <ShoppingBag className="mr-2 h-5 w-5" />
@@ -212,7 +220,7 @@ const AboutUs = () => {
                 asChild
                 size="lg"
                 variant="outline"
-                className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary"
+                className="border-2 border-white/30 text-white bg-transparent hover:bg-white/10 hover:text-white h-14 px-8 text-lg rounded-full backdrop-blur-sm"
               >
                 <Link to="/contact-us">
                   <MessageSquare className="mr-2 h-5 w-5" />

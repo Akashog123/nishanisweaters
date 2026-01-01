@@ -31,14 +31,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -56,7 +52,6 @@ import {
   EyeOff,
   Loader2,
   Calendar,
-  Link as LinkIcon,
 } from "lucide-react";
 
 type ContentType = "banner" | "announcement" | "text_block" | "image" | "video";

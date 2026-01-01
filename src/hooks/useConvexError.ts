@@ -36,34 +36,8 @@ export function useConvexError(
   } = options;
 
   /**
-   * Handle and parse Convex errors
-   */
-  const handleError = useCallback(
-    (error: unknown, context?: string): AppError => {
-      const parsedError = parseConvexError(error);
-
-      // Log error if enabled
-      if (logErrors) {
-        logError(parsedError, context);
-      }
-
-      // Show toast notification if enabled
-      if (showToast) {
-        showErrorToast(parsedError);
-      }
-
-      // Call custom error handler if provided
-      if (onError) {
-        onError(parsedError);
-      }
-
-      return parsedError;
-    },
-    [showToast, logErrors, onError]
-  );
-
-  /**
    * Show error toast notification with appropriate styling
+   * NOTE: Defined before handleError so it can be used as a dependency
    */
   const showErrorToast = useCallback((error: unknown): void => {
     const message = getErrorMessage(error);
@@ -122,6 +96,33 @@ export function useConvexError(
     // Default error toast
     toast.error(message);
   }, []);
+
+  /**
+   * Handle and parse Convex errors
+   */
+  const handleError = useCallback(
+    (error: unknown, context?: string): AppError => {
+      const parsedError = parseConvexError(error);
+
+      // Log error if enabled
+      if (logErrors) {
+        logError(parsedError, context);
+      }
+
+      // Show toast notification if enabled
+      if (showToast) {
+        showErrorToast(parsedError);
+      }
+
+      // Call custom error handler if provided
+      if (onError) {
+        onError(parsedError);
+      }
+
+      return parsedError;
+    },
+    [showToast, logErrors, onError, showErrorToast]
+  );
 
   /**
    * Check if error is of a specific type

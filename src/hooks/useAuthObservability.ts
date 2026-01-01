@@ -57,7 +57,7 @@ export function useAuthObservability(): void {
     }
 
     setUserSegment(segment);
-  }, [isLoaded, isSignedIn, dbUser?.role]);
+  }, [isLoaded, isSignedIn, dbUser]);
 }
 
 export default useAuthObservability;

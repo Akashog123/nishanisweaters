@@ -138,7 +138,8 @@ export default function Checkout() {
     return () => {
       clearCartAbandonmentTracking();
     };
-  }, []); // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally only run on mount
+  }, []);
 
   // Track step changes in the checkout flow
   useEffect(() => {

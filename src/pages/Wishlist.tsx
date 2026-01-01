@@ -101,7 +101,7 @@ export default function Wishlist() {
         productId,
       });
       toast.success("Removed from wishlist");
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to remove item");
     }
   };
@@ -110,7 +110,7 @@ export default function Wishlist() {
     try {
       await clearWishlist({});
       toast.success("Wishlist cleared");
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to clear wishlist");
     }
   };

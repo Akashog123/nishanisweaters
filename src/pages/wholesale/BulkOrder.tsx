@@ -64,7 +64,8 @@ export default function BulkOrder() {
 
   // Get all products for bulk ordering
   const productsData = useQuery(api.products.listProducts, { limit: 100 });
-  const products = productsData?.products || [];
+  // Memoize to prevent dependency array issues in child hooks
+  const products = useMemo(() => productsData?.products || [], [productsData?.products]);
 
   // Get unique categories from products
   const categories = useMemo(() => {
@@ -219,7 +220,7 @@ export default function BulkOrder() {
       setTimeout(() => {
         navigate("/checkout");
       }, 500);
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to add items to cart");
     } finally {
       setIsAddingToCart(false);

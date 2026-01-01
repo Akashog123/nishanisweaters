@@ -374,7 +374,7 @@ export default function AdminCategories() {
       toast.success(
         `Category ${category.isActive ? "deactivated" : "activated"} successfully`
       );
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to update category status");
     }
   };
@@ -388,7 +388,7 @@ export default function AdminCategories() {
       toast.success(
         `Category ${category.showInHeader ? "hidden from" : "shown in"} header`
       );
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to update category visibility");
     }
   };

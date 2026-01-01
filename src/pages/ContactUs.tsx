@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import {
   Mail,
   Phone,
-  MapPin,
   Clock,
   MessageSquare,
   Send,
@@ -129,11 +128,11 @@ interface ContactInfoItemProps {
 
 const ContactInfoItem = ({ icon, title, children }: ContactInfoItemProps) => (
   <div className="flex items-start gap-4">
-    <div className="p-3 bg-secondary rounded-lg shrink-0">
+    <div className="p-3 bg-white/10 rounded-xl shrink-0 backdrop-blur-sm">
       {icon}
     </div>
     <div>
-      <h4 className="font-medium text-sm text-muted-foreground mb-1">
+      <h4 className="font-medium text-sm text-zinc-400 mb-1">
         {title}
       </h4>
       {children}
@@ -204,36 +203,38 @@ const ContactUs = () => {
   return (
     <Layout>
       {/* Hero Section - Using primary theme colors */}
-      <section className="bg-primary text-primary-foreground py-16 lg:py-24">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center">
-            <Badge variant="secondary" className="mb-6">
-              WE'RE HERE TO HELP
-            </Badge>
-            <h1 className="text-4xl lg:text-5xl xl:text-6xl font-bold mb-6 tracking-tight">
-              Get in Touch
-            </h1>
-            <p className="text-lg lg:text-xl text-primary-foreground/80 leading-relaxed">
-              Have questions about our products, orders, or wholesale partnerships?
-              We are here to help. Reach out to us and our team will respond within 24 hours.
-            </p>
-          </div>
-        </div>
-      </section>
+      <section className="relative bg-zinc-900 text-white py-20 lg:py-28 overflow-hidden">
+         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1596524430615-b46476dd9fdb?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-20" />
+         <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 to-transparent" />
+         
+         <div className="container relative mx-auto px-4 lg:px-8">
+           <div className="max-w-4xl mx-auto text-center space-y-6 animate-in fade-in slide-in-from-bottom-6 duration-700">
+             <Badge variant="outline" className="text-white border-white/30 backdrop-blur-sm px-4 py-1.5 text-sm tracking-widest uppercase">
+               We're here to help
+             </Badge>
+             <h1 className="text-5xl lg:text-7xl font-bold tracking-tight text-white leading-tight">
+               Let's Start a Conversation
+             </h1>
+             <p className="text-xl text-zinc-300 leading-relaxed max-w-2xl mx-auto font-light">
+               Whether you have questions about our products, orders, or wholesale partnerships, our team is ready to assist you.
+             </p>
+           </div>
+         </div>
+       </section>
 
       {/* Main Content */}
-      <section className="py-12 lg:py-20">
+      <section className="py-20 lg:py-28 bg-background relative -mt-16 z-10">
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 max-w-7xl mx-auto">
             {/* Contact Form */}
             <div>
-              <Card>
-                <CardHeader className="pb-4">
+              <Card className="shadow-2xl border-none">
+                <CardHeader className="pb-8 pt-8 px-8 border-b bg-muted/30">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 bg-primary rounded-lg">
-                      <MessageSquare className="h-5 w-5 text-primary-foreground" />
+                    <div className="p-3 bg-primary/10 rounded-xl">
+                      <MessageSquare className="h-6 w-6 text-primary" />
                     </div>
-                    <CardTitle className="text-xl lg:text-2xl">
+                    <CardTitle className="text-2xl font-bold">
                       Send us a Message
                     </CardTitle>
                   </div>
@@ -241,7 +242,7 @@ const ContactUs = () => {
                     Fill out the form below and we will get back to you as soon.
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-8">
                   {isSuccess ? (
                     <div className="py-8 text-center animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
                       <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-6">
@@ -262,7 +263,7 @@ const ContactUs = () => {
                     <Form {...form}>
                       <form
                         onSubmit={form.handleSubmit(onSubmit)}
-                        className="space-y-5"
+                        className="space-y-6"
                       >
                         {/* Name Field */}
                         <FormField
@@ -270,9 +271,10 @@ const ContactUs = () => {
                           name="name"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Full Name *</FormLabel>
+                              <FormLabel className="text-base font-medium">Full Name <span className="text-destructive">*</span></FormLabel>
                               <FormControl>
                                 <Input
+                                  className="h-12 bg-muted/30 border-muted-foreground/20 focus:border-primary"
                                   placeholder="Enter your full name"
                                   {...field}
                                   disabled={isSubmitting}
@@ -290,9 +292,10 @@ const ContactUs = () => {
                             name="email"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Email Address *</FormLabel>
+                                <FormLabel className="text-base font-medium">Email Address <span className="text-destructive">*</span></FormLabel>
                                 <FormControl>
                                   <Input
+                                    className="h-12 bg-muted/30 border-muted-foreground/20 focus:border-primary"
                                     type="email"
                                     placeholder="you@example.com"
                                     {...field}
@@ -309,9 +312,10 @@ const ContactUs = () => {
                             name="phone"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Phone Number</FormLabel>
+                                <FormLabel className="text-base font-medium">Phone Number</FormLabel>
                                 <FormControl>
                                   <Input
+                                    className="h-12 bg-muted/30 border-muted-foreground/20 focus:border-primary"
                                     type="tel"
                                     placeholder="+91 98765 43210"
                                     {...field}
@@ -330,14 +334,14 @@ const ContactUs = () => {
                           name="subject"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Subject *</FormLabel>
+                              <FormLabel className="text-base font-medium">Subject <span className="text-destructive">*</span></FormLabel>
                               <Select
                                 onValueChange={field.onChange}
                                 defaultValue={field.value}
                                 disabled={isSubmitting}
                               >
                                 <FormControl>
-                                  <SelectTrigger>
+                                  <SelectTrigger className="h-12 bg-muted/30 border-muted-foreground/20 focus:border-primary">
                                     <SelectValue placeholder="Select a subject" />
                                   </SelectTrigger>
                                 </FormControl>
@@ -363,11 +367,11 @@ const ContactUs = () => {
                           name="message"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Message *</FormLabel>
+                              <FormLabel className="text-base font-medium">Message <span className="text-destructive">*</span></FormLabel>
                               <FormControl>
                                 <Textarea
                                   placeholder="How can we help you? Please provide as much detail as possible..."
-                                  className="min-h-[140px] resize-none"
+                                  className="min-h-[160px] resize-none bg-muted/30 border-muted-foreground/20 focus:border-primary p-4"
                                   {...field}
                                   disabled={isSubmitting}
                                 />
@@ -393,7 +397,7 @@ const ContactUs = () => {
                         <Button
                           type="submit"
                           size="lg"
-                          className="w-full"
+                          className="w-full h-12 text-lg font-medium"
                           disabled={isSubmitting}
                         >
                           {isSubmitting ? (
@@ -416,66 +420,66 @@ const ContactUs = () => {
             </div>
 
             {/* Contact Information */}
-            <div className="space-y-6">
+            <div className="space-y-8 lg:pt-8">
+               <div className="space-y-4">
+                 <h3 className="text-2xl font-bold">Contact Information</h3>
+                 <p className="text-muted-foreground">Reach out to us through any of these channels. We're always here to assist you.</p>
+               </div>
+
               {/* Contact Details Card */}
-              <Card>
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-xl lg:text-2xl">
-                    Contact Information
-                  </CardTitle>
-                  <CardDescription>
-                    Reach out to us through any of these channels
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
+              <Card className="border-none shadow-lg bg-zinc-900 text-white overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-bl-full -mr-8 -mt-8" />
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary/20 rounded-tr-full -ml-6 -mb-6" />
+                
+                <CardContent className="space-y-8 p-8 relative">
                   {/* Email */}
                   <ContactInfoItem
-                    icon={<Mail className="h-5 w-5 text-foreground" />}
+                    icon={<Mail className="h-5 w-5 text-white" />}
                     title="Email Us"
                   >
                     <a
                       href="mailto:support@nishaniwoolera.com"
-                      className="text-base font-medium hover:text-primary transition-colors"
+                      className="text-lg font-medium hover:text-zinc-300 transition-colors text-white"
                     >
                       support@nishaniwoolera.com
                     </a>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-sm text-zinc-400 mt-1">
                       We respond within 24 hours
                     </p>
                   </ContactInfoItem>
 
-                  <Separator />
+                  <Separator className="bg-white/10" />
 
                   {/* Phone */}
                   <ContactInfoItem
-                    icon={<Phone className="h-5 w-5 text-foreground" />}
+                    icon={<Phone className="h-5 w-5 text-white" />}
                     title="Call Us"
                   >
                     <a
                       href="tel:+917458816343"
-                      className="text-base font-medium hover:text-primary transition-colors"
+                      className="text-lg font-medium hover:text-zinc-300 transition-colors text-white"
                     >
                       +91 7458 816 343
                     </a>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-sm text-zinc-400 mt-1">
                       Mon - Sat, 10:00 AM - 6:00 PM IST
                     </p>
                   </ContactInfoItem>
                   
-                  <Separator />
+                  <Separator className="bg-white/10" />
 
                   {/* Business Hours */}
                   <ContactInfoItem
-                    icon={<Clock className="h-5 w-5 text-foreground" />}
+                    icon={<Clock className="h-5 w-5 text-white" />}
                     title="Business Hours"
                   >
-                    <div className="space-y-1">
+                    <div className="space-y-1 text-zinc-300">
                       <p className="text-sm">
-                        <span className="font-medium">Monday - Saturday:</span>{" "}
+                        <span className="font-medium text-white">Monday - Saturday:</span>{" "}
                         10:00 AM - 6:00 PM
                       </p>
                       <p className="text-sm">
-                        <span className="font-medium">Sunday:</span> Closed
+                        <span className="font-medium text-white">Sunday:</span> Closed
                       </p>
                     </div>
                   </ContactInfoItem>
@@ -483,24 +487,18 @@ const ContactUs = () => {
               </Card>
 
               {/* Map Placeholder */}
-              <Card className="overflow-hidden">
-                <div className="relative h-48 bg-secondary">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <MapPin className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">
-                        Ludhiana, Punjab, India
-                      </p>
-                    </div>
-                  </div>
-                  {/* Decorative grid overlay */}
-                  <div
-                    className="absolute inset-0 opacity-10"
-                    style={{
-                      backgroundImage:
-                        "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)",
-                      backgroundSize: "40px 40px",
-                    }}
+              <Card className="overflow-hidden border-none shadow-lg">
+                <div className="relative h-64 bg-secondary">
+                  <iframe 
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d109741.02912911311!2d75.77087864999999!3d30.900965!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x391a837462345a7d%3A0x681102348ec60610!2sLudhiana%2C%20Punjab!5e0!3m2!1sen!2sin!4v1716300000000!5m2!1sen!2sin" 
+                    width="100%" 
+                    height="100%" 
+                    style={{ border: 0 }} 
+                    allowFullScreen={true} 
+                    loading="lazy" 
+                    referrerPolicy="no-referrer-when-downgrade"
+                    className="absolute inset-0 grayscale hover:grayscale-0 transition-all duration-500"
+                    title="Nishani Woolera Location"
                   />
                 </div>
               </Card>
@@ -510,22 +508,19 @@ const ContactUs = () => {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-12 lg:py-20 bg-secondary/30">
+      <section className="py-20 lg:py-32 bg-zinc-50 dark:bg-zinc-900/50">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-10">
-              <Badge variant="outline" className="mb-4">
-                FAQ
-              </Badge>
-              <h2 className="text-2xl lg:text-3xl font-bold mb-4">
+              <h2 className="text-3xl lg:text-4xl font-bold mb-4">
                 Frequently Asked Questions
               </h2>
-              <p className="text-muted-foreground">
+              <p className="text-lg text-muted-foreground">
                 Find quick answers to common questions about orders, shipping, and more.
               </p>
             </div>
 
-            <Card>
+            <Card className="border-none shadow-xl">
               <CardContent className="pt-0 pb-0">
                 <Accordion type="single" collapsible className="w-full">
                   {faqItems.map((item, index) => (
@@ -534,10 +529,10 @@ const ContactUs = () => {
                       value={`item-${index}`}
                       className="last:border-b-0"
                     >
-                      <AccordionTrigger className="text-left hover:no-underline">
+                      <AccordionTrigger className="text-left hover:no-underline px-6 py-4 text-base lg:text-lg font-medium">
                         {item.question}
                       </AccordionTrigger>
-                      <AccordionContent className="text-muted-foreground">
+                      <AccordionContent className="text-muted-foreground px-6 pb-6 pt-0 text-base leading-relaxed">
                         {item.answer}
                       </AccordionContent>
                     </AccordionItem>
