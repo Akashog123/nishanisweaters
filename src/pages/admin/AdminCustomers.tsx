@@ -37,7 +37,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import {
   Users,
   Search,
@@ -50,7 +49,6 @@ import {
   Phone,
   MapPin,
   Calendar,
-  Building2,
   Shield,
   ShoppingBag,
 } from "lucide-react";
@@ -65,7 +63,6 @@ const RoleBadge = ({ role }: { role: string }) => {
     { variant: "default" | "secondary" | "destructive" | "outline"; label: string; icon: React.ComponentType<{ className?: string }> }
   > = {
     customer: { variant: "outline", label: "Customer", icon: ShoppingBag },
-    wholesale: { variant: "secondary", label: "Wholesale", icon: Building2 },
     admin: { variant: "default", label: "Admin", icon: Shield },
   };
 
@@ -105,7 +102,7 @@ const CustomerDetailsDialog = ({
   onOpenChange: (open: boolean) => void;
   onUpdateRole: (userId: Id<"users">, role: string) => void;
 }) => {
-  const [selectedRole, setSelectedRole] = useState(customer?.role || "customer");
+  const [selectedRole, setSelectedRole] = useState<string>(customer?.role || "customer");
   const [isUpdating, setIsUpdating] = useState(false);
 
   if (!customer) return null;
@@ -213,55 +210,6 @@ const CustomerDetailsDialog = ({
             </Card>
           )}
 
-          {/* Wholesale Info (if applicable) */}
-          {customer.role === "wholesale" && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  Wholesale Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  {customer.companyName && (
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Company</Label>
-                      <p className="font-medium">{customer.companyName}</p>
-                    </div>
-                  )}
-                  {customer.gstNumber && (
-                    <div>
-                      <Label className="text-xs text-muted-foreground">GST Number</Label>
-                      <p className="font-mono">{customer.gstNumber}</p>
-                    </div>
-                  )}
-                  {customer.businessEmail && (
-                    <div>
-                      <Label className="text-xs text-muted-foreground">
-                        Business Email
-                      </Label>
-                      <p>{customer.businessEmail}</p>
-                    </div>
-                  )}
-                  {customer.website && (
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Website</Label>
-                      <a
-                        href={customer.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
-                        {customer.website}
-                      </a>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Role Management */}
           <Card>
             <CardHeader className="pb-2">
@@ -279,7 +227,6 @@ const CustomerDetailsDialog = ({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="customer">Customer</SelectItem>
-                    <SelectItem value="wholesale">Wholesale</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>
@@ -322,8 +269,7 @@ const AdminCustomers = () => {
     const fullName = `${user.firstName || ""} ${user.lastName || ""}`.toLowerCase();
     const matchesSearch =
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      fullName.includes(searchQuery.toLowerCase()) ||
-      (user.companyName || "").toLowerCase().includes(searchQuery.toLowerCase());
+      fullName.includes(searchQuery.toLowerCase());
 
     const matchesRole = roleFilter === "all" || user.role === roleFilter;
 
@@ -342,7 +288,7 @@ const AdminCustomers = () => {
     try {
       await updateUserRole({
         userId,
-        role: role as "customer" | "wholesale" | "admin",
+        role: role as "customer" | "admin",
       });
       toast.success("User role updated successfully");
     } catch (error) {
@@ -355,7 +301,6 @@ const AdminCustomers = () => {
   const roleCounts = {
     all: allUsers.length,
     customer: allUsers.filter((u) => u.role === "customer").length,
-    wholesale: allUsers.filter((u) => u.role === "wholesale").length,
     admin: allUsers.filter((u) => u.role === "admin").length,
   };
 
@@ -371,7 +316,7 @@ const AdminCustomers = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3">
           <Card
             className={`cursor-pointer transition-colors ${
               roleFilter === "all" ? "ring-2 ring-primary" : ""
@@ -403,22 +348,6 @@ const AdminCustomers = () => {
           </Card>
           <Card
             className={`cursor-pointer transition-colors ${
-              roleFilter === "wholesale" ? "ring-2 ring-primary" : ""
-            }`}
-            onClick={() => setRoleFilter("wholesale")}
-          >
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Building2 className="h-4 w-4" />
-                Wholesale
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{roleCounts.wholesale}</div>
-            </CardContent>
-          </Card>
-          <Card
-            className={`cursor-pointer transition-colors ${
               roleFilter === "admin" ? "ring-2 ring-primary" : ""
             }`}
             onClick={() => setRoleFilter("admin")}
@@ -443,7 +372,7 @@ const AdminCustomers = () => {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search by name, email, or company..."
+                    placeholder="Search by name or email..."
                     value={searchQuery}
                     onChange={(e) => {
                       setSearchQuery(e.target.value);
@@ -467,7 +396,6 @@ const AdminCustomers = () => {
                 <SelectContent>
                   <SelectItem value="all">All Roles</SelectItem>
                   <SelectItem value="customer">Customer</SelectItem>
-                  <SelectItem value="wholesale">Wholesale</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
@@ -488,7 +416,6 @@ const AdminCustomers = () => {
                   <TableHead>User</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Company</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -522,11 +449,6 @@ const AdminCustomers = () => {
                       <RoleBadge role={user.role} />
                     </TableCell>
                     <TableCell>
-                      <div className="truncate max-w-[150px]">
-                        {user.companyName || "-"}
-                      </div>
-                    </TableCell>
-                    <TableCell>
                       <div className="text-sm">{formatDate(user.createdAt)}</div>
                     </TableCell>
                     <TableCell className="text-right">
@@ -543,7 +465,7 @@ const AdminCustomers = () => {
                 {paginatedUsers.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={5}
                       className="text-center py-8 text-muted-foreground"
                     >
                       <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
