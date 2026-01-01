@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, memo, useCallback } from "react";
 import { Play } from "lucide-react";
 import { YouTubePlayer } from "./YouTubePlayer";
 
@@ -18,8 +18,56 @@ type GalleryItem =
   | { type: "image"; src: string; index: number }
   | { type: "video"; video: ProductVideo; index: number };
 
+/**
+ * Generates a WebP URL from an image source
+ *
+ * For Convex storage URLs or external URLs, returns null as they
+ * should handle format conversion at the CDN/storage level.
+ * For local assets, appends format=webp query parameter for Vite imagetools.
+ */
+function getWebPUrl(src: string): string | null {
+  // If already WebP, return as-is
+  if (src.endsWith(".webp")) {
+    return src;
+  }
+
+  // External URLs and Convex storage - let the CDN handle format negotiation
+  if (src.includes("convex.cloud") || src.startsWith("http")) {
+    return null;
+  }
+
+  // For local assets, use Vite imagetools query parameter
+  if (src.includes("?")) {
+    return `${src}&format=webp`;
+  }
+
+  return `${src}?format=webp`;
+}
+
+/**
+ * Loading skeleton for gallery images
+ */
+const GalleryImageSkeleton = memo(function GalleryImageSkeleton() {
+  return (
+    <div className="absolute inset-0 bg-secondary animate-pulse flex items-center justify-center">
+      <div className="h-8 w-8 border-2 border-muted-foreground/20 border-t-muted-foreground rounded-full animate-spin" />
+    </div>
+  );
+});
+
 const ProductGallery = ({ images, videos = [], productName }: ProductGalleryProps) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [mainImageLoaded, setMainImageLoaded] = useState(false);
+
+  // Reset loading state when selected image changes
+  const handleImageChange = useCallback((index: number) => {
+    setSelectedIndex(index);
+    setMainImageLoaded(false);
+  }, []);
+
+  const handleMainImageLoad = useCallback(() => {
+    setMainImageLoaded(true);
+  }, []);
 
   // Create unified gallery items array (images first, then videos)
   const galleryItems = useMemo<GalleryItem[]>(() => {
@@ -72,7 +120,7 @@ const ProductGallery = ({ images, videos = [], productName }: ProductGalleryProp
         {galleryItems.map((item, index) => (
           <button
             key={`${item.type}-${index}`}
-            onClick={() => setSelectedIndex(index)}
+            onClick={() => handleImageChange(index)}
             className={`relative w-20 h-20 lg:w-24 lg:h-24 flex-shrink-0 border-2 transition-all ${
               selectedIndex === index
                 ? "border-primary"
@@ -86,17 +134,25 @@ const ProductGallery = ({ images, videos = [], productName }: ProductGalleryProp
             aria-pressed={selectedIndex === index}
           >
             {item.type === "image" ? (
+              // PERFORMANCE: Explicit dimensions prevent CLS
               <img
                 src={item.src}
                 alt={`${productName} view ${index + 1}`}
                 className="w-full h-full object-cover"
+                width={96}
+                height={96}
+                loading="lazy"
               />
             ) : (
               <>
+                {/* PERFORMANCE: Explicit dimensions prevent CLS */}
                 <img
                   src={item.video.thumbnail}
                   alt={item.video.title || `${productName} video`}
                   className="w-full h-full object-cover"
+                  width={96}
+                  height={96}
+                  loading="lazy"
                 />
                 {/* Play icon overlay for video thumbnails */}
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30">
@@ -113,10 +169,13 @@ const ProductGallery = ({ images, videos = [], productName }: ProductGalleryProp
       {/* Main Display Area */}
       <div className="flex-1 bg-secondary order-1 lg:order-2">
         {selectedItem?.type === "image" ? (
+          // PERFORMANCE: Explicit dimensions prevent CLS (3:4 aspect ratio)
           <img
             src={selectedItem.src}
             alt={productName}
             className="w-full h-auto object-cover"
+            width={800}
+            height={1067}
           />
         ) : selectedItem?.type === "video" ? (
           <YouTubePlayer
@@ -130,4 +189,5 @@ const ProductGallery = ({ images, videos = [], productName }: ProductGalleryProp
   );
 };
 
-export default ProductGallery;
+// PERFORMANCE: Memoize the gallery component to prevent unnecessary re-renders
+export default memo(ProductGallery);

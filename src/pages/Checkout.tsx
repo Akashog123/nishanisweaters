@@ -28,6 +28,17 @@ import {
   type ShippingAddress,
   type PaymentMethod,
 } from "@/components/checkout";
+// PERFORMANCE: Import checkout funnel tracking for SLI/SLO measurement
+import {
+  trackCheckoutStep,
+  trackPaymentInit,
+  trackPaymentSuccess,
+  trackPaymentFailure,
+  trackCartAbandonmentRisk,
+  resetCartAbandonmentTracking,
+  clearCartAbandonmentTracking,
+} from "@/lib/observability";
+import { validateAddress } from "@/lib/validation";
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -37,8 +48,6 @@ export default function Checkout() {
   const validateCart = useMutation(api.cart.validateCart);
   const createRazorpayOrder = useAction(api.payments.createRazorpayOrder);
   const verifyPayment = useAction(api.payments.verifyPayment);
-  // SECURITY: Use server-side identity verification - never pass client clerkId
-  const dbUser = useQuery(api.users.getCurrentUser, user ? {} : "skip");
   const cartData = useQuery(api.cart.getCart, {});
 
   // SECURITY: Get server-side pricing to prevent frontend/backend pricing drift
@@ -84,8 +93,6 @@ export default function Checkout() {
   const total = orderPreview?.total ?? (subtotal + shipping + tax - promoDiscount);
   const serverTaxRate = orderPreview?.taxRate ?? TAX_RATE;
 
-  const isWholesale = dbUser?.role === "wholesale";
-
   // Memoize cart items for step components
   const cartItems = useMemo(() => items.map(item => ({
     productId: item.productId,
@@ -116,142 +123,279 @@ export default function Checkout() {
     });
   }, []);
 
+  // OBSERVABILITY: Track checkout funnel steps for SLI/SLO measurement
+  // This tracks user progress through the checkout funnel
+  useEffect(() => {
+    if (items.length > 0) {
+      trackCheckoutStep("CHECKOUT_START", {
+        itemCount: items.length,
+        totalValue: total,
+      });
+    }
+    // Start cart abandonment tracking
+    trackCartAbandonmentRisk({ itemCount: items.length, totalValue: total });
+
+    return () => {
+      clearCartAbandonmentTracking();
+    };
+  }, []); // Only run on mount
+
+  // Track step changes in the checkout flow
+  useEffect(() => {
+    const stepMap: Record<number, Parameters<typeof trackCheckoutStep>[0]> = {
+      1: "CART_VIEW",
+      2: "SHIPPING_INFO",
+      3: "PAYMENT_METHOD",
+      4: "CHECKOUT_START", // Review step
+    };
+
+    const stepName = stepMap[currentStep];
+    if (stepName && items.length > 0) {
+      trackCheckoutStep(stepName, {
+        itemCount: items.length,
+        totalValue: total,
+      });
+      // Reset abandonment timer on step progression
+      resetCartAbandonmentTracking();
+    }
+  }, [currentStep, items.length, total]);
+
   // Memoized validation function to prevent recreation on every render
   const validateShipping = useCallback(() => {
-    if (!shippingAddress.name.trim()) {
-      toast.error("Please enter your full name");
-      return false;
-    }
-    if (!shippingAddress.phone.trim()) {
-      toast.error("Please enter your phone number");
-      return false;
-    }
-    if (!shippingAddress.street.trim()) {
-      toast.error("Please enter your street address");
-      return false;
-    }
-    if (!shippingAddress.city.trim()) {
-      toast.error("Please enter your city");
-      return false;
-    }
-    if (!shippingAddress.state.trim()) {
-      toast.error("Please enter your state");
-      return false;
-    }
-    if (!shippingAddress.postalCode.trim()) {
-      toast.error("Please enter your postal code");
-      return false;
-    }
+    const validationResult = validateAddress(shippingAddress, "IN");
 
-    const phoneRegex = /^[0-9]{10}$/;
-    if (!phoneRegex.test(shippingAddress.phone.replace(/\D/g, ''))) {
-      toast.error("Please enter a valid 10-digit phone number");
-      return false;
-    }
-
-    const postalRegex = /^[0-9]{6}$/;
-    if (!postalRegex.test(shippingAddress.postalCode)) {
-      toast.error("Please enter a valid 6-digit postal code");
+    if (!validationResult.isValid) {
+      // Display the first error found
+      const firstError = Object.values(validationResult.errors)[0];
+      toast.error(firstError || "Please check your shipping information");
       return false;
     }
 
     return true;
   }, [shippingAddress]);
 
+  /**
+   * Validates checkout prerequisites before order creation
+   * @throws {ValidationError} If validation fails
+   */
+  const validateCheckoutForm = useCallback(() => {
+    if (!user) {
+      throw new ValidationError("Please sign in to continue");
+    }
+
+    if (items.length === 0) {
+      throw new ValidationError("Your cart is empty");
+    }
+
+    if (paymentMethod === "razorpay" && !razorpayLoaded) {
+      throw new PaymentError("Payment system is loading. Please try again.");
+    }
+  }, [user, items.length, paymentMethod, razorpayLoaded]);
+
+  /**
+   * Creates order and initiates payment flow
+   * @returns Order ID for the created order
+   */
+  const createOrderWithPayment = useCallback(async (): Promise<Id<"orders">> => {
+    // Validate cart before checkout
+    const validation = await validateCart({});
+
+    if (!validation.isValid) {
+      toast.error(validation.errors.join(", "));
+      throw new ValidationError("Cart validation failed");
+    }
+
+    // Create order
+    const orderId = await createOrder({
+      items: items.map((item) => ({
+        productId: (item._convexProductId || item.productId) as Id<"products">,
+        variantSku: item._variantSku || `${item.size}-${item.color}`,
+        quantity: item.quantity,
+      })),
+      shippingAddress,
+      paymentMethod,
+      customerNotes: customerNotes || undefined,
+      promoCode: appliedPromoCode || undefined,
+    });
+
+    return orderId;
+  }, [validateCart, createOrder, items, shippingAddress, paymentMethod, customerNotes, appliedPromoCode]);
+
+  /**
+   * Processes Razorpay payment verification response
+   */
+  const processPaymentResponse = useCallback(
+    async (orderId: Id<"orders">, response: RazorpayPaymentResponse) => {
+      try {
+        const verificationResult = await verifyPayment({
+          orderId,
+          razorpayOrderId: response.razorpay_order_id,
+          razorpayPaymentId: response.razorpay_payment_id,
+          razorpaySignature: response.razorpay_signature,
+        });
+
+        if (verificationResult.success) {
+          // OBSERVABILITY: Track successful payment
+          trackPaymentSuccess(
+            {
+              orderId: orderId.toString(),
+              amount: total,
+              currency: "INR",
+              paymentMethod: "razorpay",
+              gateway: "razorpay",
+            },
+            response.razorpay_payment_id
+          );
+          trackCheckoutStep("PAYMENT_SUCCESS", {
+            itemCount: items.length,
+            totalValue: total,
+          });
+          trackCheckoutStep("ORDER_CONFIRMED", {
+            itemCount: items.length,
+            totalValue: total,
+          });
+
+          clearCart();
+          toast.success("Payment successful!");
+          navigate(`/order-confirmation/${orderId}`);
+        } else {
+          // OBSERVABILITY: Track payment verification failure
+          trackPaymentFailure(
+            {
+              orderId: orderId.toString(),
+              amount: total,
+              currency: "INR",
+              paymentMethod: "razorpay",
+              gateway: "razorpay",
+            },
+            "VERIFICATION_FAILED",
+            "Payment verification failed"
+          );
+          toast.error("Payment verification failed. Please contact support.");
+        }
+      } catch (error) {
+        // OBSERVABILITY: Track payment error
+        trackPaymentFailure(
+          {
+            orderId: orderId.toString(),
+            amount: total,
+            currency: "INR",
+            paymentMethod: "razorpay",
+            gateway: "razorpay",
+          },
+          "VERIFICATION_ERROR",
+          error instanceof Error ? error.message : "Unknown error"
+        );
+        handleError(error, "Payment verification");
+      }
+    },
+    [verifyPayment, total, items.length, clearCart, navigate, handleError]
+  );
+
+  /**
+   * Handles Razorpay payment modal dismissal
+   */
+  const handlePaymentCancellation = useCallback(
+    (orderId: Id<"orders">) => {
+      // OBSERVABILITY: Track payment cancellation
+      trackPaymentFailure(
+        {
+          orderId: orderId.toString(),
+          amount: total,
+          currency: "INR",
+          paymentMethod: "razorpay",
+          gateway: "razorpay",
+        },
+        "USER_CANCELLED",
+        "Payment cancelled by user"
+      );
+      setIsLoading(false);
+      toast.info("Payment cancelled");
+    },
+    [total]
+  );
+
+  /**
+   * Initiates Razorpay payment flow
+   */
+  const initiateRazorpayPayment = useCallback(
+    async (orderId: Id<"orders">) => {
+      // SECURITY: Amount is now calculated server-side from the order in database
+      const razorpayOrderData = await createRazorpayOrder({
+        orderId,
+      });
+
+      // OBSERVABILITY: Track payment initialization for SLI/SLO
+      trackPaymentInit({
+        orderId: orderId.toString(),
+        amount: total,
+        currency: "INR",
+        paymentMethod: "razorpay",
+        gateway: "razorpay",
+      });
+
+      const options = {
+        key: razorpayOrderData.keyId,
+        amount: razorpayOrderData.amount,
+        currency: razorpayOrderData.currency,
+        name: "Nishani Woolera",
+        description: "Premium Winter Wear",
+        order_id: razorpayOrderData.razorpayOrderId,
+        handler: (response: RazorpayPaymentResponse) => processPaymentResponse(orderId, response),
+        prefill: {
+          name: shippingAddress.name,
+          email: user?.emailAddresses[0]?.emailAddress || "",
+          contact: shippingAddress.phone,
+        },
+        theme: {
+          color: "#1a1a1a",
+        },
+        modal: {
+          ondismiss: () => handlePaymentCancellation(orderId),
+        },
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+    },
+    [createRazorpayOrder, total, processPaymentResponse, shippingAddress, user, handlePaymentCancellation]
+  );
+
+  /**
+   * Handles non-Razorpay payment methods (invoice/wholesale)
+   */
+  const handleNonRazorpayPayment = useCallback(
+    (orderId: Id<"orders">) => {
+      trackCheckoutStep("ORDER_CONFIRMED", {
+        itemCount: items.length,
+        totalValue: total,
+      });
+      clearCart();
+      toast.success("Order placed successfully! You will receive invoice details via email.");
+      navigate(`/order-confirmation/${orderId}`);
+    },
+    [items.length, total, clearCart, navigate]
+  );
+
+  /**
+   * Main checkout submission handler
+   * Orchestrates validation, order creation, and payment flow
+   */
   const handleSubmit = async () => {
     try {
-      if (!user) {
-        throw new ValidationError("Please sign in to continue");
-      }
-
-      if (items.length === 0) {
-        throw new ValidationError("Your cart is empty");
-      }
-
-      if (paymentMethod === "razorpay" && !razorpayLoaded) {
-        throw new PaymentError("Payment system is loading. Please try again.");
-      }
+      // Step 1: Validate form inputs
+      validateCheckoutForm();
 
       setIsLoading(true);
 
-      // Validate cart before checkout
-      const validation = await validateCart({});
+      // Step 2: Create order with validated cart
+      const orderId = await createOrderWithPayment();
 
-      if (!validation.isValid) {
-        toast.error(validation.errors.join(", "));
-        setIsLoading(false);
-        return;
-      }
-
-      // Create order
-      const orderId = await createOrder({
-        items: items.map((item) => ({
-          productId: (item._convexProductId || item.productId) as Id<"products">,
-          variantSku: item._variantSku || `${item.size}-${item.color}`,
-          quantity: item.quantity,
-        })),
-        shippingAddress,
-        paymentMethod,
-        customerNotes: customerNotes || undefined,
-        promoCode: appliedPromoCode || undefined,
-      });
-
-      // Handle payment based on method
+      // Step 3: Handle payment based on selected method
       if (paymentMethod === "razorpay") {
-        const razorpayOrderData = await createRazorpayOrder({
-          orderId,
-          amount: Math.round(total * 100),
-        });
-
-        const options = {
-          key: razorpayOrderData.keyId,
-          amount: razorpayOrderData.amount,
-          currency: razorpayOrderData.currency,
-          name: "Nishani Woolera",
-          description: "Premium Winter Wear",
-          order_id: razorpayOrderData.razorpayOrderId,
-          handler: async (response: RazorpayPaymentResponse) => {
-            try {
-              const verificationResult = await verifyPayment({
-                orderId,
-                razorpayOrderId: response.razorpay_order_id,
-                razorpayPaymentId: response.razorpay_payment_id,
-                razorpaySignature: response.razorpay_signature,
-              });
-
-              if (verificationResult.success) {
-                clearCart();
-                toast.success("Payment successful!");
-                navigate(`/order-confirmation/${orderId}`);
-              } else {
-                toast.error("Payment verification failed. Please contact support.");
-              }
-            } catch (error) {
-              handleError(error, "Payment verification");
-            }
-          },
-          prefill: {
-            name: shippingAddress.name,
-            email: user.emailAddresses[0]?.emailAddress || "",
-            contact: shippingAddress.phone,
-          },
-          theme: {
-            color: "#1a1a1a",
-          },
-          modal: {
-            ondismiss: () => {
-              setIsLoading(false);
-              toast.info("Payment cancelled");
-            },
-          },
-        };
-
-        const razorpay = new window.Razorpay(options);
-        razorpay.open();
+        await initiateRazorpayPayment(orderId);
       } else {
-        clearCart();
-        toast.success("Order placed successfully! You will receive invoice details via email.");
-        navigate(`/order-confirmation/${orderId}`);
+        handleNonRazorpayPayment(orderId);
       }
     } catch (error) {
       if (error instanceof ValidationError) {
@@ -322,7 +466,6 @@ export default function Checkout() {
           <PaymentStep
             paymentMethod={paymentMethod}
             setPaymentMethod={setPaymentMethod}
-            isWholesale={isWholesale}
             customerNotes={customerNotes}
             setCustomerNotes={setCustomerNotes}
             onNext={() => setCurrentStep(4)}

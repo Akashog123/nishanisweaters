@@ -5,12 +5,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export type PaymentMethod = "razorpay" | "invoice";
+export type PaymentMethod = "razorpay";
 
 export interface PaymentStepProps {
   paymentMethod: PaymentMethod;
   setPaymentMethod: (method: PaymentMethod) => void;
-  isWholesale: boolean;
   customerNotes: string;
   setCustomerNotes: (notes: string) => void;
   onNext: () => void;
@@ -20,7 +19,6 @@ export interface PaymentStepProps {
 export function PaymentStep({
   paymentMethod,
   setPaymentMethod,
-  isWholesale,
   customerNotes,
   setCustomerNotes,
   onNext,
@@ -52,21 +50,6 @@ export function PaymentStep({
               <div className="w-8 h-5 bg-green-600 rounded text-white text-[8px] flex items-center justify-center font-bold">UPI</div>
             </div>
           </div>
-
-          {isWholesale && (
-            <div className={cn(
-              "flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-colors",
-              paymentMethod === "invoice" && "border-primary bg-primary/5"
-            )}>
-              <RadioGroupItem value="invoice" id="invoice" />
-              <Label htmlFor="invoice" className="flex-1 cursor-pointer">
-                <span className="font-medium">Invoice / Bank Transfer</span>
-                <p className="text-sm text-muted-foreground">
-                  For wholesale orders - Pay within 30 days
-                </p>
-              </Label>
-            </div>
-          )}
         </RadioGroup>
       </div>
 

@@ -1,4 +1,4 @@
-import React, { memo, useState, useCallback, useRef, useEffect } from "react";
+import { memo, useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 
 interface ProductCardProps {
@@ -14,6 +14,32 @@ interface ProductCardProps {
 const PRODUCT_IMAGE_WIDTH = 300;
 const PRODUCT_IMAGE_HEIGHT = 400;
 
+/**
+ * Generates a WebP URL from an image source
+ *
+ * For Convex storage URLs or external URLs, returns null as they
+ * should handle format conversion at the CDN/storage level.
+ * For local assets, appends format=webp query parameter for Vite imagetools.
+ */
+function getWebPUrl(src: string): string | null {
+  // If already WebP, return as-is
+  if (src.endsWith(".webp")) {
+    return src;
+  }
+
+  // External URLs and Convex storage - let the CDN handle format negotiation
+  if (src.includes("convex.cloud") || src.startsWith("http")) {
+    return null;
+  }
+
+  // For local assets, use Vite imagetools query parameter
+  if (src.includes("?")) {
+    return `${src}&format=webp`;
+  }
+
+  return `${src}?format=webp`;
+}
+
 // Skeleton placeholder for image loading
 const ImageSkeleton = memo(() => (
   <div
@@ -27,6 +53,10 @@ const ProductCard = memo(({ id, image, hoverImage, name, price, originalPrice }:
   const [hoverImageLoaded, setHoverImageLoaded] = useState(false);
   const [mainImageLoaded, setMainImageLoaded] = useState(false);
   const hoverImageRef = useRef<HTMLImageElement | null>(null);
+
+  // Generate WebP URLs for modern format support
+  const mainImageWebP = getWebPUrl(image);
+  const hoverImageWebP = hoverImage ? getWebPUrl(hoverImage) : null;
 
   // Cleanup hover image prefetch on unmount to prevent memory leaks
   useEffect(() => {
@@ -86,43 +116,56 @@ const ProductCard = memo(({ id, image, hoverImage, name, price, originalPrice }:
         {/* Skeleton placeholder shown until main image loads */}
         {!mainImageLoaded && <ImageSkeleton />}
 
-        {/* Main product image */}
-        <img
-          src={image}
-          alt={name}
-          width={PRODUCT_IMAGE_WIDTH}
-          height={PRODUCT_IMAGE_HEIGHT}
-          loading="lazy"
-          decoding="async"
-          onLoad={handleMainImageLoad}
-          className={`
-            w-full h-full object-cover
-            transition-opacity duration-300
-            group-hover:opacity-0
-            ${mainImageLoaded ? "opacity-100" : "opacity-0"}
-          `}
-          style={{
-            // Ensure image fills container while maintaining aspect ratio
-            aspectRatio: "3 / 4",
-            objectFit: "cover",
-          }}
-        />
-
-        {/* Hover image - only rendered if available */}
-        {hoverImage && (
+        {/*
+          Main product image with WebP support
+          Uses <picture> element to serve modern formats with fallback
+          PERFORMANCE: WebP is ~25-35% smaller than JPEG at equivalent quality
+        */}
+        <picture>
+          {/* WebP source for modern browsers */}
+          {mainImageWebP && <source type="image/webp" srcSet={mainImageWebP} />}
+          {/* Original format fallback */}
           <img
-            src={hoverImage}
-            alt={`${name} alternate view`}
+            src={image}
+            alt={name}
             width={PRODUCT_IMAGE_WIDTH}
             height={PRODUCT_IMAGE_HEIGHT}
             loading="lazy"
             decoding="async"
-            className="w-full h-full object-cover absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+            onLoad={handleMainImageLoad}
+            className={`
+              w-full h-full object-cover
+              transition-opacity duration-300
+              group-hover:opacity-0
+              ${mainImageLoaded ? "opacity-100" : "opacity-0"}
+            `}
             style={{
               aspectRatio: "3 / 4",
               objectFit: "cover",
             }}
           />
+        </picture>
+
+        {/* Hover image with WebP support - only rendered if available */}
+        {hoverImage && (
+          <picture className="absolute inset-0">
+            {/* WebP source for modern browsers */}
+            {hoverImageWebP && <source type="image/webp" srcSet={hoverImageWebP} />}
+            {/* Original format fallback */}
+            <img
+              src={hoverImage}
+              alt={`${name} alternate view`}
+              width={PRODUCT_IMAGE_WIDTH}
+              height={PRODUCT_IMAGE_HEIGHT}
+              loading="lazy"
+              decoding="async"
+              className="w-full h-full object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+              style={{
+                aspectRatio: "3 / 4",
+                objectFit: "cover",
+              }}
+            />
+          </picture>
         )}
       </div>
 
