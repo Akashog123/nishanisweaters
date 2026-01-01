@@ -1,7 +1,7 @@
 /**
  * Wholesale Application Status Email Template
  */
-import { escapeHtml, baseEmailLayout } from "../emailTemplates";
+import { escapeHtml } from "../emailTemplates";
 
 export interface WholesaleStatusData {
   customerName: string;

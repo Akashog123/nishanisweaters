@@ -18,7 +18,6 @@ import {
   CATEGORY_LABELS,
   CATEGORY_DESCRIPTIONS,
   CATEGORY_ICONS,
-  type SettingDefinition,
   type SettingCategory,
 } from "./lib/settingsRegistry";
 import { validateSettingValue } from "./lib/settingsValidation";

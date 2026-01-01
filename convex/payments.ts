@@ -2,7 +2,7 @@
 
 import { action, internalAction } from "./_generated/server";
 import { v } from "convex/values";
-import { internal, api } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { ConvexError } from "convex/values";
 import Razorpay from "razorpay";
 import crypto from "crypto";
@@ -50,7 +50,7 @@ function getWebhookSecret(): string | undefined {
  * Type-safe helper to convert validated order ID string to Convex Id type.
  * Use after isValidOrderId() check to satisfy TypeScript without using `as any`.
  */
-function toOrderId(orderId: string): Id<"orders"> {
+function _toOrderId(orderId: string): Id<"orders"> {
   return orderId as Id<"orders">;
 }
 
@@ -98,7 +98,7 @@ function validateJsonDepth(obj: unknown, depth = 0): boolean {
  * Validates Convex order ID format.
  * Returns true if the ID appears to be a valid Convex document ID.
  */
-function isValidOrderId(orderId: unknown): boolean {
+function _isValidOrderId(orderId: unknown): boolean {
   if (typeof orderId !== "string") return false;
 
   // Convex IDs are alphanumeric, typically 20-40 characters
@@ -391,7 +391,7 @@ export const handlePaymentWebhook = internalAction({
       if (!validateJsonDepth(event)) {
         throw new Error("JSON depth exceeds maximum");
       }
-    } catch (error) {
+    } catch (_error) {
       logger.error("Failed to parse webhook payload");
       return { success: false, message: "Invalid payload format" };
     }

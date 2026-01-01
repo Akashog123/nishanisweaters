@@ -1,7 +1,7 @@
 /**
  * Order Confirmation Email Template
  */
-import { escapeHtml, formatCurrency, createSection } from "../emailTemplates";
+import { escapeHtml, formatCurrency } from "../emailTemplates";
 
 export interface OrderConfirmationData {
   orderNumber: string;

@@ -1,11 +1,10 @@
 import { query, mutation, internalMutation, QueryCtx, MutationCtx } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
-import { Doc, Id } from "./_generated/dataModel";
+import { Doc } from "./_generated/dataModel";
 import {
   validateCartItems,
   validateCartForCheckout,
   mergeCartItems,
-  calculateCartExpiration,
   type CartItem,
 } from "./lib/cartUtils";
 import { validateSessionId } from "./lib/validation";

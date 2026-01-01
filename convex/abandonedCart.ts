@@ -1,7 +1,6 @@
 import { internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { Id } from "./_generated/dataModel";
 import { getAbandonedCartConfig } from "./lib/getSettings";
 import { logger } from "./lib/logger";
 
@@ -131,7 +130,7 @@ export const processAbandonedCart = internalMutation({
     }
 
     // Check if notification already exists
-    let notification = await ctx.db
+    const notification = await ctx.db
       .query("abandonedCartNotifications")
       .withIndex("by_cart_id", (q) => q.eq("cartId", args.cartId))
       .first();
@@ -263,8 +262,6 @@ export const processAbandonedCarts = internalMutation({
         errorCount++;
       }
     }
-
-    logger.info('Abandoned cart processing complete', { processedCount, errorCount });
 
     return { processedCount, errorCount };
   },

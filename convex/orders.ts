@@ -1,9 +1,7 @@
-import { query, mutation, internalMutation, internalQuery, action } from "./_generated/server";
+import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAuth, requireAdmin, requireOwnershipOrAdmin, requireCurrentUser } from "./lib/auth";
-import { MutationCtx, QueryCtx } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
-import { internal, api } from "./_generated/api";
+import { internal } from "./_generated/api";
 
 // Shared types and validators
 import {
@@ -657,7 +655,7 @@ export const getOrderPreview = query({
   },
   handler: async (ctx, args) => {
     // Get user info for pricing (optional - guests get retail prices)
-    const user = await (async () => {
+    const _user = await (async () => {
       try {
         const identity = await ctx.auth.getUserIdentity();
         if (!identity) return null;

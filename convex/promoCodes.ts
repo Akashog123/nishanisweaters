@@ -1,12 +1,12 @@
 import { query, mutation, internalMutation, QueryCtx, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAdmin, getCurrentUser } from "./lib/auth";
+import { requireAdmin } from "./lib/auth";
 
 // Shared types and validators
 import { discountTypeValidator, promoCodeStatusValidator } from "./lib/types";
 
-// Error factory
-import { notFound, cartNotFound, promoCodeError } from "./lib/errors";
+// Error factory (promoCodeError not used, keeping for consistency)
+import { notFound, cartNotFound } from "./lib/errors";
 
 // Promo code service (extracted business logic)
 import {
@@ -67,7 +67,7 @@ export const listPromoCodes = query({
     const limit = args.limit ?? 20;
     const offset = args.offset ?? 0;
 
-    let promoCodesQuery = ctx.db.query("promoCodes");
+    const promoCodesQuery = ctx.db.query("promoCodes");
 
     // Get all promo codes (we'll filter in memory for status since it's computed)
     const allPromoCodes = await promoCodesQuery.collect();

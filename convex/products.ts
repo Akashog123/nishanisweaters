@@ -1,6 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAdmin, getCurrentUser } from "./lib/auth";
+import { requireAdmin } from "./lib/auth";
 import { Doc } from "./_generated/dataModel";
 import { QueryCtx } from "./_generated/server";
 
@@ -12,8 +12,8 @@ import {
   type ProductUpdate,
 } from "./lib/types";
 
-// Error factory
-import { notFound, productNotFound, variantNotFound } from "./lib/errors";
+// Error factory (notFound not used, but keeping import for potential future use)
+import { productNotFound, variantNotFound } from "./lib/errors";
 
 // Product filter utilities
 import {

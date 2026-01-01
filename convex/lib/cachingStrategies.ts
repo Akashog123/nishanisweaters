@@ -21,7 +21,7 @@
  * Convex's built-in caching.
  */
 
-import { MutationCtx, QueryCtx } from "../_generated/server";
+import { QueryCtx } from "../_generated/server";
 
 // ============================================
 // TYPES

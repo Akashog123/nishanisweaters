@@ -166,7 +166,17 @@ export async function consumeRateLimit(
     });
   } else {
     // Rate limit exceeded - log the violation
-    await logRateLimitViolation(ctx, identifier, config.category, ipAddress);
+    await logRateLimitViolation(
+      ctx,
+      identifier,
+      {
+        category: config.category,
+        currentCount: newCount,
+        maxAllowed: config.maxRequests,
+        windowMs: config.windowMs,
+      },
+      ipAddress
+    );
   }
 
   return {

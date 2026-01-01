@@ -128,7 +128,7 @@ export const saveDocument = action({
     documentType?: "reseller_certificate" | "business_license" | "gst_certificate" | "other";
     storageId?: Id<"_storage">;
   }> => {
-    const { clerkId } = await requireAuthAction(ctx);
+    const { clerkId: _clerkId } = await requireAuthAction(ctx);
 
     // Validate content-type is allowed for documents
     if (!isAllowedDocumentType(args.contentType)) {

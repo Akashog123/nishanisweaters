@@ -2,6 +2,7 @@
  * Email Service Wrapper
  * Centralizes email configuration and sending logic
  */
+/* eslint-disable @typescript-eslint/no-explicit-any -- GenericActionCtx requires any for DataModel flexibility */
 import { Resend } from "resend";
 import { ConvexError } from "convex/values";
 import { GenericActionCtx } from "convex/server";

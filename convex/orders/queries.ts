@@ -151,7 +151,7 @@ export const getOrderPreview = query({
   },
   handler: async (ctx, args) => {
     // Get user info for pricing (optional - guests get retail prices)
-    const user = await (async () => {
+    const _user = await (async () => {
       try {
         const identity = await ctx.auth.getUserIdentity();
         if (!identity) return null;

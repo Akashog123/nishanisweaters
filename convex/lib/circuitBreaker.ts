@@ -13,7 +13,7 @@
  * actions run in stateless Node.js environments.
  */
 
-import { MutationCtx, QueryCtx, ActionCtx } from "../_generated/server";
+import { ActionCtx } from "../_generated/server";
 import { internal } from "../_generated/api";
 
 // ============================================

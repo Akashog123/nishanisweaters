@@ -47,8 +47,8 @@ interface ProductVariant {
   color: string;
 }
 
-/** Minimal product data needed for cart operations */
-interface ProductData {
+/** Minimal product data needed for cart operations (not exported, internal use only) */
+interface _ProductData {
   _id: Id<"products">;
   name: string;
   retailPrice: number;

@@ -1,13 +1,13 @@
 import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAuth, requireAdmin, requireOwnership, getCurrentUser as getCurrentUserFromAuth } from "./lib/auth";
+import { requireAuth, requireAdmin, getCurrentUser as getCurrentUserFromAuth } from "./lib/auth";
 import { internal } from "./_generated/api";
 
 // Shared types and validators
-import { userRoleValidator, addressValidator } from "./lib/types";
+import { userRoleValidator } from "./lib/types";
 
 // Error factory
-import { notFound, userNotFound, unauthorized } from "./lib/errors";
+import { notFound, unauthorized } from "./lib/errors";
 
 // Validation utilities
 import {
@@ -15,7 +15,6 @@ import {
   validatePostalCode,
   validateRequiredString,
   validateOptionalPhone,
-  validateOptionalEmail,
 } from "./lib/validation";
 
 // Mutation: Create or update user from Clerk webhook
