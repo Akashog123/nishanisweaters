@@ -15,6 +15,7 @@
       Directives explained:
       - default-src 'self': Only allow resources from same origin by default
       - script-src: Allow scripts from self, inline (required for React/Vite), Razorpay, Sentry, and Clerk
+      - script-src-elem: Explicit directive for script elements (some browsers require this)
       - connect-src: Allow API calls to Convex, Clerk auth, Razorpay, and Sentry
       - img-src: Allow images from self, data URIs, HTTPS sources (CDNs, user avatars)
       - style-src: Allow styles from self, inline (required for styled-components/Tailwind)
@@ -33,15 +34,18 @@
 
       Note: 'unsafe-inline' for scripts is required for Vite HMR in development.
       Consider using nonces or hashes in production for stricter CSP.
+
+      Clerk Proxy Domain: clerk.nishaniwoolera.in is the custom proxy for Clerk auth.
     -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
-      script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://browser.sentry-cdn.com https://*.clerk.accounts.dev;
-      connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://*.clerk.dev https://*.clerk.com https://*.clerk.accounts.dev https://api.razorpay.com https://*.sentry.io;
+      script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://browser.sentry-cdn.com https://js.sentry-cdn.com https://*.clerk.accounts.dev https://clerk.nishaniwoolera.in https://*.clerk.com;
+      script-src-elem 'self' 'unsafe-inline' https://checkout.razorpay.com https://browser.sentry-cdn.com https://js.sentry-cdn.com https://*.clerk.accounts.dev https://clerk.nishaniwoolera.in https://*.clerk.com;
+      connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://*.clerk.dev https://*.clerk.com https://*.clerk.accounts.dev https://clerk.nishaniwoolera.in https://api.razorpay.com https://*.sentry.io;
       img-src 'self' data: https: blob:;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
       font-src 'self' https://fonts.gstatic.com;
-      frame-src https://checkout.razorpay.com https://api.razorpay.com https://*.clerk.accounts.dev;
+      frame-src https://checkout.razorpay.com https://api.razorpay.com https://*.clerk.accounts.dev https://clerk.nishaniwoolera.in;
       base-uri 'self';
       form-action 'self';
       object-src 'none';
@@ -70,7 +74,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Convex real-time data - critical for initial render -->
     <link rel="preconnect" href="https://convex.cloud" crossorigin />
-    <!-- Clerk authentication -->
+    <!-- Clerk authentication (proxy domain for production) -->
+    <link rel="preconnect" href="https://clerk.nishaniwoolera.in" crossorigin />
     <link rel="preconnect" href="https://clerk.com" crossorigin />
     <link rel="preconnect" href="https://img.clerk.com" crossorigin />
 
@@ -103,22 +108,20 @@
     <!--
       Hero Image LCP Optimization:
       =========================================================================
-      IMPORTANT: Preloading Vite-transformed images requires matching the exact
-      query parameters used in the component. During development, Vite serves
-      these via its dev server with the query string transformation.
+      The hero image is optimized for LCP using attributes in HeroSection.tsx:
+      - fetchpriority="high" - Tells browser to prioritize this image
+      - loading="eager" - Ensures immediate loading (not lazy)
+      - decoding="sync" - Synchronous decode for fastest paint
 
-      We preload the most common variant (desktop WebP 1920px) to optimize LCP.
-      The browser will use this preloaded resource when HeroSection renders.
+      NOTE: Static <link rel="preload"> is NOT used because vite-imagetools
+      generates hashed filenames in production (e.g., hero-blockhaus-C9a-omDe.jpg)
+      that don't match development paths (/src/assets/...). A static preload
+      would preload a non-existent resource in production, causing warnings
+      and wasted bandwidth.
 
-      Note: In production builds, consider using vite-plugin-html or a similar
-      plugin to inject the correct hashed asset paths dynamically.
+      For advanced preloading, consider vite-plugin-html to inject the correct
+      hashed paths dynamically during build.
     -->
-    <link
-      rel="preload"
-      as="image"
-      type="image/webp"
-      href="/src/assets/hero-blockhaus.jpg?w=1920&format=webp"
-    />
 
     <!-- Inline critical CSS for faster FCP -->
     <style>
