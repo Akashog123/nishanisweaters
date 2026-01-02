@@ -24,7 +24,7 @@ const Footer = () => {
           {/* Brand Section */}
           <div className="col-span-2 lg:col-span-1 space-y-4">
             <div className="flex items-center gap-3">
-              <img src="/Logo.svg" alt="Nishani Woolera Logo" className="h-24 lg:h-28 w-auto" />
+              <img src="/Logo.png" alt="Nishani Woolera Logo" className="h-24 lg:h-28 w-auto" />
               <h3 className="text-2xl lg:text-3xl font-bold">NISHANI WOOLERA.</h3>
             </div>
             <p className="text-sm text-gray-600">
