@@ -1,9 +1,0 @@
-# Load test results are generated at runtime
-# Do not commit these files to version control
-*.json
-*.csv
-*.html
-*.xml
-
-# But keep the directory structure
-!.gitkeep
