@@ -66,7 +66,9 @@ const SIZE_LIMITS = {
     'vendor-convex': 120, // Convex client
 
     // Charts library - admin only (Recharts + D3 is inherently large)
+    // Note: Rollup names this chunk based on the entry point (e.g., generateCategoricalChart)
     'vendor-charts': 380, // Recharts + D3 (lazy-loaded, admin only)
+    'generateCategoricalChart': 380, // Alternative chunk name from Rollup
 
     // Form handling
     'vendor-forms': 100, // React Hook Form + Zod

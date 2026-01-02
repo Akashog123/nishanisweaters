@@ -81,11 +81,12 @@ export default defineConfig(({ mode }) => ({
             return "vendor-convex";
           }
 
-          // Charts library - ONLY loaded in admin dashboard
-          // This is a significant bundle, so keeping it separate
-          if (id.includes("recharts") || id.includes("d3-")) {
-            return "vendor-charts";
-          }
+          // Charts library (recharts) - DO NOT manually chunk!
+          // Recharts has complex internal dependencies (d3, react-smooth, etc.)
+          // that cause TDZ errors when manually chunked. Let Rollup handle it
+          // naturally. The lazy loading in LazyCharts.tsx still works correctly.
+          // The chart code will be split into its own chunk by Rollup's
+          // code-splitting based on the dynamic import() in LazyCharts.tsx.
 
           // Form handling - loaded on pages with forms
           if (id.includes("react-hook-form") ||
@@ -179,11 +180,16 @@ export default defineConfig(({ mode }) => ({
       "@clerk/clerk-react",
       "convex/react",
       "@tanstack/react-query",
-      // Include recharts and lodash to fix ESM/CJS compatibility
-      // recharts uses lodash internally which needs proper CJS->ESM transformation
+      // Include recharts and its dependencies to fix ESM/CJS compatibility
+      // recharts has internal circular dependencies that need proper pre-bundling
       "recharts",
-      "lodash",
+      "recharts/lib/index.js",
     ],
+    // Force recharts to be treated as ESM to avoid TDZ issues
+    esbuildOptions: {
+      // Keep class names for proper initialization order
+      keepNames: true,
+    },
   },
 
   // CSS optimization

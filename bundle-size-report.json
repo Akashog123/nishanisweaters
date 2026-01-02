@@ -1,10 +1,10 @@
 {
-  "timestamp": "2026-01-02T06:21:01.206Z",
+  "timestamp": "2026-01-02T06:50:14.654Z",
   "summary": {
-    "totalSize": 2409.939999999999,
-    "javascript": 1752.829999999999,
+    "totalSize": 2398.969999999999,
+    "javascript": 1752.2799999999988,
     "css": 86.99,
-    "images": 570.12,
+    "images": 559.7,
     "fonts": 0
   },
   "limits": {
@@ -15,6 +15,7 @@
       "vendor-clerk": 180,
       "vendor-convex": 120,
       "vendor-charts": 380,
+      "generateCategoricalChart": 380,
       "vendor-forms": 100,
       "vendor-sentry": 280,
       "vendor-icons": 60,
@@ -30,71 +31,71 @@
   "bundles": {
     "js": [
       {
-        "name": "vendor-charts-C1SUz1z5.js",
-        "size": 355.87
+        "name": "generateCategoricalChart-CKmbGoin.js",
+        "size": 344.94
       },
       {
-        "name": "vendor-sentry-O2j11Ff_.js",
+        "name": "vendor-sentry-DDt1mvcU.js",
         "size": 264.58
       },
       {
-        "name": "vendor-react-MUoBbRm_.js",
+        "name": "vendor-react-Dmb5GEIG.js",
         "size": 223.32
       },
       {
-        "name": "vendor-radix-DkKoby1c.js",
+        "name": "vendor-radix-B5VDPBLv.js",
         "size": 143.37
       },
       {
-        "name": "vendor-clerk-Dg6LHuxd.js",
-        "size": 78.68
+        "name": "vendor-clerk-BEoNXopE.js",
+        "size": 78.91
       },
       {
-        "name": "index-CMuJG4Gf.js",
-        "size": 73.38
+        "name": "index-5mHRrQw6.js",
+        "size": 73.26
       },
       {
-        "name": "vendor-convex-Ca5YWGZY.js",
+        "name": "vendor-convex-B93GeRAA.js",
         "size": 68.57
       },
       {
-        "name": "vendor-forms-CqoB0UXq.js",
+        "name": "vendor-forms-ChekZz_N.js",
         "size": 53.3
       },
       {
-        "name": "AdminLayout-CDC1eRlE.js",
+        "name": "AdminLayout-DyQCBihb.js",
         "size": 46.56
       },
       {
-        "name": "vendor-toast-CW_18FXl.js",
+        "name": "vendor-toast-sfLRpqEm.js",
         "size": 33.43
       },
       {
-        "name": "AdminProducts-KegUgdd0.js",
-        "size": 25.87
+        "name": "AdminProducts-D7WPktFs.js",
+        "size": 25.83
       },
       {
-        "name": "vendor-query-XOEegEIg.js",
+        "name": "vendor-query-CI08zYY-.js",
         "size": 24.55
       },
       {
-        "name": "Checkout-M_gDCmtG.js",
-        "size": 24.15
+        "name": "Checkout-Cp0yFdnQ.js",
+        "size": 24.12
       },
       {
-        "name": "ProductDetail-BdmZrf18.js",
-        "size": 21.71
+        "name": "ProductDetail-BQ8fjJ9F.js",
+        "size": 21.68
       },
       {
         "name": "vendor-utils--BulIq_u.js",
         "size": 20.41
       },
       {
-        "name": "AdminOrders-CxQ1GKHs.js",
-        "size": 20.12
+        "name": "AdminOrders-C3Rx6JlP.js",
+        "size": 20.09
       },
       {
-        "name": "vendor-carousel-AGPpBfQc.js",
+        "name": "vendor-carousel-BiRLG-uD.js",
         "size": 19.32
       },
       {
@@ -102,7 +103,7 @@
         "size": 19.02
       },
       {
-        "name": "vendor-icons-D6lfsP_z.js",
+        "name": "vendor-icons-BudbHC33.js",
         "size": 18.94
       },
       {
@@ -110,123 +111,123 @@
         "size": 17.05
       },
       {
-        "name": "Index-J0MjBjCw.js",
-        "size": 16.84
+        "name": "Index-9pPzNx9i.js",
+        "size": 16.81
       },
       {
-        "name": "ContactUs-B9-hohBn.js",
-        "size": 15.77
+        "name": "ContactUs-D6Gt2AED.js",
+        "size": 15.74
       },
       {
-        "name": "AdminSettings-CtQQ5DCS.js",
-        "size": 13.81
+        "name": "AdminSettings-xWt1_5We.js",
+        "size": 13.77
       },
       {
-        "name": "Cart-BO9GD_ok.js",
-        "size": 13.25
+        "name": "Cart-CBfgh2QW.js",
+        "size": 13.22
       },
       {
-        "name": "AdminPromoCodes-By3Idyzc.js",
-        "size": 12.4
+        "name": "AdminPromoCodes-C2YsQaEv.js",
+        "size": 12.36
       },
       {
-        "name": "BulkOrder-C2KVkcuN.js",
-        "size": 11.34
+        "name": "RevenueChart-TuhMWzO5.js",
+        "size": 12.1
       },
       {
-        "name": "AdminCMS-CBFPH9NY.js",
-        "size": 11.1
+        "name": "BulkOrder-C-TUDwHh.js",
+        "size": 11.31
       },
       {
-        "name": "AdminDashboard-C4ZwcJ4J.js",
-        "size": 11.1
+        "name": "AdminCMS-CPt8JHGn.js",
+        "size": 11.07
       },
       {
-        "name": "AdminCategories-rqI3H10N.js",
-        "size": 9.92
+        "name": "AdminDashboard-C2JZwBOn.js",
+        "size": 11.07
       },
       {
-        "name": "AdminCustomers-DKpQPR2Y.js",
-        "size": 9.37
+        "name": "AdminCategories-CAd8nkhb.js",
+        "size": 9.89
       },
       {
-        "name": "Shop-O2DsgeQs.js",
-        "size": 9.14
+        "name": "AdminCustomers-CNyL39C3.js",
+        "size": 9.34
       },
       {
-        "name": "web-vitals-N_SObD93.js",
-        "size": 8.65
+        "name": "Shop-CkUSw0FO.js",
+        "size": 9.11
       },
       {
-        "name": "OrderHistory-C618FUBq.js",
-        "size": 8.55
+        "name": "web-vitals-CI4VBGrs.js",
+        "size": 8.62
       },
       {
-        "name": "AboutUs-DvhA3G0R.js",
-        "size": 8.44
+        "name": "OrderHistory-B6s3viaF.js",
+        "size": 8.52
       },
       {
-        "name": "AdminReviews-0rD86Cms.js",
-        "size": 7.07
+        "name": "AboutUs-DUkdCHvx.js",
+        "size": 8.41
       },
       {
-        "name": "Wishlist-CACxmrc8.js",
-        "size": 6.29
+        "name": "AdminReviews-A2Ly5vWD.js",
+        "size": 7.03
       },
       {
-        "name": "OrderConfirmation-BdXwwAE5.js",
-        "size": 3.61
+        "name": "Wishlist-B7CFSW31.js",
+        "size": 6.25
       },
       {
-        "name": "NotFoundError-B6FoVjCB.js",
+        "name": "OrderConfirmation-D2Mt3ZEl.js",
+        "size": 3.57
+      },
+      {
+        "name": "NotFoundError-BPonbQ0F.js",
         "size": 3.11
       },
       {
-        "name": "select-AB4y-TOG.js",
+        "name": "select-DsAzWgv7.js",
         "size": 2.98
       },
       {
-        "name": "ProductSkeleton-G9y6deQa.js",
+        "name": "ProductSkeleton-swFMlQes.js",
         "size": 2.61
       },
       {
-        "name": "SearchResults-BYNHuyMu.js",
-        "size": 2.46
+        "name": "SearchResults-BUyiHnXA.js",
+        "size": 2.42
       },
       {
-        "name": "alert-dialog-DzHGQx1K.js",
+        "name": "alert-dialog-D6GiWu2c.js",
         "size": 2.01
       },
       {
-        "name": "table-DzjjQlGl.js",
+        "name": "OrderTypeChart-C04yKXRk.js",
+        "size": 1.55
+      },
+      {
+        "name": "table-XMPkE-dR.js",
         "size": 1.49
       },
       {
-        "name": "OrderTypeChart-Bu-imA3E.js",
-        "size": 1.33
-      },
-      {
-        "name": "RevenueChart-DzfIEytA.js",
-        "size": 1.32
-      },
-      {
-        "name": "progress-Cy7ufHYW.js",
+        "name": "progress-D6fi1PKK.js",
         "size": 1.19
       },
       {
-        "name": "tabs-CLpw6o3A.js",
+        "name": "tabs-CPuvqTJ7.js",
         "size": 1.13
       },
       {
-        "name": "useConvexError-lrpj2YKU.js",
+        "name": "useConvexError-BPSqiM-I.js",
         "size": 1.07
       },
       {
-        "name": "accordion-DbVuxPF5.js",
+        "name": "accordion-DmM-8aOC.js",
         "size": 1.03
       },
       {
-        "name": "alert-BX3PjKaq.js",
+        "name": "alert-BJXcKEOa.js",
         "size": 0.96
       },
       {
@@ -234,11 +235,11 @@
         "size": 0.55
       },
       {
-        "name": "textarea-DJ5JiVDM.js",
+        "name": "textarea-DO3oqTyW.js",
         "size": 0.51
       },
       {
-        "name": "PageContainer-O-982KmL.js",
+        "name": "PageContainer-B4SolFZ0.js",
         "size": 0.23
       }
     ],
@@ -253,15 +254,15 @@
     "errors": [],
     "warnings": [
       {
-        "type": "Chunk: vendor-charts",
-        "file": "vendor-charts-C1SUz1z5.js",
-        "current": 355.87,
+        "type": "Chunk: generateCategoricalChart",
+        "file": "generateCategoricalChart-CKmbGoin.js",
+        "current": 344.94,
         "limit": 380,
-        "percentage": 94
+        "percentage": 91
       },
       {
         "type": "Chunk: vendor-sentry",
-        "file": "vendor-sentry-O2j11Ff_.js",
+        "file": "vendor-sentry-DDt1mvcU.js",
         "current": 264.58,
         "limit": 280,
         "percentage": 94
