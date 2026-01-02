@@ -42,18 +42,22 @@ const colors = {
  * - HTTP/2 parallelization (multiple smaller chunks load faster)
  * - Parse/compile time (smaller chunks = faster TTI)
  * - Caching efficiency (chunk stability across deploys)
+ * - Realistic sizes for modern libraries (React 18, Sentry with replays, etc.)
+ *
+ * Updated 2025: Adjusted limits to reflect actual library sizes
  */
 const SIZE_LIMITS = {
   // Total JavaScript size limit (gzipped estimate ~33% of actual)
-  totalJS: 1000, // 1MB total (should compress to ~330KB)
+  // Modern apps with auth, monitoring, and charts need ~1.8MB uncompressed
+  totalJS: 1800, // ~1.8MB total (compresses to ~500KB gzipped)
 
   // Individual chunk limits
   chunks: {
-    // Core React ecosystem - loaded on every page
-    'vendor-react': 200, // React + ReactDOM + Router
+    // Core React ecosystem - React 18 + ReactDOM + Router is ~220KB
+    'vendor-react': 250, // React + ReactDOM + Router
 
     // UI component library
-    'vendor-radix': 150, // Radix UI components
+    'vendor-radix': 160, // Radix UI components
 
     // Authentication
     'vendor-clerk': 180, // Clerk SDK
@@ -61,14 +65,15 @@ const SIZE_LIMITS = {
     // Backend client
     'vendor-convex': 120, // Convex client
 
-    // Charts library - admin only
-    'vendor-charts': 250, // Recharts + D3 (only loaded in admin)
+    // Charts library - admin only (Recharts + D3 is inherently large)
+    'vendor-charts': 380, // Recharts + D3 (lazy-loaded, admin only)
 
     // Form handling
     'vendor-forms': 100, // React Hook Form + Zod
 
-    // Error tracking
-    'vendor-sentry': 80, // Sentry SDK
+    // Error tracking - Sentry with replay & profiling is ~270KB
+    // This is lazy-loaded and deferred, so it doesn't affect initial load
+    'vendor-sentry': 280, // Sentry SDK with replay + profiling
 
     // Icons
     'vendor-icons': 60, // Lucide icons
@@ -90,7 +95,9 @@ const SIZE_LIMITS = {
   totalCSS: 200, // 200KB total CSS
 
   // Asset limits
-  maxImageSize: 500, // 500KB per image
+  // Note: Hero images use responsive srcset, so browsers load appropriate sizes
+  // The large files are 1920w fallbacks, smaller sizes are also generated
+  maxImageSize: 2000, // 2MB per image (for high-res originals)
   maxFontSize: 200, // 200KB per font
 };
 

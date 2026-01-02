@@ -1,0 +1,272 @@
+{
+  "timestamp": "2026-01-02T06:21:01.206Z",
+  "summary": {
+    "totalSize": 2409.939999999999,
+    "javascript": 1752.829999999999,
+    "css": 86.99,
+    "images": 570.12,
+    "fonts": 0
+  },
+  "limits": {
+    "totalJS": 1800,
+    "chunks": {
+      "vendor-react": 250,
+      "vendor-radix": 160,
+      "vendor-clerk": 180,
+      "vendor-convex": 120,
+      "vendor-charts": 380,
+      "vendor-forms": 100,
+      "vendor-sentry": 280,
+      "vendor-icons": 60,
+      "vendor-date": 40,
+      "vendor-query": 80,
+      "vendor-utils": 30,
+      "index": 300
+    },
+    "totalCSS": 200,
+    "maxImageSize": 2000,
+    "maxFontSize": 200
+  },
+  "bundles": {
+    "js": [
+      {
+        "name": "vendor-charts-C1SUz1z5.js",
+        "size": 355.87
+      },
+      {
+        "name": "vendor-sentry-O2j11Ff_.js",
+        "size": 264.58
+      },
+      {
+        "name": "vendor-react-MUoBbRm_.js",
+        "size": 223.32
+      },
+      {
+        "name": "vendor-radix-DkKoby1c.js",
+        "size": 143.37
+      },
+      {
+        "name": "vendor-clerk-Dg6LHuxd.js",
+        "size": 78.68
+      },
+      {
+        "name": "index-CMuJG4Gf.js",
+        "size": 73.38
+      },
+      {
+        "name": "vendor-convex-Ca5YWGZY.js",
+        "size": 68.57
+      },
+      {
+        "name": "vendor-forms-CqoB0UXq.js",
+        "size": 53.3
+      },
+      {
+        "name": "AdminLayout-CDC1eRlE.js",
+        "size": 46.56
+      },
+      {
+        "name": "vendor-toast-CW_18FXl.js",
+        "size": 33.43
+      },
+      {
+        "name": "AdminProducts-KegUgdd0.js",
+        "size": 25.87
+      },
+      {
+        "name": "vendor-query-XOEegEIg.js",
+        "size": 24.55
+      },
+      {
+        "name": "Checkout-M_gDCmtG.js",
+        "size": 24.15
+      },
+      {
+        "name": "ProductDetail-BdmZrf18.js",
+        "size": 21.71
+      },
+      {
+        "name": "vendor-utils--BulIq_u.js",
+        "size": 20.41
+      },
+      {
+        "name": "AdminOrders-CxQ1GKHs.js",
+        "size": 20.12
+      },
+      {
+        "name": "vendor-carousel-AGPpBfQc.js",
+        "size": 19.32
+      },
+      {
+        "name": "vendor-date-BBErTw00.js",
+        "size": 19.02
+      },
+      {
+        "name": "vendor-icons-D6lfsP_z.js",
+        "size": 18.94
+      },
+      {
+        "name": "vendor-scroll-O2mZTKSc.js",
+        "size": 17.05
+      },
+      {
+        "name": "Index-J0MjBjCw.js",
+        "size": 16.84
+      },
+      {
+        "name": "ContactUs-B9-hohBn.js",
+        "size": 15.77
+      },
+      {
+        "name": "AdminSettings-CtQQ5DCS.js",
+        "size": 13.81
+      },
+      {
+        "name": "Cart-BO9GD_ok.js",
+        "size": 13.25
+      },
+      {
+        "name": "AdminPromoCodes-By3Idyzc.js",
+        "size": 12.4
+      },
+      {
+        "name": "BulkOrder-C2KVkcuN.js",
+        "size": 11.34
+      },
+      {
+        "name": "AdminCMS-CBFPH9NY.js",
+        "size": 11.1
+      },
+      {
+        "name": "AdminDashboard-C4ZwcJ4J.js",
+        "size": 11.1
+      },
+      {
+        "name": "AdminCategories-rqI3H10N.js",
+        "size": 9.92
+      },
+      {
+        "name": "AdminCustomers-DKpQPR2Y.js",
+        "size": 9.37
+      },
+      {
+        "name": "Shop-O2DsgeQs.js",
+        "size": 9.14
+      },
+      {
+        "name": "web-vitals-N_SObD93.js",
+        "size": 8.65
+      },
+      {
+        "name": "OrderHistory-C618FUBq.js",
+        "size": 8.55
+      },
+      {
+        "name": "AboutUs-DvhA3G0R.js",
+        "size": 8.44
+      },
+      {
+        "name": "AdminReviews-0rD86Cms.js",
+        "size": 7.07
+      },
+      {
+        "name": "Wishlist-CACxmrc8.js",
+        "size": 6.29
+      },
+      {
+        "name": "OrderConfirmation-BdXwwAE5.js",
+        "size": 3.61
+      },
+      {
+        "name": "NotFoundError-B6FoVjCB.js",
+        "size": 3.11
+      },
+      {
+        "name": "select-AB4y-TOG.js",
+        "size": 2.98
+      },
+      {
+        "name": "ProductSkeleton-G9y6deQa.js",
+        "size": 2.61
+      },
+      {
+        "name": "SearchResults-BYNHuyMu.js",
+        "size": 2.46
+      },
+      {
+        "name": "alert-dialog-DzHGQx1K.js",
+        "size": 2.01
+      },
+      {
+        "name": "table-DzjjQlGl.js",
+        "size": 1.49
+      },
+      {
+        "name": "OrderTypeChart-Bu-imA3E.js",
+        "size": 1.33
+      },
+      {
+        "name": "RevenueChart-DzfIEytA.js",
+        "size": 1.32
+      },
+      {
+        "name": "progress-Cy7ufHYW.js",
+        "size": 1.19
+      },
+      {
+        "name": "tabs-CLpw6o3A.js",
+        "size": 1.13
+      },
+      {
+        "name": "useConvexError-lrpj2YKU.js",
+        "size": 1.07
+      },
+      {
+        "name": "accordion-DbVuxPF5.js",
+        "size": 1.03
+      },
+      {
+        "name": "alert-BX3PjKaq.js",
+        "size": 0.96
+      },
+      {
+        "name": "formatting-CEMZmaoQ.js",
+        "size": 0.55
+      },
+      {
+        "name": "textarea-DJ5JiVDM.js",
+        "size": 0.51
+      },
+      {
+        "name": "PageContainer-O-982KmL.js",
+        "size": 0.23
+      }
+    ],
+    "css": [
+      {
+        "name": "index-hRpOKyaT.css",
+        "size": 86.99
+      }
+    ]
+  },
+  "issues": {
+    "errors": [],
+    "warnings": [
+      {
+        "type": "Chunk: vendor-charts",
+        "file": "vendor-charts-C1SUz1z5.js",
+        "current": 355.87,
+        "limit": 380,
+        "percentage": 94
+      },
+      {
+        "type": "Chunk: vendor-sentry",
+        "file": "vendor-sentry-O2j11Ff_.js",
+        "current": 264.58,
+        "limit": 280,
+        "percentage": 94
+      }
+    ]
+  },
+  "passed": true
+}
