@@ -56,87 +56,23 @@ export default defineConfig(({ mode }) => ({
         // Entry file naming with hash for cache busting
         entryFileNames: "assets/[name]-[hash].js",
 
-        // Improved chunking strategy for optimal caching and loading
-        manualChunks: (id) => {
-          // Core React ecosystem - loaded on every page
-          if (id.includes("node_modules/react") ||
-              id.includes("node_modules/react-dom") ||
-              id.includes("node_modules/react-router-dom") ||
-              id.includes("node_modules/scheduler")) {
-            return "vendor-react";
-          }
-
-          // Radix UI components - frequently used UI primitives
-          if (id.includes("@radix-ui")) {
-            return "vendor-radix";
-          }
-
-          // Authentication - loaded early but can be deferred slightly
-          if (id.includes("@clerk")) {
-            return "vendor-clerk";
-          }
-
-          // Convex backend client
-          if (id.includes("convex")) {
-            return "vendor-convex";
-          }
-
-          // Charts library (recharts) - DO NOT manually chunk!
-          // Recharts has complex internal dependencies (d3, react-smooth, etc.)
-          // that cause TDZ errors when manually chunked. Let Rollup handle it
-          // naturally. The lazy loading in LazyCharts.tsx still works correctly.
-          // The chart code will be split into its own chunk by Rollup's
-          // code-splitting based on the dynamic import() in LazyCharts.tsx.
-
-          // Form handling - loaded on pages with forms
-          if (id.includes("react-hook-form") ||
-              id.includes("@hookform") ||
-              id.includes("node_modules/zod")) {
-            return "vendor-forms";
-          }
-
-          // Sentry error tracking - can be loaded after initial render
-          if (id.includes("@sentry")) {
-            return "vendor-sentry";
-          }
-
-          // Lucide icons - commonly used
-          if (id.includes("lucide-react")) {
-            return "vendor-icons";
-          }
-
-          // Date utilities (if used)
-          if (id.includes("date-fns")) {
-            return "vendor-date";
-          }
-
-          // TanStack Query - used for data fetching
-          if (id.includes("@tanstack/react-query")) {
-            return "vendor-query";
-          }
-
-          // Utility libraries - class-variance-authority, clsx, tailwind-merge
-          if (id.includes("class-variance-authority") ||
-              id.includes("clsx") ||
-              id.includes("tailwind-merge")) {
-            return "vendor-utils";
-          }
-
-          // PERFORMANCE: Carousel library - used on product pages, isolated for caching
-          if (id.includes("embla-carousel")) {
-            return "vendor-carousel";
-          }
-
-          // PERFORMANCE: Smooth scroll library - only needed on specific pages
-          if (id.includes("lenis") || id.includes("@studio-freight")) {
-            return "vendor-scroll";
-          }
-
-          // PERFORMANCE: Toast notifications - loaded after initial render
-          if (id.includes("sonner")) {
-            return "vendor-toast";
-          }
-        },
+        // IMPORTANT: Do NOT use manualChunks for vendor splitting!
+        // Manual chunking causes Temporal Dead Zone (TDZ) errors in production
+        // because it breaks the natural initialization order that Rollup calculates.
+        //
+        // Symptoms when using manualChunks:
+        // - "Cannot access 'X' before initialization"
+        // - "Cannot set properties of undefined"
+        //
+        // Let Rollup handle code splitting naturally. It will:
+        // 1. Create chunks based on dynamic imports (React.lazy, import())
+        // 2. Properly order module initialization
+        // 3. Deduplicate shared dependencies
+        //
+        // Code splitting still works via:
+        // - Lazy routes in React Router
+        // - React.lazy() for component code splitting
+        // - Dynamic import() for deferred loading
 
         // Optimize chunk file naming for better caching
         chunkFileNames: (chunkInfo) => {

@@ -89,8 +89,9 @@ const SIZE_LIMITS = {
     // Utility libraries
     'vendor-utils': 30, // CVA + clsx + tailwind-merge
 
-    // Main application bundle
-    index: 300, // Application code
+    // Main application bundle (includes all vendor code when not using manualChunks)
+    // This is intentional - manual chunking causes TDZ errors in production
+    index: 900, // Application code + vendors (React, Clerk, Convex, Radix, etc.)
   },
 
   // CSS limits
