@@ -1,7 +1,7 @@
 /**
  * Service Level Indicators (SLI) and Service Level Objectives (SLO) Definitions
  *
- * This module defines the SLIs, SLOs, and error budgets for the Nishani Woolera
+ * This module defines the SLIs, SLOs, and error budgets for the Nidhi Sweaters
  * e-commerce application. These metrics form the foundation of reliability
  * engineering practices and drive alerting decisions.
  *
@@ -35,7 +35,7 @@ export interface SLIDefinition {
 }
 
 /**
- * Core SLI Definitions for Nishani Woolera E-Commerce Platform
+ * Core SLI Definitions for Nidhi Sweaters E-Commerce Platform
  */
 export const SLI_DEFINITIONS: Record<string, SLIDefinition> = {
   // -------------------------------------------------------------------------
@@ -291,7 +291,7 @@ export interface SLODefinition {
 }
 
 /**
- * Service Level Objectives for Nishani Woolera E-Commerce Platform
+ * Service Level Objectives for Nidhi Sweaters E-Commerce Platform
  *
  * Objectives are set based on:
  * - Industry standards for e-commerce

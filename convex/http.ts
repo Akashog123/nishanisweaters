@@ -214,7 +214,7 @@ http.route({
       JSON.stringify({
         status: "ok",
         timestamp: Date.now(),
-        service: "nishani-woolera-api",
+        service: "nidhi-sweaters-api",
       }),
       {
         status: 200,

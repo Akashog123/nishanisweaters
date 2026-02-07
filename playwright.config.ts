@@ -4,7 +4,7 @@ import { defineConfig, devices } from '@playwright/test';
  * Playwright Configuration for E2E Testing
  *
  * This configuration is optimized for testing the checkout flow
- * of the Nishani Woolera e-commerce platform.
+ * of the Nidhi Sweaters e-commerce platform.
  *
  * USAGE:
  * - Option 1: Start dev server manually in another terminal, then run tests

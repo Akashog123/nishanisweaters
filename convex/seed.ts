@@ -257,7 +257,7 @@ export const createAdminUser = mutation({
 
     const userId = await ctx.db.insert("users", {
       clerkId: "admin_placeholder",
-      email: "admin@nishaniwoolera.com",
+      email: "admin@nidhisweaters.com",
       firstName: "Admin",
       lastName: "User",
       role: "admin",

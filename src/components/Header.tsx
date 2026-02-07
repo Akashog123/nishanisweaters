@@ -123,8 +123,8 @@ const Header = () => {
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 text-xl lg:text-3xl font-bold tracking-tight">
-            <img src="/Logo.png" alt="Nishani Woolera Logo" className="h-10 lg:h-12 w-auto" />
-            NISHANI WOOLERA
+            <img src="/Logo.png" alt="Nidhi Sweaters Logo" className="h-10 lg:h-12 w-auto" />
+            NIDHI SWEATERS
           </Link>
 
           {/* Navigation - Hidden on mobile */}

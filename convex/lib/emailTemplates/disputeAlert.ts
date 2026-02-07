@@ -83,7 +83,7 @@ export function generateDisputeAlertTemplate(params: DisputeAlertData): string {
       </div>
 
       <p style="font-size: 12px; color: #999; text-align: center; margin-top: 32px;">
-        This is an automated alert from your Nishani Woolera store.
+        This is an automated alert from your Nidhi Sweaters store.
       </p>
     </div>
   </div>

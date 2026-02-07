@@ -138,7 +138,7 @@ const HeroSection = () => {
           {/* JPG fallback for older browsers */}
           <img
             src={heroImageJpg}
-            alt="NISHANI WOOLERA Fashion Collection - Modern streetwear and premium clothing"
+            alt="NIDHI SWEATERS Fashion Collection - Modern streetwear and premium clothing"
             className="w-full h-full object-cover"
             // Explicit dimensions for CLS prevention
             width={HERO_WIDTH}
@@ -165,12 +165,12 @@ const HeroSection = () => {
             YEAR-END SALE
           </span>
           <h1 className="text-5xl lg:text-7xl xl:text-8xl font-bold text-white mb-6 leading-tight">
-            NISHANI WOOLERA
+            NIDHI SWEATERS
             <br />
             SIGNATURES 25% OFF
           </h1>
           <p className="text-lg lg:text-xl text-white/90 mb-8 max-w-lg">
-            Redefine your look with 25% off for all NISHANI WOOLERA Signatures outfit
+            Redefine your look with 25% off for all NIDHI SWEATERS Signatures outfit
           </p>
           <Button
             size="lg"

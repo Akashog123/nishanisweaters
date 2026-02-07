@@ -128,10 +128,10 @@ export function AdminSidebar() {
               <div className="flex items-center w-full">
                 <Link to="/admin" className="flex items-center gap-3 flex-1">
                   <div className="flex aspect-square size-9 items-center justify-center bg-primary text-primary-foreground font-bold text-sm shrink-0 shadow-sm">
-                    NW
+                    NS
                   </div>
                   <div className="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
-                    <span className="font-bold text-sm tracking-tight">NISHANI WOOLERA</span>
+                    <span className="font-bold text-sm tracking-tight">NIDHI SWEATERS</span>
                     <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Admin Panel</span>
                   </div>
                 </Link>

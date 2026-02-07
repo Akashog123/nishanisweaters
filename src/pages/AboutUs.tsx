@@ -121,7 +121,7 @@ const AboutUs = () => {
               
               <div className="space-y-6 text-lg text-muted-foreground leading-relaxed">
                 <p className="drop-cap first-letter:text-5xl first-letter:font-serif first-letter:mr-3 first-letter:float-left first-letter:text-primary">
-                  Nishani Woolera was founded in 2013 in Ludhiana, Punjab — the
+                  Nidhi Sweaters was founded in 2013 in Ludhiana, Punjab — the
                   heart of India's woolen textile industry. What began as a
                   small family workshop has grown into a trusted name in premium
                   woolen apparel.
@@ -197,12 +197,12 @@ const AboutUs = () => {
         <div className="container mx-auto px-4 lg:px-8 relative">
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <h2 className="text-4xl lg:text-6xl font-bold text-white tracking-tight">
-              Experience the Nishani Difference
+              Experience the Nidhi Difference
             </h2>
             <p className="text-xl text-primary-foreground/90 leading-relaxed max-w-2xl mx-auto font-light">
               Discover our collection of premium woolens, crafted with care in
               Ludhiana and delivered to your doorstep. Join thousands of
-              satisfied customers who trust Nishani Woolera for quality and
+              satisfied customers who trust Nidhi Sweaters for quality and
               style.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">

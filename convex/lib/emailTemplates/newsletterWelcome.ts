@@ -11,7 +11,7 @@ export function generateNewsletterWelcomeTemplate(): string {
   `;
 
   return baseEmailLayout({
-    title: "Welcome to Nishani Woolera",
+    title: "Welcome to Nidhi Sweaters",
     content,
     showTagline: false,
   });

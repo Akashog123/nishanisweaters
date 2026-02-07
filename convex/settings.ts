@@ -128,11 +128,11 @@ export const getEmailConfig = internalQuery({
     }
 
     return {
-      fromOrders: result["EMAIL.FROM_ORDERS"] || "orders@nishaniwoolera.com",
-      fromShipping: result["EMAIL.FROM_SHIPPING"] || "shipping@nishaniwoolera.com",
-      fromWholesale: result["EMAIL.FROM_WHOLESALE"] || "wholesale@nishaniwoolera.com",
-      fromCart: result["EMAIL.FROM_CART"] || "cart@nishaniwoolera.com",
-      support: result["EMAIL.SUPPORT_ADDRESS"] || "support@nishaniwoolera.com",
+      fromOrders: result["EMAIL.FROM_ORDERS"] || "orders@nidhisweaters.com",
+      fromShipping: result["EMAIL.FROM_SHIPPING"] || "shipping@nidhisweaters.com",
+      fromWholesale: result["EMAIL.FROM_WHOLESALE"] || "wholesale@nidhisweaters.com",
+      fromCart: result["EMAIL.FROM_CART"] || "cart@nidhisweaters.com",
+      support: result["EMAIL.SUPPORT_ADDRESS"] || "support@nidhisweaters.com",
     };
   },
 });

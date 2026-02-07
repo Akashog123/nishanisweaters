@@ -282,13 +282,13 @@ export function initSentry(config: SentryConfig = {}): boolean {
       // Set initial scope
       initialScope: {
         tags: {
-          app: 'nishani-woolera',
+          app: 'nidhi-sweaters',
           version: import.meta.env.VITE_APP_VERSION || 'unknown',
         },
       },
 
       // Release tracking
-      release: import.meta.env.VITE_APP_VERSION || `nishani-woolera@${Date.now()}`,
+      release: import.meta.env.VITE_APP_VERSION || `nidhi-sweaters@${Date.now()}`,
 
       // Normalize depth for complex objects
       normalizeDepth: 5,

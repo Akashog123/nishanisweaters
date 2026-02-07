@@ -24,14 +24,14 @@ const Footer = () => {
           {/* Brand Section */}
           <div className="col-span-2 lg:col-span-1 space-y-4">
             <div className="flex items-center gap-3">
-              <img src="/Logo.png" alt="Nishani Woolera Logo" className="h-24 lg:h-28 w-auto" />
-              <h3 className="text-2xl lg:text-3xl font-bold">NISHANI WOOLERA.</h3>
+              <img src="/Logo.png" alt="Nidhi Sweaters Logo" className="h-24 lg:h-28 w-auto" />
+              <h3 className="text-2xl lg:text-3xl font-bold">NIDHI SWEATERS.</h3>
             </div>
             <p className="text-sm text-gray-600">
               Made by OG
             </p>
             <div className="space-y-1 text-sm">
-              <p className="text-gray-900">© 2025 Nishani Woolera</p>
+              <p className="text-gray-900">© 2025 Nidhi Sweaters</p>
               <Link to="/privacy-policy" className="block text-gray-600 hover:text-black transition-colors">
                 Privacy Policy.
               </Link>

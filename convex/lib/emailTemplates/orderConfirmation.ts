@@ -74,7 +74,7 @@ export function generateOrderConfirmationTemplate(order: OrderConfirmationData):
 <body>
   <div class="container">
     <div class="header">
-      <h1>Nishani Woolera</h1>
+      <h1>Nidhi Sweaters</h1>
       <p style="margin: 10px 0 0 0; opacity: 0.8;">Premium Winter Wear</p>
     </div>
     <div class="content">
@@ -122,8 +122,8 @@ export function generateOrderConfirmationTemplate(order: OrderConfirmationData):
       </div>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© ${currentYear} Nishani Woolera. All rights reserved.</p>
-      <p style="margin: 10px 0 0 0;">If you have any questions, contact us at support@nishaniwoolera.com</p>
+      <p style="margin: 0;">© ${currentYear} Nidhi Sweaters. All rights reserved.</p>
+      <p style="margin: 10px 0 0 0;">If you have any questions, contact us at support@nidhisweaters.com</p>
     </div>
   </div>
 </body>

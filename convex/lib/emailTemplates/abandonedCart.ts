@@ -63,7 +63,7 @@ export function generateAbandonedCartTemplate1(data: AbandonedCartData): string 
 <body>
   <div class="container">
     <div class="header">
-      <h1>Nishani Woolera</h1>
+      <h1>Nidhi Sweaters</h1>
     </div>
     <div class="content">
       <h2 style="text-align: center;">Forgot something?</h2>
@@ -83,7 +83,7 @@ export function generateAbandonedCartTemplate1(data: AbandonedCartData): string 
       <a href="${data.cartUrl}" class="cta-button">Complete Your Purchase</a>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© ${currentYear} Nishani Woolera. All rights reserved.</p>
+      <p style="margin: 0;">© ${currentYear} Nidhi Sweaters. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -112,7 +112,7 @@ export function generateAbandonedCartTemplate2(data: AbandonedCartData): string 
 <body>
   <div class="container">
     <div class="header">
-      <h1>Nishani Woolera</h1>
+      <h1>Nidhi Sweaters</h1>
     </div>
     <div class="content">
       <h2>Still interested?</h2>
@@ -130,7 +130,7 @@ export function generateAbandonedCartTemplate2(data: AbandonedCartData): string 
       <a href="${data.cartUrl}" class="cta-button">Return to Cart</a>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© ${currentYear} Nishani Woolera. All rights reserved.</p>
+      <p style="margin: 0;">© ${currentYear} Nidhi Sweaters. All rights reserved.</p>
     </div>
   </div>
 </body>
@@ -176,7 +176,7 @@ export function generateAbandonedCartTemplate3(data: AbandonedCartData): string 
 <body>
   <div class="container">
     <div class="header">
-      <h1>Nishani Woolera</h1>
+      <h1>Nidhi Sweaters</h1>
     </div>
     <div class="content">
       <h2>Last Chance!</h2>
@@ -189,7 +189,7 @@ export function generateAbandonedCartTemplate3(data: AbandonedCartData): string 
       <a href="${data.cartUrl}" class="cta-button">Complete Purchase Now</a>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© ${currentYear} Nishani Woolera. All rights reserved.</p>
+      <p style="margin: 0;">© ${currentYear} Nidhi Sweaters. All rights reserved.</p>
     </div>
   </div>
 </body>

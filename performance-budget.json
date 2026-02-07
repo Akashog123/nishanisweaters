@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/web-performance-budget.json",
-  "description": "Performance budget for Nishani Woolera e-commerce application",
+  "description": "Performance budget for Nidhi Sweaters e-commerce application",
   "budgets": [
     {
       "resourceType": "script",

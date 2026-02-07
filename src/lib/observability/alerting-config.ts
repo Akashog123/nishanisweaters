@@ -2,7 +2,7 @@
  * Alerting Configuration
  *
  * Defines alert rules, thresholds, notification channels, and escalation policies
- * for the Nishani Woolera e-commerce platform.
+ * for the Nidhi Sweaters e-commerce platform.
  *
  * Compatible with Sentry Alerts, Grafana Alerting, and PagerDuty.
  */
@@ -146,7 +146,7 @@ export const NOTIFICATION_CHANNELS: NotificationChannel[] = [
     type: 'email',
     config: {
       recipients: '${ENGINEERING_EMAIL_GROUP}',
-      from: 'alerts@nishani-woolera.com',
+      from: 'alerts@nidhi-sweaters.com',
     },
     severities: ['critical', 'high', 'medium'],
   },

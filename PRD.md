@@ -1,11 +1,11 @@
-# Product Requirements Document (PRD): Nishani Woolera E-commerce Platform
+# Product Requirements Document (PRD): Nidhi Sweaters E-commerce Platform
 
 ## 1. Project Overview
-Nishani Woolera is a premium winter wear brand powered by Nidhi. The goal is to evolve the current showcase site into a full-fledged e-commerce platform that supports both retail (B2C) and wholesale (B2B) operations, managed through a centralized admin dashboard.
+Nidhi Sweaters is a premium winter wear brand powered by Nidhi. The goal is to evolve the current showcase site into a full-fledged e-commerce platform that supports both retail (B2C) and wholesale (B2B) operations, managed through a centralized admin dashboard.
 
 ## 2. Target Audience
 *   **Retail Customers (B2C):** Individual shoppers looking for premium winter wear.
-*   **Wholesale Partners (B2B):** Retailers and boutiques looking to stock Nishani Woolera products in bulk.
+*   **Wholesale Partners (B2B):** Retailers and boutiques looking to stock Nidhi Sweaters products in bulk.
 *   **Administrators:** Internal staff managing inventory, orders, and customer relations.
 
 ## 3. Key Features
@@ -61,14 +61,14 @@ Nishani Woolera is a premium winter wear brand powered by Nidhi. The goal is to 
 *   **Authentication:** Clerk (User management, multi-tenancy for wholesale, and role-based access control).
 *   **Payments & Billing:** Razorpay for retail checkout and wholesale invoicing.
 *   **State Management:** Convex hooks for server state, Context API for local UI state.
-*   **Email Service:** Resend for transactional and marketing emails.
+*   **Email Service:** Nodemailer with Brevo SMTP for transactional emails (free tier: 300 emails/day).
 *   **Deployment:** Vercel (Frontend) and Convex (Backend).
 
 ## 5. Integration Details
 *   **Clerk + Convex:** Use Clerk's JWT-based authentication to secure Convex mutations and queries. User identity in Convex will be synced with Clerk user IDs.
 *   **Razorpay Integration:** Leverage Razorpay for one-time payments and subscriptions (if applicable), synced with Convex for order fulfillment status.
 *   **Real-time Updates:** Use Convex's reactive subscriptions to update the Admin Dashboard and Storefront inventory levels instantly without page refreshes.
-*   **Email Integration:** Trigger emails via Convex actions using the chosen provider (Resend) based on database events (e.g., order created, status changed).
+*   **Email Integration:** Trigger emails via Convex actions using Nodemailer with SMTP based on database events (e.g., order created, status changed).
 
 ## 6. User Stories
 *   **As a Retail Customer,** I want to filter products by my size so I only see what I can wear.
@@ -115,7 +115,7 @@ Nishani Woolera is a premium winter wear brand powered by Nidhi. The goal is to 
 - [x] Dashboard Overview: Revenue, pending orders, low stock counts
 
 #### Marketing & Communication
-- [x] Transactional Emails: Order confirmation, shipping updates (via Resend)
+- [x] Transactional Emails: Order confirmation, shipping updates (via Nodemailer/Brevo SMTP)
 - [x] Wholesale Notifications: Application status emails (approved/rejected)
 - [x] Abandoned Cart Recovery: Automated reminders (3 reminder emails, cron-scheduled)
 - [x] Newsletter Welcome Email: Template ready

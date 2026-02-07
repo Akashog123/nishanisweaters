@@ -75,7 +75,7 @@ export function generateWholesaleStatusTemplate(data: WholesaleStatusData): stri
 <body>
   <div class="container">
     <div class="header">
-      <h1>Nishani Woolera</h1>
+      <h1>Nidhi Sweaters</h1>
       <p style="margin: 10px 0 0 0; opacity: 0.8;">Wholesale Program</p>
     </div>
     <div class="content">
@@ -85,8 +85,8 @@ export function generateWholesaleStatusTemplate(data: WholesaleStatusData): stri
       ${statusContent}
     </div>
     <div class="footer">
-      <p style="margin: 0;">© ${currentYear} Nishani Woolera. All rights reserved.</p>
-      <p style="margin: 10px 0 0 0;">Contact: wholesale@nishaniwoolera.com</p>
+      <p style="margin: 0;">© ${currentYear} Nidhi Sweaters. All rights reserved.</p>
+      <p style="margin: 10px 0 0 0;">Contact: wholesale@nidhisweaters.com</p>
     </div>
   </div>
 </body>

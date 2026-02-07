@@ -1,7 +1,7 @@
 {
-  "title": "Nishani Woolera - E-Commerce Overview",
-  "description": "Production monitoring dashboard for the Nishani Woolera e-commerce platform",
-  "tags": ["ecommerce", "production", "nishani-woolera"],
+  "title": "Nidhi Sweaters - E-Commerce Overview",
+  "description": "Production monitoring dashboard for the Nidhi Sweaters e-commerce platform",
+  "tags": ["ecommerce", "production", "nidhi-sweaters"],
   "timezone": "Asia/Kolkata",
   "refresh": "30s",
   "time": {

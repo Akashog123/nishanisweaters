@@ -339,7 +339,7 @@ export default function Checkout() {
         key: razorpayOrderData.keyId,
         amount: razorpayOrderData.amount,
         currency: razorpayOrderData.currency,
-        name: "Nishani Woolera",
+        name: "Nidhi Sweaters",
         description: "Premium Winter Wear",
         order_id: razorpayOrderData.razorpayOrderId,
         handler: (response: RazorpayPaymentResponse) => processPaymentResponse(orderId, response),

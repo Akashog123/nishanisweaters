@@ -438,10 +438,10 @@ const ContactUs = () => {
                     title="Email Us"
                   >
                     <a
-                      href="mailto:support@nishaniwoolera.com"
+                      href="mailto:support@nidhisweaters.com"
                       className="text-lg font-medium hover:text-zinc-300 transition-colors text-white"
                     >
-                      support@nishaniwoolera.com
+                      support@nidhisweaters.com
                     </a>
                     <p className="text-sm text-zinc-400 mt-1">
                       We respond within 24 hours
@@ -498,7 +498,7 @@ const ContactUs = () => {
                     loading="lazy" 
                     referrerPolicy="no-referrer-when-downgrade"
                     className="absolute inset-0 grayscale hover:grayscale-0 transition-all duration-500"
-                    title="Nishani Woolera Location"
+                    title="Nidhi Sweaters Location"
                   />
                 </div>
               </Card>
@@ -547,7 +547,7 @@ const ContactUs = () => {
               </p>
               <Button asChild size="lg" className="group">
                 <a
-                  href="https://wa.me/917458816343?text=Hello%2C%20I%20have%20a%20question%20about%20Nishani%20Woolera%20products."
+                  href="https://wa.me/917458816343?text=Hello%2C%20I%20have%20a%20question%20about%20Nidhi%20Sweaters%20products."
                   target="_blank"
                   rel="noopener noreferrer"
                 >

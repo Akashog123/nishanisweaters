@@ -1,6 +1,6 @@
 # Performance Optimization Runbook
 
-This runbook documents the performance optimization strategies implemented in the Nishani Woolera e-commerce application, along with monitoring procedures and troubleshooting guides.
+This runbook documents the performance optimization strategies implemented in the Nidhi Sweaters e-commerce application, along with monitoring procedures and troubleshooting guides.
 
 ## Table of Contents
 
