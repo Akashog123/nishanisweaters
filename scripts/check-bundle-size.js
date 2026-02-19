@@ -42,7 +42,7 @@ const colors = {
  * - HTTP/2 parallelization (multiple smaller chunks load faster)
  * - Parse/compile time (smaller chunks = faster TTI)
  * - Caching efficiency (chunk stability across deploys)
- * - Realistic sizes for modern libraries (React 18, Sentry with replays, etc.)
+ * - Realistic sizes for modern libraries (React 18, etc.)
  *
  * Updated 2025: Adjusted limits to reflect actual library sizes
  */
@@ -72,10 +72,6 @@ const SIZE_LIMITS = {
 
     // Form handling
     'vendor-forms': 100, // React Hook Form + Zod
-
-    // Error tracking - Sentry with replay & profiling is ~270KB
-    // This is lazy-loaded and deferred, so it doesn't affect initial load
-    'vendor-sentry': 280, // Sentry SDK with replay + profiling
 
     // Icons
     'vendor-icons': 60, // Lucide icons
