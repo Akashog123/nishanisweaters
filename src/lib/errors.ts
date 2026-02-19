@@ -226,7 +226,6 @@ export function logError(error: unknown, context?: string): void {
   const parsedError = parseConvexError(error);
 
   // Use the logger utility which handles dev/prod differently
-  // and integrates with Sentry in production
   import('./logger').then(({ logger }) => {
     logger.error(
       parsedError.message,

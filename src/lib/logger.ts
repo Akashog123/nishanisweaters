@@ -3,7 +3,6 @@
  *
  * Provides structured logging that:
  * - Uses console.* in development for debugging
- * - Routes errors to Sentry in production
  * - Suppresses non-essential logs in production
  *
  * @example
@@ -16,9 +15,6 @@
  * logger.error('Payment failed', new Error('Card declined'), { userId: '123' });
  * ```
  */
-
-import { captureError, captureMessage, addBreadcrumb, isSentryInitialized } from './sentry';
-
 
 interface LogContext {
   [key: string]: unknown;
@@ -48,10 +44,6 @@ function debug(message: string, context?: LogContext): void {
   if (isDevelopment()) {
     console.debug(`[DEBUG] ${formatMessage(message, context)}`);
   }
-  // Add breadcrumb for Sentry context even if not logging
-  if (isSentryInitialized()) {
-    addBreadcrumb(message, 'debug', context);
-  }
 }
 
 /**
@@ -61,10 +53,6 @@ function info(message: string, context?: LogContext): void {
   if (isDevelopment()) {
     console.info(`[INFO] ${formatMessage(message, context)}`);
   }
-  // Add breadcrumb for Sentry context
-  if (isSentryInitialized()) {
-    addBreadcrumb(message, 'info', context);
-  }
 }
 
 /**
@@ -73,40 +61,19 @@ function info(message: string, context?: LogContext): void {
 function warn(message: string, context?: LogContext): void {
   if (isDevelopment()) {
     console.warn(`[WARN] ${formatMessage(message, context)}`);
-  } else if (isSentryInitialized()) {
-    // In production, send warnings to Sentry
-    captureMessage(message, 'warning', context);
   }
 }
 
 /**
- * Log an error message and optionally capture to Sentry
+ * Log an error message
  *
  * @param message - Error description
  * @param error - The error object (optional)
  * @param context - Additional context
  */
 function error(message: string, errorObj?: Error | unknown, context?: LogContext): void {
-  const fullContext = {
-    ...context,
-    message,
-  };
-
   if (isDevelopment()) {
     console.error(`[ERROR] ${message}`, errorObj, context);
-  }
-
-  // Always send errors to Sentry in production
-  if (isSentryInitialized()) {
-    if (errorObj instanceof Error) {
-      captureError(errorObj, fullContext);
-    } else if (errorObj) {
-      // Convert non-Error to Error for Sentry
-      const syntheticError = new Error(message);
-      captureError(syntheticError, { ...fullContext, originalError: errorObj });
-    } else {
-      captureMessage(message, 'error', fullContext);
-    }
   }
 }
 

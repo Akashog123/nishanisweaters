@@ -28,7 +28,6 @@ const PERFORMANCE_BUDGETS = {
   'vendor-convex': 150, // Convex backend client (~80KB gzipped)
   'vendor-charts': 300, // Recharts (loaded only in admin dashboard)
   'vendor-forms': 100, // React Hook Form + Zod
-  'vendor-sentry': 100, // Sentry error tracking (lazy loaded)
   'vendor-icons': 80, // Lucide icons
   'index': 250, // Main application code
 } as const;
@@ -83,15 +82,6 @@ describe('Performance Budgets', () => {
       expect(chunkSize).toBeLessThanOrEqual(limit);
     });
 
-    it('should not exceed vendor-sentry bundle size limit', () => {
-      const chunkSize = simulateChunkSize('vendor-sentry', 85);
-      const limit = PERFORMANCE_BUDGETS['vendor-sentry'];
-
-      expect(chunkSize).toBeLessThanOrEqual(limit);
-      // Sentry should be lazy-loaded after initial render
-      expect(chunkSize).toBeGreaterThan(0);
-    });
-
     it('should not exceed vendor-icons bundle size limit', () => {
       const chunkSize = simulateChunkSize('vendor-icons', 45);
       const limit = PERFORMANCE_BUDGETS['vendor-icons'];
@@ -125,13 +115,13 @@ describe('Performance Budgets', () => {
       expect(totalCritical).toBeGreaterThan(200); // Sanity check
     });
 
-    it('should defer non-critical chunks (charts, sentry)', () => {
+    it('should defer non-critical chunks (charts)', () => {
       // These should NOT be in critical path
-      const deferredChunks = ['vendor-charts', 'vendor-sentry'];
+      const deferredChunks = ['vendor-charts'];
 
       deferredChunks.forEach((chunk) => {
         // Verify these chunks exist but aren't loaded immediately
-        const size = simulateChunkSize(chunk, chunk === 'vendor-charts' ? 250 : 85);
+        const size = simulateChunkSize(chunk, 250);
         expect(size).toBeGreaterThan(0);
         // These are loaded after initial render
       });
@@ -139,9 +129,9 @@ describe('Performance Budgets', () => {
   });
 
   describe('Total JavaScript Budget', () => {
-    it('should keep total JS under 1.2MB gzipped', () => {
-      // Adjusted total budget to 1.2MB to account for modern e-commerce app requirements
-      const ADJUSTED_TOTAL_JS_BUDGET = 1200;
+    it('should keep total JS under 1.1MB gzipped', () => {
+      // Adjusted total budget to 1.1MB to account for modern e-commerce app requirements
+      const ADJUSTED_TOTAL_JS_BUDGET = 1100;
       const allChunks = Object.keys(PERFORMANCE_BUDGETS).map((chunk) => {
         const simulatedSizes: Record<string, number> = {
           'vendor-react': 130,
@@ -150,7 +140,6 @@ describe('Performance Budgets', () => {
           'vendor-convex': 80,
           'vendor-charts': 250,
           'vendor-forms': 60,
-          'vendor-sentry': 85,
           'vendor-icons': 45,
           'index': 180,
         };
@@ -210,7 +199,6 @@ describe('Performance Budgets', () => {
           'vendor-convex': 80,
           'vendor-charts': 250,
           'vendor-forms': 60,
-          'vendor-sentry': 85,
           'vendor-icons': 45,
           'index': 180,
         };
@@ -235,7 +223,7 @@ describe('Performance Budgets', () => {
       expect(documentedChunks).toContain('index');
 
       // Ensure we have budgets for all critical vendors
-      expect(documentedChunks.length).toBeGreaterThanOrEqual(7);
+      expect(documentedChunks.length).toBeGreaterThanOrEqual(6);
     });
 
     it('should have reasonable budget limits', () => {
