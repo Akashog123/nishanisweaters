@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BLOCKHAUS - Modern Streetwear Collection</title>
-    <meta name="description" content="Redefine your look with BLOCKHAUS premium streetwear. Shop the latest collection with 25% off signatures." />
-    <meta name="author" content="BLOCKHAUS" />
+    <title>Nidhi Clothing Co. - Premium Winter Wear</title>
+    <meta name="description" content="Discover premium winter wear at Nidhi Clothing Co. Shop our latest collection of sweaters, jackets, and more." />
+    <meta name="author" content="Nidhi Clothing Co." />
 
     <!--
       SECURITY: Content Security Policy (CSP)
@@ -14,9 +14,9 @@
 
       Directives explained:
       - default-src 'self': Only allow resources from same origin by default
-      - script-src: Allow scripts from self, inline (required for React/Vite), Razorpay, Sentry, and Clerk
+      - script-src: Allow scripts from self, inline (required for React/Vite), Razorpay, and Clerk
       - script-src-elem: Explicit directive for script elements (some browsers require this)
-      - connect-src: Allow API calls to Convex, Clerk auth, Razorpay, and Sentry
+      - connect-src: Allow API calls to Convex, Clerk auth, and Razorpay
       - img-src: Allow images from self, data URIs, HTTPS sources (CDNs, user avatars)
       - style-src: Allow styles from self, inline (required for styled-components/Tailwind)
       - font-src: Allow fonts from self and Google Fonts
@@ -35,31 +35,33 @@
       Note: 'unsafe-inline' for scripts is required for Vite HMR in development.
       Consider using nonces or hashes in production for stricter CSP.
 
-      Clerk Domain: Using standard Clerk domain. Custom proxy (clerk.nidhisweaters.in) can be added later.
+      Clerk Domain: Using standard Clerk domain. Custom proxy (clerk.nidhiclothing.com) can be added later.
     -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
-      script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://browser.sentry-cdn.com https://js.sentry-cdn.com https://*.clerk.accounts.dev https://*.clerk.com;
-      script-src-elem 'self' 'unsafe-inline' https://checkout.razorpay.com https://browser.sentry-cdn.com https://js.sentry-cdn.com https://*.clerk.accounts.dev https://*.clerk.com;
-      connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://*.clerk.dev https://*.clerk.com https://*.clerk.accounts.dev https://api.razorpay.com https://*.sentry.io;
-      img-src 'self' data: https: blob:;
-      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-      font-src 'self' https://fonts.gstatic.com;
-      frame-src https://checkout.razorpay.com https://api.razorpay.com https://*.clerk.accounts.dev https://*.clerk.com;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.convex.cloud https://*.convex.dev https://checkout.razorpay.com https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com;
+      script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https://*.convex.cloud https://*.convex.dev https://checkout.razorpay.com https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com;
+      connect-src 'self' https://*.convex.cloud https://*.convex.dev wss://*.convex.cloud wss://*.convex.dev https://*.clerk.dev https://*.clerk.com https://*.clerk.accounts.dev https://api.razorpay.com https://checkout.razorpay.com;
+      img-src 'self' data: https: blob: https://img.clerk.com;
+      style-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://fonts.googleapis.com;
+      font-src 'self' https://fonts.gstatic.com data:;
+      frame-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com;
+      worker-src 'self' blob: https://*.clerk.accounts.dev https://*.clerk.com;
+      child-src 'self' blob: https://*.clerk.accounts.dev https://*.clerk.com;
       base-uri 'self';
-      form-action 'self';
+      form-action 'self' https://checkout.razorpay.com;
       object-src 'none';
       upgrade-insecure-requests;
     " />
 
-    <meta property="og:title" content="BLOCKHAUS - Modern Streetwear Collection" />
-    <meta property="og:description" content="Redefine your look with BLOCKHAUS premium streetwear" />
+    <meta property="og:title" content="Nidhi Clothing Co. - Premium Winter Wear" />
+    <meta property="og:description" content="Discover premium winter wear at Nidhi Clothing Co." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta property="og:image" content="https://nidhiclothing.com/og-image.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@blockhaus" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta name="twitter:site" content="@nidhiclothing" />
+    <meta name="twitter:image" content="https://nidhiclothing.com/og-image.png" />
 
     <!--
       Resource Hints Priority Order:
@@ -79,10 +81,9 @@
     <link rel="preconnect" href="https://clerk.com" crossorigin />
     <link rel="preconnect" href="https://img.clerk.com" crossorigin />
 
-    <!-- DNS Prefetch for secondary origins (payment, analytics) -->
+    <!-- DNS Prefetch for secondary origins (payment) -->
     <link rel="dns-prefetch" href="https://checkout.razorpay.com" />
     <link rel="dns-prefetch" href="https://api.razorpay.com" />
-    <link rel="dns-prefetch" href="https://browser.sentry-cdn.com" />
 
     <!--
       Font loading optimization using media="print" swap trick
