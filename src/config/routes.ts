@@ -74,6 +74,16 @@ export const publicRoutes: RouteConfig[] = [
     component: lazy(() => import('@/pages/wholesale/BulkOrder')),
     isLazy: true,
   },
+  {
+    path: '/terms-of-service',
+    component: lazy(() => import('@/pages/TermsOfService')),
+    isLazy: true,
+  },
+  {
+    path: '/privacy-policy',
+    component: lazy(() => import('@/pages/PrivacyPolicy')),
+    isLazy: true,
+  },
 ];
 
 /**
