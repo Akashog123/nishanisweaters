@@ -1,5 +1,5 @@
 import { useState, useMemo, memo } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import Layout from "@/components/Layout";
@@ -7,9 +7,13 @@ import PageContainer from "@/components/PageContainer";
 import ProductCard from "@/components/ProductCard";
 import ProductSkeleton from "@/components/ProductSkeleton";
 import { ProductFilters, FilterState } from "@/components/ProductFilters";
+import { useImageSettings } from "@/hooks/useImageSettings";
+import { useCategoryBySlug } from "@/hooks/useCategories";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
-// PERFORMANCE: Move static data outside component to prevent recreation
-const CATEGORY_TITLES: Record<string, string> = {
+// Default category titles as fallback
+const DEFAULT_CATEGORY_TITLES: Record<string, string> = {
   "new-arrival": "NEW ARRIVAL",
   "mens": "MEN'S COLLECTION",
   "womens": "WOMEN'S COLLECTION",
@@ -17,47 +21,45 @@ const CATEGORY_TITLES: Record<string, string> = {
 };
 
 // PERFORMANCE: Pure function moved outside component
-function getCategoryFilter(category: string | undefined) {
+// This maps URL slugs to database category values
+function getCategoryFilter(category: string | undefined, isNewArrival: boolean = false) {
   if (!category) return {};
 
-  switch (category) {
-    case "new-arrival":
-      return { newArrival: true };
-    case "mens":
-      return { category: "men" };
-    case "womens":
-      return { category: "women" };
-    case "kids":
-      return { category: "kids" };
-    default:
-      return { category };
+  // Check if this is the new arrivals category (special flag-based category)
+  if (isNewArrival) {
+    return { newArrival: true };
   }
+
+  // For other categories, use the slug directly as the category value
+  return { category };
 }
 
 // PERFORMANCE: Pure function moved outside component
 function getCategoryString(category: string | undefined): string | undefined {
-  if (!category) return undefined;
-  switch (category) {
-    case "mens":
-      return "men";
-    case "womens":
-      return "women";
-    case "kids":
-      return "kids";
-    default:
-      return undefined;
-  }
+  // Simply return the category slug for database queries
+  return category;
 }
 
 const Shop = () => {
+  const navigate = useNavigate();
   const { category } = useParams<{ category: string }>();
   const [filters, setFilters] = useState<FilterState>({
     sizes: [],
     colors: [],
   });
+  const { placeholderUrl } = useImageSettings();
+
+  // Get category data from database if available
+  const categoryData = useCategoryBySlug(category);
+
+  // Determine if this is a "new arrival" category (special flag-based)
+  const isNewArrivalCategory = categoryData?.slug === "new-arrival" || category === "new-arrival";
 
   // PERFORMANCE: Memoize category filter to prevent object recreation
-  const categoryFilter = useMemo(() => getCategoryFilter(category), [category]);
+  const categoryFilter = useMemo(
+    () => getCategoryFilter(category, isNewArrivalCategory),
+    [category, isNewArrivalCategory]
+  );
   const categoryString = useMemo(() => getCategoryString(category), [category]);
 
   // PERFORMANCE: Memoize query arguments to prevent unnecessary re-queries
@@ -75,7 +77,12 @@ const Shop = () => {
     category: categoryString,
   });
 
-  const title = category ? CATEGORY_TITLES[category] || "SHOP" : "SHOP";
+  // Get category title - use database name if available, otherwise fall back to defaults
+  const title = category
+    ? categoryData?.name
+      ? `${categoryData.name.toUpperCase()} COLLECTION`
+      : DEFAULT_CATEGORY_TITLES[category] || "SHOP"
+    : "SHOP";
   const products = productsResult?.products;
 
   // Loading state
@@ -133,6 +140,14 @@ const Shop = () => {
   return (
     <Layout>
       <PageContainer className="py-12 lg:py-20">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="-ml-2 mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
         <h1 className="text-4xl lg:text-6xl font-bold mb-8 text-center">{title}</h1>
 
         <ProductFilters
@@ -147,7 +162,7 @@ const Shop = () => {
             <ProductCard
               key={product._id}
               id={product.slug}
-              image={product.images[0]?.url || "/placeholder.jpg"}
+              image={product.images[0]?.url || placeholderUrl}
               hoverImage={product.images[1]?.url}
               name={product.name}
               price={product.retailPrice.toFixed(2)}

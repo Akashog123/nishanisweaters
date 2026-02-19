@@ -5,6 +5,7 @@ import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import Layout from "@/components/Layout";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useCart } from "@/context/CartContext";
@@ -16,7 +17,7 @@ import {
   FREE_SHIPPING_THRESHOLD,
   SHIPPING_COST,
 } from "@/lib/constants";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, ArrowLeft } from "lucide-react";
 import { loadRazorpayScript, type RazorpayPaymentResponse } from "@/types/razorpay";
 import { CheckoutErrorBoundary } from "@/components/CheckoutErrorBoundary";
 import {
@@ -339,7 +340,7 @@ export default function Checkout() {
         key: razorpayOrderData.keyId,
         amount: razorpayOrderData.amount,
         currency: razorpayOrderData.currency,
-        name: "Nidhi Sweaters",
+        name: "Nidhi Clothing Co.",
         description: "Premium Winter Wear",
         order_id: razorpayOrderData.razorpayOrderId,
         handler: (response: RazorpayPaymentResponse) => processPaymentResponse(orderId, response),
@@ -432,6 +433,14 @@ export default function Checkout() {
   return (
     <Layout showAnnouncement={false}>
       <div className="container mx-auto px-4 py-8 max-w-3xl">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/cart")}
+          className="-ml-2 mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Cart
+        </Button>
         <h1 className="text-3xl font-bold mb-2">Checkout</h1>
         <p className="text-muted-foreground mb-6">Complete your order in a few simple steps</p>
 

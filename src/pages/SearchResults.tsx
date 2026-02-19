@@ -6,10 +6,12 @@ import PageContainer from "@/components/PageContainer";
 import ProductCard from "@/components/ProductCard";
 import ProductSkeleton from "@/components/ProductSkeleton";
 import { Search } from "lucide-react";
+import { useImageSettings } from "@/hooks/useImageSettings";
 
 const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get("q") || "";
+  const { placeholderUrl } = useImageSettings();
 
   const searchResults = useQuery(
     api.products.searchProducts,
@@ -88,7 +90,7 @@ const SearchResults = () => {
             <ProductCard
               key={product._id}
               id={product.slug}
-              image={product.images[0]?.url || "/placeholder.jpg"}
+              image={product.images[0]?.url || placeholderUrl}
               hoverImage={product.images[1]?.url}
               name={product.name}
               price={product.retailPrice.toFixed(2)}

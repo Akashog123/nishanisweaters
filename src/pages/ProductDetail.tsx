@@ -18,6 +18,7 @@ import { useCart } from "@/context/CartContext";
 import NotFoundError from "@/components/NotFoundError";
 import { useConvexError } from "@/hooks/useConvexError";
 import { ValidationError } from "@/lib/errors";
+import { useImageSettings } from "@/hooks/useImageSettings";
 
 const ProductDetailSkeleton = () => {
   return (
@@ -84,6 +85,7 @@ const ProductDetail = () => {
   const { addToCart } = useCart();
   const { handleError } = useConvexError();
   const { isSignedIn } = useUser();
+  const { placeholderUrl } = useImageSettings();
 
   // Use slug to fetch product from Convex
   const product = useQuery(api.products.getProductBySlug, { slug: productId || "" });
@@ -169,7 +171,7 @@ const ProductDetail = () => {
         name: product.name,
         price: product.retailPrice,
         originalPrice: product.compareAtPrice,
-        image: product.images[0]?.url || "/placeholder.jpg",
+        image: product.images[0]?.url || placeholderUrl,
         size: selectedSize,
         color: selectedColor,
         quantity: quantity,
@@ -382,7 +384,7 @@ const ProductDetail = () => {
                 <ProductCard
                   key={relatedProduct._id}
                   id={relatedProduct.slug}
-                  image={relatedProduct.images[0]?.url || "/placeholder.jpg"}
+                  image={relatedProduct.images[0]?.url || placeholderUrl}
                   hoverImage={relatedProduct.images[1]?.url}
                   name={relatedProduct.name}
                   price={relatedProduct.retailPrice.toFixed(2)}

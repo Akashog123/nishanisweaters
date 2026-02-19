@@ -5,17 +5,24 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { formatCurrency } from "@/lib/formatting";
+import { useImageSettings } from "@/hooks/useImageSettings";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 const WinterWear = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const { settings } = useSiteSettings();
+
+  // Get the configured winter wear category from settings (default: "winter")
+  const winterCategory = settings?.winterWearCategory || "winter";
 
   // Fetch winter wear products from the database
   // Uses category filter to get jackets/winter wear items
   const result = useQuery(api.products.listProducts, {
-    category: "jackets",
+    category: winterCategory,
     limit: 6
   });
   const products = result?.products ?? [];
+  const { placeholderUrl } = useImageSettings();
 
   const nextSlide = () => {
     if (products.length === 0) return;
@@ -73,7 +80,7 @@ const WinterWear = () => {
               shoes, bags and accessories featuring signature styles and detailing.
             </p>
 
-            <Link to="/shop/jackets">
+            <Link to={`/shop/${winterCategory}`}>
               <Button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 text-base">
                 Browse All
               </Button>
@@ -86,7 +93,7 @@ const WinterWear = () => {
             <div className="relative aspect-[3/4] bg-gray-200 rounded-lg overflow-hidden">
               <img
                 key={currentSlide}
-                src={currentProduct.images[0]?.url || "/placeholder.jpg"}
+                src={currentProduct.images[0]?.url || placeholderUrl}
                 alt={currentProduct.name}
                 className="w-full h-full object-cover transition-opacity duration-300"
               />
@@ -119,7 +126,7 @@ const WinterWear = () => {
             >
               <div className="flex items-center gap-4">
                 <img
-                  src={currentProduct.images[0]?.url || "/placeholder.jpg"}
+                  src={currentProduct.images[0]?.url || placeholderUrl}
                   alt={currentProduct.name}
                   className="w-20 h-20 object-cover rounded"
                 />

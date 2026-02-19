@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCart } from "@/context/CartContext";
+import { useImageSettings } from "@/hooks/useImageSettings";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/formatting";
 import { WHATSAPP_BULK_PRICING_CONTACT, WHATSAPP_BULK_PRICING_URL } from "@/lib/constants";
@@ -56,6 +57,7 @@ interface BulkOrderItem {
 export default function BulkOrder() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { placeholderUrl } = useImageSettings();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -137,7 +139,7 @@ export default function BulkOrder() {
         {
           productId: product._id,
           productName: product.name,
-          productImage: product.images[0]?.url || "/placeholder.jpg",
+          productImage: product.images[0]?.url || "placeholderUrl",
           variantSku: variant.sku,
           size: variant.size,
           color: variant.color,
@@ -343,7 +345,7 @@ export default function BulkOrder() {
                     <CardContent className="p-4">
                       <div className="flex gap-4">
                         <img
-                          src={product.images[0]?.url || "/placeholder.jpg"}
+                          src={product.images[0]?.url || "placeholderUrl"}
                           alt={product.name}
                           className="w-24 h-24 object-cover rounded"
                         />

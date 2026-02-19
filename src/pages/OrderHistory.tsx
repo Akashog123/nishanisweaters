@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -25,6 +25,7 @@ import {
   Calendar,
   Loader2,
   RefreshCw,
+  ArrowLeft,
 } from "lucide-react";
 import { formatDate, formatDateTime, formatCurrency } from "@/lib/formatting";
 
@@ -53,6 +54,7 @@ const paymentStatusConfig: Record<PaymentStatus, { label: string; variant: "defa
 };
 
 export default function OrderHistory() {
+  const navigate = useNavigate();
   const { user, isSignedIn, isLoaded: isClerkLoaded } = useUser();
 
   const orders = useQuery(
@@ -124,6 +126,16 @@ export default function OrderHistory() {
     <Layout showAnnouncement={false}>
       <div className="container mx-auto px-4 py-8 lg:py-12">
         <div className="max-w-4xl mx-auto">
+          {/* Back Button */}
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="-ml-2 mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl lg:text-4xl font-bold">Order History</h1>

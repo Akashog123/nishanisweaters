@@ -2,10 +2,12 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import ProductCard from "./ProductCard";
 import ProductSkeleton from "./ProductSkeleton";
+import { useImageSettings } from "@/hooks/useImageSettings";
 
 const BestSeller = () => {
   // Fetch bestseller products with a limit of 3
   const products = useQuery(api.products.getBestsellerProducts, { limit: 3 });
+  const { placeholderUrl } = useImageSettings();
 
   return (
     <section className="py-16 lg:py-24 bg-background">
@@ -24,7 +26,7 @@ const BestSeller = () => {
               <ProductCard
                 key={product._id}
                 id={product.slug}
-                image={product.images[0]?.url || "/placeholder.jpg"}
+                image={product.images[0]?.url || placeholderUrl}
                 hoverImage={product.images[1]?.url}
                 name={product.name}
                 price={product.retailPrice.toFixed(2)}

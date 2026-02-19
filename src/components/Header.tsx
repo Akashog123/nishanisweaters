@@ -12,9 +12,12 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ContactInfoPage } from "@/components/account/ContactInfoPage";
 import { ClerkAddressesPage } from "@/components/account/ClerkAddressesPage";
 import { ClerkNotificationsPage } from "@/components/account/ClerkNotificationsPage";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { useHeaderCategories } from "@/hooks/useCategories";
 
 // Navigation links - defined outside component to prevent recreation on each render
-const NAV_LINKS = [
+// These are fallback defaults when dynamic categories are not enabled
+const DEFAULT_navLinks = [
   { name: "NEW ARRIVALS", href: "/shop/new-arrival" },
   { name: "MENS", href: "/shop/mens" },
   { name: "WOMENS", href: "/shop/womens" },
@@ -23,10 +26,31 @@ const NAV_LINKS = [
   { name: "ABOUT US", href: "/about-us" },
 ] as const;
 
+const STATIC_LINKS = [
+  { name: "BULK PURCHASE", href: "/bulk-purchase" },
+  { name: "ABOUT US", href: "/about-us" },
+] as const;
+
 const Header = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isSignedIn, isLoaded } = useUser();
+  const { siteName, logoUrl, settings } = useSiteSettings();
+  const headerCategories = useHeaderCategories();
+
+  // Check if dynamic categories are enabled
+  const enableDynamicCategories = settings?.enableDynamic === "true";
+
+  // Build navigation links based on settings
+  const navLinks = enableDynamicCategories && headerCategories
+    ? [
+        ...headerCategories.map((cat) => ({
+          name: cat.name.toUpperCase(),
+          href: `/shop/${cat.slug}`,
+        })),
+        ...STATIC_LINKS,
+      ]
+    : DEFAULT_navLinks;
 
   // SECURITY: Use server-side identity verification - never pass client clerkId
   const dbUser = useQuery(
@@ -62,7 +86,7 @@ const Header = () => {
             </SheetTrigger>
             <SheetContent side="left" className="w-[300px] sm:w-[400px]">
               <nav className="flex flex-col gap-4 mt-8">
-                {NAV_LINKS.map((link) => (
+                {navLinks.map((link) => (
                   <Link
                     key={link.name}
                     to={link.href}
@@ -123,13 +147,13 @@ const Header = () => {
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 text-xl lg:text-3xl font-bold tracking-tight">
-            <img src="/Logo.png" alt="Nidhi Sweaters Logo" className="h-10 lg:h-12 w-auto" />
-            NIDHI SWEATERS
+            <img src={logoUrl} alt={`${siteName} Logo`} className="h-12 lg:h-20 w-auto" />
+            {/* {siteName} */}
           </Link>
 
           {/* Navigation - Hidden on mobile */}
           <nav className="hidden lg:flex items-center gap-8">
-            {NAV_LINKS.map((link) => (
+            {navLinks.map((link) => (
               <Link
                 key={link.name}
                 to={link.href}

@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle, RefreshCw, Home, ClipboardList } from "lucide-react";
 import { Link } from "react-router-dom";
 import { logError } from "@/lib/errors";
-import { captureError } from "@/lib/sentry";
 
 interface Props {
   children: ReactNode;
@@ -34,14 +33,6 @@ export class CheckoutErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Log error with checkout-specific context
     logError(error, "CheckoutErrorBoundary");
-
-    // Send to Sentry with checkout context for prioritized alerting
-    captureError(error, {
-      componentStack: errorInfo.componentStack,
-      boundary: "CheckoutErrorBoundary",
-      context: "checkout-flow",
-      severity: "high",
-    });
   }
 
   handleReset = () => {

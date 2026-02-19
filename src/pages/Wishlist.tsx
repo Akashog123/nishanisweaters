@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -146,9 +146,9 @@ export default function Wishlist() {
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-4xl mx-auto">
             <Button variant="ghost" asChild className="mb-6">
-              <Link to="/account">
+              <Link to="/">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Account
+                Continue Shopping
               </Link>
             </Button>
 
@@ -176,9 +176,9 @@ export default function Wishlist() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
             <div>
               <Button variant="ghost" asChild className="mb-2 -ml-4">
-                <Link to="/account">
+                <Link to="/">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Account
+                  Continue Shopping
                 </Link>
               </Button>
               <h1 className="text-3xl lg:text-4xl font-bold flex items-center gap-3">

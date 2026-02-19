@@ -16,8 +16,10 @@ import {
 } from "lucide-react";
 
 import Layout from "@/components/Layout";
+import { BackButton } from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
@@ -155,6 +157,7 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 const ContactUs = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const { responseTime, hoursWeekdays, hoursWeekends, businessLocation } = useSiteSettings();
 
   const submitContactForm = useMutation(api.contact.submitContactForm);
 
@@ -252,8 +255,7 @@ const ContactUs = () => {
                         Message Sent Successfully!
                       </h3>
                       <p className="text-muted-foreground mb-6">
-                        Thank you for reaching out. Our team will review your message
-                        and respond within 24 hours.
+                        Thank you for reaching out. Our team will review your message and {responseTime.toLowerCase()}.
                       </p>
                       <Button onClick={handleSendAnother} variant="outline">
                         Send Another Message
@@ -438,13 +440,13 @@ const ContactUs = () => {
                     title="Email Us"
                   >
                     <a
-                      href="mailto:support@nidhisweaters.com"
+                      href="mailto:support@nidhiclothing.com"
                       className="text-lg font-medium hover:text-zinc-300 transition-colors text-white"
                     >
-                      support@nidhisweaters.com
+                      support@nidhiclothing.com
                     </a>
                     <p className="text-sm text-zinc-400 mt-1">
-                      We respond within 24 hours
+                      {responseTime}
                     </p>
                   </ContactInfoItem>
 
@@ -462,7 +464,7 @@ const ContactUs = () => {
                       +91 7458 816 343
                     </a>
                     <p className="text-sm text-zinc-400 mt-1">
-                      Mon - Sat, 10:00 AM - 6:00 PM IST
+                      Mon - Sat, {hoursWeekdays} IST
                     </p>
                   </ContactInfoItem>
                   
@@ -476,10 +478,10 @@ const ContactUs = () => {
                     <div className="space-y-1 text-zinc-300">
                       <p className="text-sm">
                         <span className="font-medium text-white">Monday - Saturday:</span>{" "}
-                        10:00 AM - 6:00 PM
+                        {hoursWeekdays}
                       </p>
                       <p className="text-sm">
-                        <span className="font-medium text-white">Sunday:</span> Closed
+                        <span className="font-medium text-white">Sunday:</span> {hoursWeekends}
                       </p>
                     </div>
                   </ContactInfoItem>
@@ -498,7 +500,7 @@ const ContactUs = () => {
                     loading="lazy" 
                     referrerPolicy="no-referrer-when-downgrade"
                     className="absolute inset-0 grayscale hover:grayscale-0 transition-all duration-500"
-                    title="Nidhi Sweaters Location"
+                    title="Nidhi Clothing Co. Location"
                   />
                 </div>
               </Card>

@@ -131,7 +131,7 @@ export function AdminSidebar() {
                     NS
                   </div>
                   <div className="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
-                    <span className="font-bold text-sm tracking-tight">NIDHI SWEATERS</span>
+                    <span className="font-bold text-sm tracking-tight">NIDHI CLOTHING CO.</span>
                     <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Admin Panel</span>
                   </div>
                 </Link>

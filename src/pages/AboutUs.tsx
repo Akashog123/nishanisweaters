@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { BackButton } from "@/components/BackButton";
 import {
   Award,
   Heart,
@@ -20,6 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 // Company values data
 const values = [
@@ -62,8 +64,13 @@ const values = [
 ];
 
 const AboutUs = () => {
+  const { establishedYear, businessLocation, customersCount, yearsExperience, qualityGuarantee, siteName } = useSiteSettings();
+
   return (
     <Layout>
+      <div className="container mx-auto px-4 pt-4 lg:px-8">
+        <BackButton />
+      </div>
       {/* Hero Section */}
       <section className="relative bg-zinc-900 text-white py-24 lg:py-32 overflow-hidden">
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1605218427368-35b866509a25?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-30" />
@@ -72,13 +79,13 @@ const AboutUs = () => {
         <div className="container relative mx-auto px-4 lg:px-8">
           <div className="max-w-4xl mx-auto text-center space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
             <Badge variant="outline" className="text-white border-white/30 backdrop-blur-sm px-4 py-1.5 text-sm tracking-widest uppercase">
-              Established 2013
+              Established {establishedYear}
             </Badge>
             <h1 className="text-5xl lg:text-7xl font-bold tracking-tight text-white leading-tight">
               Weaving Stories in <span className="text-primary-foreground italic">Wool</span>
             </h1>
             <p className="text-xl lg:text-2xl text-zinc-300 leading-relaxed max-w-2xl mx-auto font-light">
-              From the heart of Ludhiana to your wardrobe, bringing you premium woolens that blend heritage with modern elegance.
+              From the heart of {businessLocation} to your wardrobe, bringing you premium woolens that blend heritage with modern elegance.
             </p>
           </div>
         </div>
@@ -121,7 +128,7 @@ const AboutUs = () => {
               
               <div className="space-y-6 text-lg text-muted-foreground leading-relaxed">
                 <p className="drop-cap first-letter:text-5xl first-letter:font-serif first-letter:mr-3 first-letter:float-left first-letter:text-primary">
-                  Nidhi Sweaters was founded in 2013 in Ludhiana, Punjab — the
+                  {siteName} was founded in {establishedYear} in {businessLocation} — the
                   heart of India's woolen textile industry. What began as a
                   small family workshop has grown into a trusted name in premium
                   woolen apparel.
@@ -134,15 +141,15 @@ const AboutUs = () => {
                 </p>
                 <div className="flex items-center gap-4 pt-4">
                   <div className="pl-4 border-l-2 border-primary">
-                    <p className="font-semibold text-foreground">10K+</p>
+                    <p className="font-semibold text-foreground">{customersCount}</p>
                     <p className="text-sm">Happy Customers</p>
                   </div>
                   <div className="pl-4 border-l-2 border-primary">
-                    <p className="font-semibold text-foreground">40+</p>
+                    <p className="font-semibold text-foreground">{yearsExperience}</p>
                     <p className="text-sm">Years Experience</p>
                   </div>
                   <div className="pl-4 border-l-2 border-primary">
-                    <p className="font-semibold text-foreground">100%</p>
+                    <p className="font-semibold text-foreground">{qualityGuarantee}</p>
                     <p className="text-sm">Quality Guarantee</p>
                   </div>
                 </div>
@@ -201,8 +208,8 @@ const AboutUs = () => {
             </h2>
             <p className="text-xl text-primary-foreground/90 leading-relaxed max-w-2xl mx-auto font-light">
               Discover our collection of premium woolens, crafted with care in
-              Ludhiana and delivered to your doorstep. Join thousands of
-              satisfied customers who trust Nidhi Sweaters for quality and
+              {businessLocation.split(',')[0]} and delivered to your doorstep. Join thousands of
+              satisfied customers who trust {siteName} for quality and
               style.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">

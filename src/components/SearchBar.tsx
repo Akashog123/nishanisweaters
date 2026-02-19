@@ -6,6 +6,7 @@ import { api } from "../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/constants";
+import { useImageSettings } from "@/hooks/useImageSettings";
 
 const SearchBar = () => {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ const SearchBar = () => {
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { placeholderUrl } = useImageSettings();
 
   // Debounce search query
   useEffect(() => {
@@ -167,7 +169,7 @@ const SearchBar = () => {
                     className="w-full flex items-center gap-3 px-3 py-2 hover:bg-secondary/50 transition-colors text-left"
                   >
                     <img
-                      src={product.images[0]?.url || "/placeholder.jpg"}
+                      src={product.images[0]?.url || placeholderUrl}
                       alt={product.name}
                       className="w-12 h-12 object-cover rounded"
                     />

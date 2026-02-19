@@ -1,7 +1,7 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, Trash2, ShoppingBag, Loader2, AlertCircle, RefreshCw, Heart, ShoppingCart } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingBag, Loader2, AlertCircle, RefreshCw, Heart, ShoppingCart, ArrowLeft } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Id } from "../../convex/_generated/dataModel";
 import { useState } from "react";
 import { PromoCodeInput } from "@/components/PromoCodeInput";
+import { useImageSettings } from "@/hooks/useImageSettings";
 import {
   Select,
   SelectContent,
@@ -120,7 +121,7 @@ function SavedItem({
     <div className="flex gap-4 p-4 border rounded-lg">
       <Link to={`/product/${item.product.slug}`}>
         <img
-          src={item.product.images[0]?.url || "/placeholder.jpg"}
+          src={item.product.images[0]?.url || placeholderUrl}
           alt={item.product.name}
           className="w-20 h-20 object-cover rounded"
         />
@@ -176,8 +177,10 @@ function SavedItem({
 }
 
 export default function Cart() {
+  const navigate = useNavigate();
   const { items, removeFromCart, updateQuantity, getSubtotal, getTotalItems, isLoading, error, clearCart } = useCart();
   const { isSignedIn } = useUser();
+  const { placeholderUrl } = useImageSettings();
 
   // Wishlist queries and mutations (only for signed-in users)
   const wishlist = useQuery(
@@ -289,6 +292,10 @@ export default function Cart() {
   return (
     <Layout showAnnouncement={false}>
       <div className="container mx-auto px-4 py-8">
+        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4 -ml-2">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">
             Shopping Cart ({getTotalItems()} items)

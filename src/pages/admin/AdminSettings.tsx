@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { AdminLayout } from "@/components/AdminLayout";
@@ -44,7 +45,10 @@ import {
   Phone,
   Info,
   ArrowRight,
+  ArrowLeft,
   Share2,
+  Image,
+  ExternalLink,
 } from "lucide-react";
 
 // ============================================
@@ -166,6 +170,46 @@ interface SettingInputProps {
   onChange: (value: string) => void;
 }
 
+// Image preview component for URL settings in images category
+function ImagePreview({ url }: { url: string }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (!url) {
+    return (
+      <p className="text-xs text-muted-foreground mt-1">No URL configured</p>
+    );
+  }
+
+  return (
+    <div className="mt-2">
+      <div className="relative w-full h-32 bg-muted rounded-md overflow-hidden border">
+        {!hasError ? (
+          <img
+            src={url}
+            alt="Preview"
+            className="w-full h-full object-cover"
+            onError={() => setHasError(true)}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+            <Image className="h-8 w-8 mr-2" />
+            <span>Failed to load image</span>
+          </div>
+        )}
+      </div>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-muted-foreground flex items-center gap-1 mt-1 hover:text-primary"
+      >
+        <ExternalLink className="h-3 w-3" />
+        Open in new tab
+      </a>
+    </div>
+  );
+}
+
 function SettingInput({ setting, localValue, onChange }: SettingInputProps) {
   const inputValue = formatForInput(localValue, setting.valueType);
 
@@ -242,13 +286,17 @@ function SettingInput({ setting, localValue, onChange }: SettingInputProps) {
       );
 
     case "url":
+      const showImagePreview = setting.category === "images";
       return (
-        <Input
-          type="url"
-          value={localValue}
-          onChange={(e) => onChange(e.target.value)}
-          className="max-w-lg"
-        />
+        <div>
+          <Input
+            type="url"
+            value={localValue}
+            onChange={(e) => onChange(e.target.value)}
+            className="max-w-lg"
+          />
+          {showImagePreview && <ImagePreview url={localValue} />}
+        </div>
       );
 
     case "phone":
@@ -491,6 +539,8 @@ function HistoryDialog({ open, onClose, settingKey, settingLabel }: HistoryDialo
 // ============================================
 
 export default function AdminSettings() {
+  const navigate = useNavigate();
+
   // Fetch settings data
   const settingsData = useQuery(api.settings.listSettings, {});
   const updateSettings = useMutation(api.settings.updateSettings);
@@ -501,6 +551,7 @@ export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState<string>("pricing_tax");
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
   const [historyDialog, setHistoryDialog] = useState<{
     open: boolean;
     key: string;
@@ -614,6 +665,16 @@ export default function AdminSettings() {
   return (
     <AdminLayout breadcrumbs={[{ label: "Settings" }]}>
       <div className="space-y-6">
+        {/* Back Button */}
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/admin")}
+          className="-ml-2"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Dashboard
+        </Button>
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -626,9 +687,52 @@ export default function AdminSettings() {
             </p>
           </div>
 
+          {/* Preview Mode Banner */}
+          {previewMode && (
+            <div className="fixed bottom-4 right-4 z-50 bg-blue-600 text-white px-6 py-4 rounded-lg shadow-lg max-w-md">
+              <div className="flex items-start gap-3">
+                <ExternalLink className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-semibold">Preview Mode Active</h4>
+                  <p className="text-sm text-blue-100 mt-1">
+                    You're viewing a preview with your unsaved changes. These changes are only visible to you until you save.
+                  </p>
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        setPreviewMode(false);
+                        handleDiscardAll();
+                      }}
+                    >
+                      Discard
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-white text-blue-600 hover:bg-blue-50"
+                      onClick={() => {
+                        setShowSaveDialog(true);
+                      }}
+                    >
+                      Save Changes
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center gap-3">
             {pendingChanges.length > 0 && (
               <>
+                <Button
+                  variant="outline"
+                  onClick={() => setPreviewMode(!previewMode)}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  {previewMode ? "Exit Preview" : "Preview Changes"}
+                </Button>
                 <Button variant="outline" onClick={handleDiscardAll}>
                   Discard All
                 </Button>
@@ -637,6 +741,12 @@ export default function AdminSettings() {
                   Save {pendingChanges.length} Change{pendingChanges.length > 1 ? "s" : ""}
                 </Button>
               </>
+            )}
+            {pendingChanges.length === 0 && previewMode && (
+              <Button variant="outline" onClick={() => setPreviewMode(false)}>
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Exit Preview
+              </Button>
             )}
           </div>
         </div>

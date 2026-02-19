@@ -1,6 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { logError } from '@/lib/errors';
-import { captureError } from '@/lib/sentry';
 import { logger } from '@/lib/logger';
 
 interface Props {
@@ -36,14 +35,8 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // Log error to console and error tracking service
+    // Log error to console
     logError(error, 'ErrorBoundary');
-
-    // Send error to Sentry
-    captureError(error, {
-      componentStack: errorInfo.componentStack,
-      boundary: 'ErrorBoundary',
-    });
 
     // Log component stack trace
     logger.error('Component stack', undefined, { componentStack: errorInfo.componentStack });

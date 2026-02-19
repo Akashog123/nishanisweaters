@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { useActiveCategories } from "@/hooks/useCategories";
 
 // Helper to validate URL protocol for XSS prevention
 const isSafeUrl = (url: string): boolean => {
@@ -15,6 +17,28 @@ const isSafeUrl = (url: string): boolean => {
 const Footer = () => {
   // Fetch dynamic social links from settings
   const socialLinks = useQuery(api.settings.getSocialLinks);
+  const { siteName, logoUrl, footerTagline, footerBackgroundText, copyrightYear, settings } = useSiteSettings();
+  const activeCategories = useActiveCategories();
+
+  // Check if dynamic categories are enabled
+  const enableDynamicCategories = settings?.enableDynamic === "true";
+
+  // Default shop links as fallback
+  const defaultShopLinks = [
+    { name: "NEW ARRIVALS", href: "/shop/new-arrival" },
+    { name: "MENS", href: "/shop/mens" },
+    { name: "WOMENS", href: "/shop/womens" },
+    { name: "KIDS", href: "/shop/kids" },
+    { name: "WINTER", href: "/shop/winter" },
+  ];
+
+  // Build shop links based on settings
+  const shopLinks = enableDynamicCategories && activeCategories
+    ? activeCategories.map((cat) => ({
+        name: cat.name.toUpperCase(),
+        href: `/shop/${cat.slug}`,
+      }))
+    : defaultShopLinks;
 
   return (
     <footer className="bg-gray-100 py-16 lg:py-20 relative overflow-hidden">
@@ -24,16 +48,19 @@ const Footer = () => {
           {/* Brand Section */}
           <div className="col-span-2 lg:col-span-1 space-y-4">
             <div className="flex items-center gap-3">
-              <img src="/Logo.png" alt="Nidhi Sweaters Logo" className="h-24 lg:h-28 w-auto" />
-              <h3 className="text-2xl lg:text-3xl font-bold">NIDHI SWEATERS.</h3>
+              <img src={logoUrl} alt={`${siteName} Logo`} className="h-24 lg:h-28 w-auto" />
+              {/* <h3 className="text-2xl lg:text-3xl font-bold">{siteName}</h3> */}
             </div>
             <p className="text-sm text-gray-600">
-              Made by OG
+              {footerTagline}
             </p>
             <div className="space-y-1 text-sm">
-              <p className="text-gray-900">© 2025 Nidhi Sweaters</p>
+              <p className="text-gray-900">© {copyrightYear} {siteName}</p>
               <Link to="/privacy-policy" className="block text-gray-600 hover:text-black transition-colors">
                 Privacy Policy.
+              </Link>
+              <Link to="/terms-of-service" className="block text-gray-600 hover:text-black transition-colors">
+                Terms of Service.
               </Link>
             </div>
           </div>
@@ -44,31 +71,13 @@ const Footer = () => {
               SHOPS
             </h4>
             <ul className="space-y-2 lg:space-y-3">
-              <li>
-                <Link to="/shop/new-arrival" className="text-sm lg:text-base text-gray-900 hover:underline transition-colors">
-                  NEW ARRIVALS
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop/mens" className="text-sm lg:text-base text-gray-900 hover:underline transition-colors">
-                  MENS
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop/womens" className="text-sm lg:text-base text-gray-900 hover:underline transition-colors">
-                  WOMENS
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop/kids" className="text-sm lg:text-base text-gray-900 hover:underline transition-colors">
-                  KIDS
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop/winter" className="text-sm lg:text-base text-gray-900 hover:underline transition-colors">
-                  WINTER
-                </Link>
-              </li>
+              {shopLinks.map((link) => (
+                <li key={link.href}>
+                  <Link to={link.href} className="text-sm lg:text-base text-gray-900 hover:underline transition-colors">
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -120,7 +129,7 @@ const Footer = () => {
         {/* Background Text */}
         <div className="absolute bottom-0 left-0 right-0 flex items-end justify-center pointer-events-none select-none overflow-hidden h-32 lg:h-48">
           <h2 className="text-[2rem] sm:text-[2.5rem] md:text-[3.5rem] lg:text-[5rem] xl:text-[6rem] 2xl:text-[8rem] font-bold whitespace-nowrap opacity-[0.1] leading-none text-center">
-            DESIGNED FOR THE BOLD.
+            {footerBackgroundText}
           </h2>
         </div>
       </div>

@@ -1,6 +1,8 @@
 import { ArrowRight } from "lucide-react";
 import { useEffect, useRef, useState, useCallback, memo } from "react";
 import { Button } from "@/components/ui/button";
+import { useImageSettings } from "@/hooks/useImageSettings";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 // Use the original high-quality AVIF file from assets (best quality for full resolution)
 import heroAvifOriginal from "@/assets/hero-blockhaus.avif";
@@ -29,6 +31,8 @@ const HeroSection = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDesktop, setIsDesktop] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const { heroUrl } = useImageSettings();
+  const { heroBadgeText, heroHeading, heroDescription, heroCtaText, siteName } = useSiteSettings();
 
   // Check for desktop viewport and reduced motion preference
   useEffect(() => {
@@ -118,42 +122,63 @@ const HeroSection = () => {
         }}
       >
         {/*
-          <picture> element with responsive images
-          Browser picks the best format and size automatically
-          Order: AVIF (best) -> WebP (good) -> JPG (fallback)
+          Dynamic hero from settings - used when admin configures a custom hero image
         */}
-        <picture>
-          {/* AVIF sources - best compression for modern browsers */}
-          <source
-            type="image/avif"
-            srcSet={`${heroAvif480} 480w, ${heroAvif768} 768w, ${heroAvif1024} 1024w, ${heroAvifOriginal} 1920w`}
-            sizes="100vw"
-          />
-          {/* WebP sources - good compression, wider support */}
-          <source
-            type="image/webp"
-            srcSet={`${heroWebp480} 480w, ${heroWebp768} 768w, ${heroWebp1024} 1024w, ${heroWebp1920} 1920w`}
-            sizes="100vw"
-          />
-          {/* JPG fallback for older browsers */}
+        {heroUrl ? (
           <img
-            src={heroImageJpg}
-            alt="NIDHI SWEATERS Fashion Collection - Modern streetwear and premium clothing"
+            src={heroUrl}
+            alt={`${siteName} Fashion Collection`}
             className="w-full h-full object-cover"
-            // Explicit dimensions for CLS prevention
             width={HERO_WIDTH}
             height={HERO_HEIGHT}
             style={{
               aspectRatio: `${HERO_ASPECT_RATIO}`,
               objectFit: "cover",
             }}
-            // LCP optimization attributes
             // @ts-expect-error - React 18 doesn't recognize fetchpriority yet
             fetchpriority="high"
             loading="eager"
-            decoding="sync" // Use sync decoding for LCP image
+            decoding="sync"
           />
-        </picture>
+        ) : (
+          /*
+            <picture> element with responsive images
+            Browser picks the best format and size automatically
+            Order: AVIF (best) -> WebP (good) -> JPG (fallback)
+          */
+          <picture>
+            {/* AVIF sources - best compression for modern browsers */}
+            <source
+              type="image/avif"
+              srcSet={`${heroAvif480} 480w, ${heroAvif768} 768w, ${heroAvif1024} 1024w, ${heroAvifOriginal} 1920w`}
+              sizes="100vw"
+            />
+            {/* WebP sources - good compression, wider support */}
+            <source
+              type="image/webp"
+              srcSet={`${heroWebp480} 480w, ${heroWebp768} 768w, ${heroWebp1024} 1024w, ${heroWebp1920} 1920w`}
+              sizes="100vw"
+            />
+            {/* JPG fallback for older browsers */}
+            <img
+              src={heroImageJpg}
+              alt={`${siteName} Fashion Collection - Modern streetwear and premium clothing`}
+              className="w-full h-full object-cover"
+              // Explicit dimensions for CLS prevention
+              width={HERO_WIDTH}
+              height={HERO_HEIGHT}
+              style={{
+                aspectRatio: `${HERO_ASPECT_RATIO}`,
+                objectFit: "cover",
+              }}
+              // LCP optimization attributes
+              // @ts-expect-error - React 18 doesn't recognize fetchpriority yet
+              fetchpriority="high"
+              loading="eager"
+              decoding="sync" // Use sync decoding for LCP image
+            />
+          </picture>
+        )}
         {/* Overlay for text contrast */}
         <div className="absolute inset-0 bg-black/20" aria-hidden="true" />
       </div>
@@ -162,22 +187,25 @@ const HeroSection = () => {
       <div className="container relative z-10 mx-auto px-4 lg:px-8">
         <div className="max-w-2xl animate-fade-in">
           <span className="inline-block bg-primary text-primary-foreground px-4 py-2 text-sm font-medium tracking-wider mb-6">
-            YEAR-END SALE
+            {heroBadgeText}
           </span>
           <h1 className="text-5xl lg:text-7xl xl:text-8xl font-bold text-white mb-6 leading-tight">
-            NIDHI SWEATERS
-            <br />
-            SIGNATURES 25% OFF
+            {heroHeading.split('\n').map((line, i) => (
+              <span key={i}>
+                {line}
+                {i < heroHeading.split('\n').length - 1 && <br />}
+              </span>
+            ))}
           </h1>
           <p className="text-lg lg:text-xl text-white/90 mb-8 max-w-lg">
-            Redefine your look with 25% off for all NIDHI SWEATERS Signatures outfit
+            {heroDescription}
           </p>
           <Button
             size="lg"
             className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium px-8 py-6 text-base group"
             onClick={handleExploreClick}
           >
-            Explore
+            {heroCtaText}
             <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
           </Button>
         </div>

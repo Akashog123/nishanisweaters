@@ -3,16 +3,11 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import ErrorBoundary from './ErrorBoundary'
 import * as errors from '@/lib/errors'
-import * as sentry from '@/lib/sentry'
 import * as logger from '@/lib/logger'
 
 // Mock the error logging utilities
 vi.mock('@/lib/errors', () => ({
   logError: vi.fn(),
-}))
-
-vi.mock('@/lib/sentry', () => ({
-  captureError: vi.fn(),
 }))
 
 vi.mock('@/lib/logger', () => ({
@@ -102,18 +97,16 @@ describe('ErrorBoundary', () => {
       )
     })
 
-    it('should send error to Sentry', () => {
+    it('should log error to errors module', () => {
       render(
         <ErrorBoundary>
           <ThrowError />
         </ErrorBoundary>
       )
 
-      expect(sentry.captureError).toHaveBeenCalledWith(
+      expect(errors.logError).toHaveBeenCalledWith(
         expect.any(Error),
-        expect.objectContaining({
-          boundary: 'ErrorBoundary',
-        })
+        'ErrorBoundary'
       )
     })
 
@@ -470,7 +463,7 @@ describe('ErrorBoundary', () => {
       )
 
       expect(screen.getByText('Something went wrong')).toBeInTheDocument()
-      expect(sentry.captureError).toHaveBeenCalled()
+      expect(errors.logError).toHaveBeenCalled()
     })
 
     it('should handle ReferenceError', () => {
@@ -481,7 +474,7 @@ describe('ErrorBoundary', () => {
       )
 
       expect(screen.getByText('Something went wrong')).toBeInTheDocument()
-      expect(sentry.captureError).toHaveBeenCalled()
+      expect(errors.logError).toHaveBeenCalled()
     })
 
     it('should handle custom Error subclasses', () => {
@@ -499,7 +492,7 @@ describe('ErrorBoundary', () => {
       )
 
       expect(screen.getByText('Something went wrong')).toBeInTheDocument()
-      expect(sentry.captureError).toHaveBeenCalled()
+      expect(errors.logError).toHaveBeenCalled()
     })
   })
 
