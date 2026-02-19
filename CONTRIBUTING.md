@@ -62,14 +62,14 @@ npm --version   # Should be 9.x or higher
    RAZORPAY_KEY_ID=rzp_test_your_key_here
    RAZORPAY_KEY_SECRET=your_razorpay_secret
 
-   # Resend Email (https://resend.com)
-   RESEND_API_KEY=re_your_api_key_here
+   # SMTP Email Service - Brevo (https://app.brevo.com/settings/keys/smtp)
+   SMTP_HOST=smtp-relay.brevo.com
+   SMTP_PORT=587
+   SMTP_USER=your-brevo-login-email@example.com
+   SMTP_PASS=your-brevo-smtp-key
 
    # App Configuration
    VITE_APP_URL=http://localhost:8080
-
-   # Optional: Sentry Error Tracking
-   VITE_SENTRY_DSN=https://your-sentry-dsn@sentry.io/your-project-id
    ```
 
 4. **Initialize Convex**

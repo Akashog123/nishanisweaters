@@ -1,11 +1,11 @@
-# Product Requirements Document (PRD): Nidhi Sweaters E-commerce Platform
+# Product Requirements Document (PRD): Nidhi Clothing Co. E-commerce Platform
 
 ## 1. Project Overview
-Nidhi Sweaters is a premium winter wear brand powered by Nidhi. The goal is to evolve the current showcase site into a full-fledged e-commerce platform that supports both retail (B2C) and wholesale (B2B) operations, managed through a centralized admin dashboard.
+Nidhi Clothing Co. is a premium winter wear brand. The goal is to evolve the current showcase site into a full-fledged e-commerce platform that supports both retail (B2C) and wholesale (B2B) operations, managed through a centralized admin dashboard.
 
 ## 2. Target Audience
 *   **Retail Customers (B2C):** Individual shoppers looking for premium winter wear.
-*   **Wholesale Partners (B2B):** Retailers and boutiques looking to stock Nidhi Sweaters products in bulk.
+*   **Wholesale Partners (B2B):** Retailers and boutiques looking to stock Nidhi Clothing Co. products in bulk.
 *   **Administrators:** Internal staff managing inventory, orders, and customer relations.
 
 ## 3. Key Features

@@ -1,8 +1,8 @@
-# Technical Specifications: Nishani Woolera E-commerce Platform
+# Technical Specifications: Nidhi Clothing Co. E-commerce Platform
 
 ## Problem Statement
 
-**Business Issue**: The current Nishani Woolera showcase site lacks e-commerce functionality, preventing the brand from selling premium winter wear products online. There is no support for retail (B2C) transactions, wholesale (B2B) partnerships, inventory management, or order processing.
+**Business Issue**: The current Nidhi Clothing Co. showcase site lacks e-commerce functionality, preventing the brand from selling premium winter wear products online. There is no support for retail (B2C) transactions, wholesale (B2B) partnerships, inventory management, or order processing.
 
 **Current State**:
 - Static React-based showcase site with product displays
@@ -22,7 +22,7 @@
 
 ## Solution Overview
 
-**Approach**: Build a serverless e-commerce platform leveraging Convex for real-time backend operations, Clerk for authentication and user management, Razorpay for payment processing, and Resend for transactional emails. The frontend will evolve from the existing React/Vite/TypeScript/Tailwind CSS codebase with Shadcn UI components.
+**Approach**: Build a serverless e-commerce platform leveraging Convex for real-time backend operations, Clerk for authentication and user management, Razorpay for payment processing, and Nodemailer with Brevo SMTP for transactional emails. The frontend will evolve from the existing React/Vite/TypeScript/Tailwind CSS codebase with Shadcn UI components.
 
 **Core Changes**:
 - Integrate Convex backend with schema for products, users, orders, cart, wishlist, inventory, and wholesale applications
@@ -30,7 +30,7 @@
 - Add Razorpay payment gateway for retail checkout and wholesale invoicing
 - Create admin dashboard for inventory, order, and customer management
 - Build wholesale portal with tiered pricing, bulk ordering, and MOQ enforcement
-- Set up Resend for automated transactional and marketing emails
+- Set up Nodemailer with Brevo SMTP for automated transactional emails
 - Implement real-time updates using Convex reactive queries
 
 **Success Criteria**:
@@ -1193,7 +1193,7 @@ export const getOrderTypeBreakdown = query({
 export const sendOrderConfirmation = action({
   args: { orderId: v.id("orders") },
   handler: async (ctx, args) => {
-    // Implementation: Fetch order, send email via Resend
+    // Implementation: Fetch order, send email via Nodemailer/SMTP
   },
 });
 
@@ -1231,7 +1231,7 @@ export const subscribeToNewsletter = mutation({
 export const sendMarketingCampaign = action({
   args: { campaignId: v.id("emailCampaigns") },
   handler: async (ctx, args) => {
-    // Implementation: Send bulk emails via Resend
+    // Implementation: Send bulk emails via Nodemailer/SMTP
   },
 });
 ```
@@ -1300,8 +1300,11 @@ CONVEX_DEPLOYMENT=prod:...
 VITE_RAZORPAY_KEY_ID=rzp_test_...
 RAZORPAY_KEY_SECRET=...
 
-# Resend
-RESEND_API_KEY=re_...
+# SMTP Email Service (Brevo)
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_USER=your-email@example.com
+SMTP_PASS=your-brevo-smtp-key
 ```
 
 #### 3.2 Clerk Provider Setup
@@ -1552,7 +1555,7 @@ export function RazorpayCheckout({ orderId }: { orderId: string }) {
       amount: razorpayOrder.amount,
       currency: razorpayOrder.currency,
       order_id: razorpayOrder.id,
-      name: "Nishani Woolera",
+      name: "Nidhi Clothing Co.",
       description: "Order Payment",
       prefill: {
         email: user?.emailAddresses[0].emailAddress,
@@ -1623,7 +1626,7 @@ http.route({
 
 ---
 
-### 5. Resend Email Integration
+### 5. Nodemailer Email Integration (Brevo SMTP)
 
 #### 5.1 Email Templates
 
@@ -1697,53 +1700,67 @@ export function wholesaleRejectionTemplate(application: any, user: any) {
 }
 ```
 
-#### 5.2 Resend Integration
+#### 5.2 Nodemailer SMTP Integration
 
-**File: `convex/emails/resend.ts`**
+**File: `convex/lib/emailService.ts`**
 ```typescript
-import { action } from "../_generated/server";
-import { v } from "convex/values";
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
+import type { Transporter } from "nodemailer";
+import { ConvexError } from "convex/values";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Create Nodemailer transporter with SMTP configuration
+function createTransporter(): Transporter {
+  const host = process.env.SMTP_HOST;
+  const port = process.env.SMTP_PORT;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
 
-export const sendEmail = action({
-  args: {
-    to: v.string(),
-    subject: v.string(),
-    html: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const { data, error } = await resend.emails.send({
-      from: "Nishani Woolera <orders@nishaniwoolera.com>",
-      to: args.to,
-      subject: args.subject,
-      html: args.html,
+  if (!host || !port || !user || !pass) {
+    throw new ConvexError({
+      code: "CONFIGURATION_ERROR",
+      message: "SMTP configuration incomplete",
     });
+  }
 
-    if (error) {
-      throw new Error(`Failed to send email: ${error.message}`);
+  return nodemailer.createTransport({
+    host,
+    port: parseInt(port, 10),
+    secure: parseInt(port, 10) === 465,
+    auth: { user, pass },
+  });
+}
+
+export class EmailService {
+  private transporter: Transporter;
+
+  constructor() {
+    this.transporter = createTransporter();
+  }
+
+  async send(params: {
+    from: string;
+    to: string;
+    subject: string;
+    html: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    try {
+      await this.transporter.sendMail(params);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: String(error) };
     }
+  }
+}
+```
 
-    return data;
-  },
-});
-
-export const sendOrderConfirmation = action({
-  args: { orderId: v.id("orders") },
-  handler: async (ctx, args) => {
-    const order = await ctx.runQuery(internal.orders.getOrderById, {
-      orderId: args.orderId,
-    });
-
-    const template = orderConfirmationTemplate(order);
-
-    await sendEmail(ctx, {
-      to: order.userEmail,
-      subject: template.subject,
-      html: template.html,
-    });
-  },
+**Usage Example:**
+```typescript
+const emailService = new EmailService();
+await emailService.send({
+  from: "Nidhi Clothing Co. <support@nidhiclothing.com>",
+  to: order.userEmail,
+  subject: template.subject,
+  html: template.html,
 });
 ```
 
@@ -2398,10 +2415,10 @@ export function BulkOrderForm({ product }: { product: any }) {
    - Create order tracking functionality
 
 ### Phase 4: Email Integration (Week 7)
-1. **Resend Setup**
-   - Install Resend SDK
-   - Create email templates in `convex/emails/templates.ts`
-   - Implement send functions in `convex/emails/resend.ts`
+1. **Nodemailer Setup (Brevo SMTP)**
+   - Install Nodemailer: `npm install nodemailer @types/nodemailer`
+   - Create email templates in `convex/lib/emailTemplates/`
+   - Implement EmailService class in `convex/lib/emailService.ts`
 
 2. **Transactional Emails**
    - Order confirmation emails
@@ -2511,7 +2528,7 @@ export function BulkOrderForm({ product }: { product: any }) {
    - Set up production Convex deployment
    - Configure production Clerk instance
    - Add production Razorpay credentials
-   - Set up production Resend account
+   - Set up production Brevo SMTP account
 
 2. **Deployment**
    - Deploy frontend to Vercel
@@ -2610,9 +2627,9 @@ D:\Projects\blockhaus-clone-showcase\
 │   ├── reviews.ts                   # Review system
 │   ├── analytics.ts                 # Analytics queries
 │   ├── cms.ts                       # CMS functions
-│   ├── emails/
-│   │   ├── templates.ts             # Email templates
-│   │   └── resend.ts                # Resend integration
+│   ├── lib/
+│   │   ├── emailService.ts          # Nodemailer SMTP integration
+│   │   └── emailTemplates/          # Email templates
 │   └── _generated/                  # Convex generated files
 │
 ├── src/
@@ -2692,7 +2709,7 @@ D:\Projects\blockhaus-clone-showcase\
     "convex": "^1.x",
     "convex-helpers": "^0.x",
     "razorpay": "^2.x",
-    "resend": "^3.x"
+    "nodemailer": "^7.x"
   },
   "devDependencies": {
     // Existing remain unchanged
@@ -2720,8 +2737,11 @@ VITE_RAZORPAY_KEY_ID=rzp_test_...
 RAZORPAY_KEY_SECRET=your_razorpay_secret
 RAZORPAY_WEBHOOK_SECRET=your_webhook_secret
 
-# Resend Email Service
-RESEND_API_KEY=re_...
+# SMTP Email Service (Brevo)
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_USER=your-email@example.com
+SMTP_PASS=your-brevo-smtp-key
 
 # App Configuration
 VITE_APP_URL=http://localhost:8080
@@ -2739,7 +2759,7 @@ VITE_API_URL=https://your-deployment.convex.cloud
 {
   "functions": "convex/",
   "node": {
-    "externalPackages": ["razorpay", "resend", "svix"]
+    "externalPackages": ["razorpay", "nodemailer", "svix"]
   }
 }
 ```
@@ -2792,10 +2812,10 @@ export default defineConfig(({ mode }) => ({
 - Production: Transaction fees apply (2% + GST)
 - Webhook retries: 3 attempts with exponential backoff
 
-### Resend
-- Free tier: 100 emails/day
-- Paid: $20/month for 50,000 emails
-- Rate limit: 1 email/second on free tier
+### Brevo SMTP (Email)
+- Free tier: 300 emails/day (9,000/month)
+- Paid: €7/month for 20,000 emails
+- Rate limit: 10 emails/second on free tier
 
 ---
 
@@ -2834,7 +2854,7 @@ export default defineConfig(({ mode }) => ({
 - [ ] All Convex schema tables deployed successfully
 - [ ] Clerk authentication working with role-based access
 - [ ] Razorpay payments processing successfully
-- [ ] Email notifications sending via Resend
+- [ ] Email notifications sending via Nodemailer/Brevo SMTP
 - [ ] Real-time inventory updates functioning
 - [ ] Admin dashboard displaying analytics
 - [ ] Wholesale portal showing tiered pricing
@@ -2849,4 +2869,4 @@ export default defineConfig(({ mode }) => ({
 
 ---
 
-This technical specification provides a complete blueprint for transforming the Nishani Woolera showcase site into a full-fledged e-commerce platform with B2C and B2B capabilities. Each section maps directly to implementation tasks with specific file paths, function signatures, and integration details.
+This technical specification provides a complete blueprint for transforming the Nidhi Clothing Co. showcase site into a full-fledged e-commerce platform with B2C and B2B capabilities. Each section maps directly to implementation tasks with specific file paths, function signatures, and integration details.

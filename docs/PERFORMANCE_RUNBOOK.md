@@ -1,6 +1,6 @@
 # Performance Optimization Runbook
 
-This runbook documents the performance optimization strategies implemented in the Nidhi Sweaters e-commerce application, along with monitoring procedures and troubleshooting guides.
+This runbook documents the performance optimization strategies implemented in the Nidhi Clothing Co. e-commerce application, along with monitoring procedures and troubleshooting guides.
 
 ## Table of Contents
 
@@ -24,7 +24,7 @@ This runbook documents the performance optimization strategies implemented in th
 | Backend | Convex (serverless) | Indexed queries, batch operations, real-time subscriptions |
 | Payment | Razorpay | Circuit breaker, timeout protection |
 | CDN | Vercel Edge | Asset caching, compression, geographic distribution |
-| Observability | Sentry + Web Vitals | Error tracking, RUM, distributed tracing |
+| Analytics | Web Vitals | Core Web Vitals tracking |
 
 ### Critical User Journeys
 
@@ -74,7 +74,6 @@ Vendor chunks for optimal caching:
 ├── vendor-convex (Backend client) - loaded on every page
 ├── vendor-charts (Admin only) - lazy loaded
 ├── vendor-forms (Form pages) - lazy loaded
-├── vendor-sentry (Error tracking) - deferred loading
 ├── vendor-carousel (Product pages) - lazy loaded
 ├── vendor-scroll (Smooth scroll) - lazy loaded
 └── vendor-toast (Notifications) - lazy loaded
@@ -284,7 +283,7 @@ node scripts/check-bundle-size.js
 ### Weekly Tasks
 
 1. **Review error budget consumption** in Grafana
-2. **Check Core Web Vitals trends** in Sentry
+2. **Check Core Web Vitals trends** in Web Vitals dashboard
 3. **Review slow queries** in Convex dashboard
 4. **Check bundle size trends** in CI artifacts
 

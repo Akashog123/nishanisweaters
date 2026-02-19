@@ -10,7 +10,6 @@ A modern e-commerce application built with React, TypeScript, and Convex, featur
 - **Authentication**: Clerk
 - **State Management**: React Context, React Query
 - **Testing**: Vitest, React Testing Library
-- **Error Tracking**: Sentry (optional)
 
 ## Features
 
@@ -50,7 +49,6 @@ cp .env.example .env.local
 Edit `.env.local` with your configuration:
 - `VITE_CONVEX_URL` - Your Convex deployment URL
 - `VITE_CLERK_PUBLISHABLE_KEY` - Clerk publishable key
-- `VITE_SENTRY_DSN` - (Optional) Sentry DSN for error tracking
 
 4. Start the development server:
 ```sh
@@ -140,7 +138,7 @@ The production build includes:
 The application uses a centralized logging system:
 
 - Development: Console output with structured formatting
-- Production: Errors sent to Sentry (if configured)
+- Production: Errors logged for debugging
 
 Use the logger in your code:
 
@@ -159,8 +157,6 @@ logger.error('Error message', error, { context: 'data' });
 |----------|----------|-------------|
 | `VITE_CONVEX_URL` | Yes | Convex deployment URL |
 | `VITE_CLERK_PUBLISHABLE_KEY` | Yes | Clerk publishable key |
-| `VITE_SENTRY_DSN` | No | Sentry DSN for error tracking |
-| `VITE_SENTRY_ENVIRONMENT` | No | Environment name for Sentry |
 
 ## Deployment
 

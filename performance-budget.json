@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/web-performance-budget.json",
-  "description": "Performance budget for Nidhi Sweaters e-commerce application",
+  "description": "Performance budget for Nidhi Clothing Co. e-commerce application",
   "budgets": [
     {
       "resourceType": "script",
@@ -57,10 +57,6 @@
     "vendor-forms": {
       "budget": 100,
       "description": "React Hook Form + Zod validation"
-    },
-    "vendor-sentry": {
-      "budget": 80,
-      "description": "Sentry error tracking SDK"
     },
     "vendor-icons": {
       "budget": 60,
