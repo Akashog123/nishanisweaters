@@ -150,7 +150,7 @@ export const sendWholesaleStatusEmail = internalAction({
 
     const subject =
       args.status === "approved"
-        ? "Welcome to the Nidhi Sweaters Wholesale Program!"
+        ? "Welcome to the Nidhi Clothing Co. Wholesale Program!"
         : "Wholesale Application Update";
 
     return emailService.sendWholesaleEmail(ctx, {
@@ -179,7 +179,7 @@ export const sendNewsletterWelcomeEmail = internalAction({
 
     return emailService.sendSupportEmail(ctx, {
       to: args.to,
-      subject: "Welcome to Nidhi Sweaters!",
+      subject: "Welcome to Nidhi Clothing Co.!",
       html,
     });
   },
@@ -202,7 +202,7 @@ export const sendWelcomeEmail = internalAction({
 
     return emailService.sendSupportEmail(ctx, {
       to: args.to,
-      subject: "Welcome to Nidhi Sweaters!",
+      subject: "Welcome to Nidhi Clothing Co.!",
       html,
     });
   },
@@ -295,7 +295,7 @@ export const sendDisputeAlertEmail = internalAction({
   handler: async (ctx, args) => {
     const emailService = new EmailService();
 
-    const baseUrl = process.env.SITE_URL || "https://nidhisweaters.com";
+    const baseUrl = process.env.SITE_URL || "https://nidhiclothing.com";
     const dashboardUrl = `${baseUrl}/admin/orders`;
 
     const html = generateDisputeAlertTemplate({
@@ -335,7 +335,7 @@ export const sendDisputeResolutionEmail = internalAction({
   handler: async (ctx, args) => {
     const emailService = new EmailService();
 
-    const baseUrl = process.env.SITE_URL || "https://nidhisweaters.com";
+    const baseUrl = process.env.SITE_URL || "https://nidhiclothing.com";
     const dashboardUrl = `${baseUrl}/admin/orders`;
 
     const html = generateDisputeResolutionTemplate({
@@ -384,7 +384,7 @@ export const sendContactInquiryEmail = internalAction({
   handler: async (ctx, args) => {
     const emailService = new EmailService();
 
-    const baseUrl = process.env.SITE_URL || "https://nidhisweaters.com";
+    const baseUrl = process.env.SITE_URL || "https://nidhiclothing.com";
     const dashboardUrl = `${baseUrl}/admin/contact`;
 
     const subjectLabel = CONTACT_SUBJECT_LABELS[args.subject] || args.subject;
@@ -404,7 +404,7 @@ export const sendContactInquiryEmail = internalAction({
     const emailSubject = `[Contact] ${subjectLabel} from ${args.name}`;
 
     return emailService.sendSupportEmail(ctx, {
-      to: (await emailService.getConfig(ctx)).support || "support@nidhisweaters.com",
+      to: (await emailService.getConfig(ctx)).support || "support@nidhiclothing.com",
       subject: emailSubject,
       html,
       replyTo: args.email,

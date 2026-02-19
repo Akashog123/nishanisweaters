@@ -15,7 +15,7 @@ export function generateWelcomeEmailTemplate(data: WelcomeEmailData): string {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Welcome to Nidhi Sweaters</title>
+  <title>Welcome to Nidhi Clothing Co.</title>
   <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
     .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -28,12 +28,12 @@ export function generateWelcomeEmailTemplate(data: WelcomeEmailData): string {
 <body>
   <div class="container">
     <div class="header">
-      <h1>Nidhi Sweaters</h1>
+      <h1>Nidhi Clothing Co.</h1>
       <p style="margin: 10px 0 0 0; opacity: 0.8;">Premium Winter Wear</p>
     </div>
     <div class="content">
       <h2>Welcome, ${escapeHtml(data.customerName)}!</h2>
-      <p>Thank you for creating an account with Nidhi Sweaters. We're excited to have you join our community of style-conscious winter wear enthusiasts.</p>
+      <p>Thank you for creating an account with Nidhi Clothing Co. We're excited to have you join our community of style-conscious winter wear enthusiasts.</p>
 
       <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 25px 0;">
         <h3 style="margin-top: 0;">What you can do now:</h3>
@@ -46,12 +46,12 @@ export function generateWelcomeEmailTemplate(data: WelcomeEmailData): string {
       </div>
 
       <div style="text-align: center;">
-        <a href="https://nidhisweaters.com/shop" class="cta-button">Start Shopping</a>
+        <a href="https://nidhiclothing.com/shop" class="cta-button">Start Shopping</a>
       </div>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© ${currentYear} Nidhi Sweaters. All rights reserved.</p>
-      <p style="margin: 10px 0 0 0;">Questions? Contact us at support@nidhisweaters.com</p>
+      <p style="margin: 0;">© ${currentYear} Nidhi Clothing Co. All rights reserved.</p>
+      <p style="margin: 10px 0 0 0;">Questions? Contact us at support@nidhiclothing.com</p>
     </div>
   </div>
 </body>

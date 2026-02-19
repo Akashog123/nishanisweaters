@@ -11,7 +11,7 @@ export function generateNewsletterWelcomeTemplate(): string {
   `;
 
   return baseEmailLayout({
-    title: "Welcome to Nidhi Sweaters",
+    title: "Welcome to Nidhi Clothing Co.",
     content,
     showTagline: false,
   });

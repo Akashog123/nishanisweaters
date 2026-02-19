@@ -187,7 +187,7 @@ export const processAbandonedCart = internalMutation({
       reminderNumber: args.reminderNumber,
       items: args.items,
       cartTotal: args.cartTotal,
-      cartUrl: "https://nidhisweaters.com/cart",
+      cartUrl: "https://nidhiclothing.com/cart",
     });
 
     return { success: true, reminderNumber: args.reminderNumber };

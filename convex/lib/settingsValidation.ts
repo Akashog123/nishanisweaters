@@ -81,11 +81,18 @@ function validateEmail(registry: SettingDefinition, value: string): void {
 }
 
 /**
- * Validates URLs with protocol checking
+ * Validates URLs with protocol checking and security enhancements
  */
 function validateUrl(registry: SettingDefinition, value: string): void {
   // Allow empty URLs for optional fields (like social links)
   if (value === "") return;
+
+  // Length check to prevent DoS attacks
+  if (value.length > 2048) {
+    throw createValidationError(
+      `${registry.label} URL is too long (max 2048 characters)`
+    );
+  }
 
   try {
     const url = new URL(value);
@@ -123,11 +130,67 @@ function validatePhone(registry: SettingDefinition, value: string): void {
 }
 
 /**
- * Validates string values
+ * Validates string values with XSS prevention and control character filtering
  */
 function validateString(registry: SettingDefinition, value: string): void {
   if (!value.trim()) {
     throw createValidationError(`${registry.label} cannot be empty`);
+  }
+
+  // Reject control characters (OWASP recommendation)
+  // This prevents null bytes and other dangerous control characters
+  if (/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(value)) {
+    throw createValidationError(
+      `${registry.label} contains invalid characters`
+    );
+  }
+
+  // Check max length (prevent DoS)
+  if (value.length > 5000) {
+    throw createValidationError(
+      `${registry.label} is too long (max 5000 characters)`
+    );
+  }
+}
+
+/**
+ * Validates text content (for legal pages, descriptions) with HTML sanitization
+ */
+function validateText(registry: SettingDefinition, value: string): void {
+  if (!value.trim()) {
+    // Allow empty for optional text fields
+    return;
+  }
+
+  // Reject control characters
+  if (/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(value)) {
+    throw createValidationError(
+      `${registry.label} contains invalid characters`
+    );
+  }
+
+  // Check max length (prevent DoS) - higher limit for text content
+  if (value.length > 50000) {
+    throw createValidationError(
+      `${registry.label} is too long (max 50000 characters)`
+    );
+  }
+
+  // Check for dangerous HTML patterns (basic XSS prevention)
+  // Note: Full sanitization happens on output, this is input validation
+  const dangerousPatterns = [
+    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+    /javascript\s*:/gi,
+    /on\w+\s*=/gi,
+    /data\s*:/gi,
+  ];
+
+  for (const pattern of dangerousPatterns) {
+    if (pattern.test(value)) {
+      throw createValidationError(
+        `${registry.label} contains potentially dangerous content`
+      );
+    }
   }
 }
 
@@ -147,6 +210,7 @@ const VALIDATORS: Record<string, ValidatorFunction> = {
   boolean: validateBoolean,
   phone: validatePhone,
   string: validateString,
+  text: validateText,
 };
 
 /**

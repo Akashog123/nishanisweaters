@@ -1,5 +1,43 @@
 import { mutation } from "./_generated/server";
 
+// Default categories to seed on fresh install
+const DEFAULT_CATEGORIES = [
+  { name: "New Arrivals", slug: "new-arrival", description: "Our latest arrivals", showInHeader: true, displayOrder: 1 },
+  { name: "Men's", slug: "mens", description: "Men's collection", showInHeader: true, displayOrder: 2 },
+  { name: "Women's", slug: "womens", description: "Women's collection", showInHeader: true, displayOrder: 3 },
+  { name: "Kids", slug: "kids", description: "Kids collection", showInHeader: true, displayOrder: 4 },
+  { name: "Winter Wear", slug: "winter", description: "Winter wear collection", showInHeader: true, displayOrder: 5 },
+];
+
+// Seed default categories for fresh installs
+export const seedCategories = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // Check if categories already exist
+    const existingCategories = await ctx.db.query("categories").collect();
+
+    if (existingCategories.length > 0) {
+      return { success: false, message: "Categories already exist", count: existingCategories.length };
+    }
+
+    const now = Date.now();
+    const insertedIds = [];
+
+    for (const category of DEFAULT_CATEGORIES) {
+      const id = await ctx.db.insert("categories", {
+        ...category,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+        createdBy: "system",
+      });
+      insertedIds.push(id);
+    }
+
+    return { success: true, count: insertedIds.length, ids: insertedIds };
+  },
+});
+
 // Seed products for development
 export const seedProducts = mutation({
   handler: async (ctx) => {
@@ -257,7 +295,7 @@ export const createAdminUser = mutation({
 
     const userId = await ctx.db.insert("users", {
       clerkId: "admin_placeholder",
-      email: "admin@nidhisweaters.com",
+      email: "admin@nidhiclothing.com",
       firstName: "Admin",
       lastName: "User",
       role: "admin",

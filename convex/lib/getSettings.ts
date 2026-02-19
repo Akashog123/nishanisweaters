@@ -205,11 +205,11 @@ export async function getEmailConfig(ctx: ConvexCtx): Promise<{
   ]);
 
   return {
-    fromOrders: settings[SETTING_KEYS.EMAIL_FROM_ORDERS] || "orders@nidhisweaters.com",
-    fromShipping: settings[SETTING_KEYS.EMAIL_FROM_SHIPPING] || "shipping@nidhisweaters.com",
-    fromWholesale: settings[SETTING_KEYS.EMAIL_FROM_WHOLESALE] || "wholesale@nidhisweaters.com",
-    fromCart: settings[SETTING_KEYS.EMAIL_FROM_CART] || "cart@nidhisweaters.com",
-    support: settings[SETTING_KEYS.EMAIL_SUPPORT] || "support@nidhisweaters.com",
+    fromOrders: settings[SETTING_KEYS.EMAIL_FROM_ORDERS] || "support@nidhiclothing.com",
+    fromShipping: settings[SETTING_KEYS.EMAIL_FROM_SHIPPING] || "support@nidhiclothing.com",
+    fromWholesale: settings[SETTING_KEYS.EMAIL_FROM_WHOLESALE] || "support@nidhiclothing.com",
+    fromCart: settings[SETTING_KEYS.EMAIL_FROM_CART] || "support@nidhiclothing.com",
+    support: settings[SETTING_KEYS.EMAIL_SUPPORT] || "support@nidhiclothing.com",
   };
 }
 

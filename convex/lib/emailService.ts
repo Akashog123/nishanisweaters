@@ -1,9 +1,10 @@
 /**
- * Email Service Wrapper
- * Centralizes email configuration and sending logic
+ * Email Service
+ *
+ * Sends transactional emails via Brevo HTTP API
+ * Uses native fetch() - no nodemailer needed!
  */
 /* eslint-disable @typescript-eslint/no-explicit-any -- GenericActionCtx requires any for DataModel flexibility */
-import { Resend } from "resend";
 import { ConvexError } from "convex/values";
 import { GenericActionCtx } from "convex/server";
 import { internal } from "../_generated/api";
@@ -18,31 +19,83 @@ export interface EmailConfig {
 }
 
 /**
- * Initialize Resend instance with API key validation
+ * Brevo API Configuration
  */
-function getResendInstance(): Resend {
-  const apiKey = process.env.RESEND_API_KEY;
+interface BrevoConfig {
+  apiKey: string;
+}
+
+/**
+ * Get and validate Brevo API configuration from environment
+ */
+function getBrevoConfig(): BrevoConfig {
+  const apiKey = process.env.BREVO_API_KEY;
 
   if (!apiKey) {
     throw new ConvexError({
       code: "CONFIGURATION_ERROR",
-      message: "Resend API key not configured",
+      message: "Brevo API key not configured. Set BREVO_API_KEY environment variable.",
     });
   }
 
-  return new Resend(apiKey);
+  return { apiKey };
+}
+
+/**
+ * Send email via Brevo HTTP API
+ */
+async function sendViaBrevo(
+  config: BrevoConfig,
+  params: {
+    from: string;
+    to: string;
+    subject: string;
+    html: string;
+    replyTo?: string;
+  }
+): Promise<void> {
+  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "api-key": config.apiKey,
+    },
+    body: JSON.stringify({
+      sender: {
+        email: params.from.includes("<")
+          ? params.from.match(/<(.+)>/)?.[1] || params.from
+          : params.from,
+      },
+      to: [{ email: params.to }],
+      subject: params.subject,
+      htmlContent: params.html,
+      ...(params.replyTo && {
+        replyTo: { email: params.replyTo },
+      }),
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Brevo API error: ${response.status} - ${errorText}`);
+  }
 }
 
 /**
  * EmailService class to handle all email operations
- * Caches email configuration to reduce database queries
  */
 export class EmailService {
-  private resend: Resend;
   private config: EmailConfig | null = null;
+  private brevoConfig: BrevoConfig | null = null;
 
-  constructor() {
-    this.resend = getResendInstance();
+  /**
+   * Get Brevo configuration (cached)
+   */
+  private getBrevo(): BrevoConfig {
+    if (!this.brevoConfig) {
+      this.brevoConfig = getBrevoConfig();
+    }
+    return this.brevoConfig;
   }
 
   /**
@@ -67,13 +120,7 @@ export class EmailService {
     logContext?: Record<string, any>;
   }): Promise<{ success: boolean; error?: string }> {
     try {
-      await this.resend.emails.send({
-        from: params.from,
-        to: params.to,
-        subject: params.subject,
-        html: params.html,
-        replyTo: params.replyTo,
-      });
+      await sendViaBrevo(this.getBrevo(), params);
 
       if (params.logContext) {
         logger.info(`Email sent: ${params.subject}`, params.logContext);
@@ -103,7 +150,7 @@ export class EmailService {
   ): Promise<{ success: boolean; error?: string }> {
     const config = await this.getConfig(ctx);
     return this.send({
-      from: `Nishani Woolera <${config.fromOrders}>`,
+      from: `Nidhi Clothing Co. <${config.fromOrders}>`,
       to: params.to,
       subject: params.subject,
       html: params.html,
@@ -125,7 +172,7 @@ export class EmailService {
   ): Promise<{ success: boolean; error?: string }> {
     const config = await this.getConfig(ctx);
     return this.send({
-      from: `Nishani Woolera <${config.fromShipping}>`,
+      from: `Nidhi Clothing Co. <${config.fromShipping}>`,
       to: params.to,
       subject: params.subject,
       html: params.html,
@@ -147,7 +194,7 @@ export class EmailService {
   ): Promise<{ success: boolean; error?: string }> {
     const config = await this.getConfig(ctx);
     return this.send({
-      from: `Nishani Woolera <${config.fromWholesale}>`,
+      from: `Nidhi Clothing Co. <${config.fromWholesale}>`,
       to: params.to,
       subject: params.subject,
       html: params.html,
@@ -169,7 +216,7 @@ export class EmailService {
   ): Promise<{ success: boolean; error?: string }> {
     const config = await this.getConfig(ctx);
     return this.send({
-      from: `Nishani Woolera <${config.fromCart}>`,
+      from: `Nidhi Clothing Co. <${config.fromCart}>`,
       to: params.to,
       subject: params.subject,
       html: params.html,
@@ -192,7 +239,7 @@ export class EmailService {
   ): Promise<{ success: boolean; error?: string }> {
     const config = await this.getConfig(ctx);
     return this.send({
-      from: `Nishani Woolera <${config.support}>`,
+      from: `Nidhi Clothing Co. <${config.support}>`,
       to: params.to,
       subject: params.subject,
       html: params.html,
@@ -213,10 +260,10 @@ export class EmailService {
     }
   ): Promise<{ success: boolean; error?: string }> {
     const config = await this.getConfig(ctx);
-    const adminEmail = config.support || "support@nishaniwoolera.com";
+    const adminEmail = config.support || "support@nidhiclothing.com";
 
     return this.send({
-      from: `Nishani Woolera Alerts <${config.fromOrders}>`,
+      from: `Nidhi Clothing Co. Alerts <${config.fromOrders}>`,
       to: adminEmail,
       subject: params.subject,
       html: params.html,

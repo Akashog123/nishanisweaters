@@ -73,10 +73,10 @@ export const EMAIL_STYLES = {
  * Brand configuration
  */
 export const BRAND = {
-  name: "Nidhi Sweaters",
+  name: "Nidhi Clothing Co.",
   tagline: "Premium Winter Wear",
-  supportEmail: "support@nidhisweaters.com",
-  wholesaleEmail: "wholesale@nidhisweaters.com",
+  supportEmail: "support@nidhiclothing.com",
+  wholesaleEmail: "support@nidhiclothing.com",
 };
 
 /**

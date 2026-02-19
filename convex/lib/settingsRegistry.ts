@@ -22,7 +22,13 @@ export type SettingCategory =
   | "abandoned_cart"
   | "email"
   | "contact"
-  | "social_links";
+  | "social_links"
+  | "images"
+  | "branding"
+  | "content"
+  | "display"
+  | "business_info"
+  | "legal";
 
 export type SettingValueType =
   | "number"
@@ -31,6 +37,7 @@ export type SettingValueType =
   | "duration_ms"
   | "duration_hours"
   | "string"
+  | "text"
   | "email"
   | "phone"
   | "url"
@@ -63,6 +70,12 @@ export const CATEGORY_LABELS: Record<SettingCategory, string> = {
   email: "Email Settings",
   contact: "Contact Information",
   social_links: "Social Media Links",
+  images: "Images & Media",
+  branding: "Branding",
+  content: "Content",
+  display: "Display Settings",
+  business_info: "Business Information",
+  legal: "Legal Pages",
 };
 
 export const CATEGORY_DESCRIPTIONS: Record<SettingCategory, string> = {
@@ -75,6 +88,12 @@ export const CATEGORY_DESCRIPTIONS: Record<SettingCategory, string> = {
   email: "Configure email sender addresses",
   contact: "Manage contact information displayed to customers",
   social_links: "Configure social media links displayed in the footer",
+  images: "Configure default images for hero, placeholders, and category banners",
+  branding: "Configure site branding and identity",
+  content: "Manage content displayed in hero, footer, and banners",
+  display: "Configure product display limits and grid settings",
+  business_info: "Manage business information displayed to customers",
+  legal: "Configure legal page content and policies",
 };
 
 export const CATEGORY_ICONS: Record<SettingCategory, string> = {
@@ -87,6 +106,12 @@ export const CATEGORY_ICONS: Record<SettingCategory, string> = {
   email: "Mail",
   contact: "Phone",
   social_links: "Share2",
+  images: "Image",
+  branding: "Palette",
+  content: "FileText",
+  display: "LayoutGrid",
+  business_info: "Building",
+  legal: "Scale",
 };
 
 // ============================================
@@ -374,7 +399,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     description: "From address for order confirmation emails",
     category: "email",
     valueType: "email",
-    defaultValue: "orders@nidhisweaters.com",
+    defaultValue: "support@nidhiclothing.com",
     displayOrder: 1,
     affectedAreas: ["convex/emails.ts - sendOrderConfirmationEmail"],
   },
@@ -384,7 +409,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     description: "From address for shipping update emails",
     category: "email",
     valueType: "email",
-    defaultValue: "shipping@nidhisweaters.com",
+    defaultValue: "support@nidhiclothing.com",
     displayOrder: 2,
     affectedAreas: ["convex/emails.ts - sendShippingUpdateEmail"],
   },
@@ -394,7 +419,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     description: "From address for wholesale-related emails",
     category: "email",
     valueType: "email",
-    defaultValue: "wholesale@nidhisweaters.com",
+    defaultValue: "support@nidhiclothing.com",
     displayOrder: 3,
     affectedAreas: ["convex/emails.ts - sendWholesaleStatusEmail"],
   },
@@ -404,7 +429,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     description: "From address for abandoned cart emails",
     category: "email",
     valueType: "email",
-    defaultValue: "cart@nidhisweaters.com",
+    defaultValue: "support@nidhiclothing.com",
     displayOrder: 4,
     affectedAreas: ["convex/emails.ts - sendAbandonedCartEmail"],
   },
@@ -414,7 +439,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     description: "Support email shown in email footers",
     category: "email",
     valueType: "email",
-    defaultValue: "support@nidhisweaters.com",
+    defaultValue: "support@nidhiclothing.com",
     displayOrder: 5,
     affectedAreas: ["All email templates - Footer support link"],
   },
@@ -453,7 +478,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     description: "Primary support email address for customer inquiries",
     category: "contact",
     valueType: "email",
-    defaultValue: "support@nidhisweaters.com",
+    defaultValue: "support@nidhiclothing.com",
     displayOrder: 3,
     affectedAreas: [
       "Contact page",
@@ -481,7 +506,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     description: "Physical business address displayed on contact page",
     category: "contact",
     valueType: "string",
-    defaultValue: "Nidhi Sweaters, Main Market Road, Ludhiana, Punjab 141001, India",
+    defaultValue: "Nidhi Clothing Co., Main Market Road, Ludhiana, Punjab 141001, India",
     displayOrder: 5,
     affectedAreas: [
       "Contact page",
@@ -652,6 +677,413 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     defaultValue: "false",
     displayOrder: 16,
     affectedAreas: ["src/components/Footer.tsx - Social links section"],
+  },
+
+  // ============================================
+  // IMAGES & MEDIA
+  // ============================================
+  {
+    key: "IMAGES.HERO_URL",
+    label: "Hero Image URL",
+    description: "URL for the homepage hero section background image",
+    category: "images",
+    valueType: "url",
+    defaultValue: "",
+    displayOrder: 1,
+    affectedAreas: ["src/components/HeroSection.tsx - Hero background image"],
+  },
+  {
+    key: "IMAGES.PLACEHOLDER_URL",
+    label: "Placeholder Image URL",
+    description: "Default fallback image when product images are unavailable",
+    category: "images",
+    valueType: "url",
+    defaultValue: "/placeholder.svg",
+    displayOrder: 2,
+    affectedAreas: [
+      "src/components/NewArrivals.tsx - Product images",
+      "src/components/BestSeller.tsx - Product images",
+      "src/components/WinterWear.tsx - Product images",
+      "src/components/SearchBar.tsx - Product images",
+      "src/pages/Cart.tsx - Cart item images",
+      "src/pages/ProductDetail.tsx - Product images",
+      "src/pages/Shop.tsx - Product grid images",
+      "src/pages/SearchResults.tsx - Search result images",
+      "src/pages/wholesale/BulkOrder.tsx - Product images",
+    ],
+  },
+  {
+    key: "IMAGES.CATEGORY_BANNER_URL",
+    label: "Default Category Banner URL",
+    description: "Default banner image for category pages without custom images",
+    category: "images",
+    valueType: "url",
+    defaultValue: "",
+    displayOrder: 3,
+    affectedAreas: ["Category pages - Banner background"],
+  },
+
+  // ============================================
+  // BRANDING (3 settings)
+  // ============================================
+  {
+    key: "BRANDING.SITE_NAME",
+    label: "Site Name",
+    description: "Company name displayed in header and footer",
+    category: "branding",
+    valueType: "string",
+    defaultValue: "NIDHI CLOTHING CO.",
+    displayOrder: 1,
+    affectedAreas: [
+      "src/components/Header.tsx",
+      "src/components/Footer.tsx",
+      "src/components/admin/AdminSidebar.tsx",
+    ],
+  },
+  {
+    key: "BRANDING.LOGO_URL",
+    label: "Logo Image URL",
+    description: "URL to the site logo image",
+    category: "branding",
+    valueType: "url",
+    defaultValue: "/Logo.png",
+    displayOrder: 2,
+    affectedAreas: [
+      "src/components/Header.tsx",
+      "src/components/Footer.tsx",
+    ],
+  },
+  {
+    key: "BRANDING.COPYRIGHT_YEAR",
+    label: "Copyright Year",
+    description: "Year displayed in copyright notice",
+    category: "branding",
+    valueType: "string",
+    defaultValue: "2025",
+    displayOrder: 3,
+    affectedAreas: ["src/components/Footer.tsx"],
+  },
+
+  // ============================================
+  // CONTENT (7 settings)
+  // ============================================
+  {
+    key: "HERO.BADGE_TEXT",
+    label: "Hero Badge Text",
+    description: "Small badge text above hero heading (e.g., 'YEAR-END SALE')",
+    category: "content",
+    valueType: "string",
+    defaultValue: "YEAR-END SALE",
+    displayOrder: 1,
+    affectedAreas: ["src/components/HeroSection.tsx"],
+  },
+  {
+    key: "HERO.HEADING",
+    label: "Hero Heading",
+    description: "Main heading text for hero section",
+    category: "content",
+    valueType: "text",
+    defaultValue: "NIDHI CLOTHING CO.\nSIGNATURES 25% OFF",
+    displayOrder: 2,
+    affectedAreas: ["src/components/HeroSection.tsx"],
+  },
+  {
+    key: "HERO.DESCRIPTION",
+    label: "Hero Description",
+    description: "Description text below hero heading",
+    category: "content",
+    valueType: "text",
+    defaultValue: "Redefine your look with 25% off for all NIDHI CLOTHING CO. Signatures outfit",
+    displayOrder: 3,
+    affectedAreas: ["src/components/HeroSection.tsx"],
+  },
+  {
+    key: "HERO.CTA_TEXT",
+    label: "Hero CTA Button Text",
+    description: "Text for the call-to-action button",
+    category: "content",
+    valueType: "string",
+    defaultValue: "Explore",
+    displayOrder: 4,
+    affectedAreas: ["src/components/HeroSection.tsx"],
+  },
+  {
+    key: "FOOTER.TAGLINE",
+    label: "Footer Tagline",
+    description: "Short tagline displayed below logo",
+    category: "content",
+    valueType: "string",
+    defaultValue: "Made by OG",
+    displayOrder: 5,
+    affectedAreas: ["src/components/Footer.tsx"],
+  },
+  {
+    key: "FOOTER.BACKGROUND_TEXT",
+    label: "Footer Background Text",
+    description: "Large decorative text in footer background",
+    category: "content",
+    valueType: "string",
+    defaultValue: "DESIGNED FOR THE BOLD.",
+    displayOrder: 6,
+    affectedAreas: ["src/components/Footer.tsx"],
+  },
+  {
+    key: "BUSINESS.RESPONSE_TIME",
+    label: "Response Time Message",
+    description: "Message about support response time",
+    category: "content",
+    valueType: "string",
+    defaultValue: "We respond within 24 hours",
+    displayOrder: 7,
+    affectedAreas: ["src/pages/ContactUs.tsx"],
+  },
+
+  // ============================================
+  // BUSINESS INFORMATION (6 settings)
+  // ============================================
+  {
+    key: "BUSINESS.ESTABLISHED_YEAR",
+    label: "Established Year",
+    description: "Year the business was established",
+    category: "business_info",
+    valueType: "string",
+    defaultValue: "2013",
+    displayOrder: 1,
+    affectedAreas: ["src/pages/AboutUs.tsx"],
+  },
+  {
+    key: "BUSINESS.LOCATION",
+    label: "Business Location",
+    description: "City and state where business is located",
+    category: "business_info",
+    valueType: "string",
+    defaultValue: "Ludhiana, Punjab",
+    displayOrder: 2,
+    affectedAreas: [
+      "src/pages/AboutUs.tsx",
+      "src/pages/ContactUs.tsx",
+    ],
+  },
+  {
+    key: "BUSINESS.CUSTOMERS_COUNT",
+    label: "Happy Customers Count",
+    description: "Number of happy customers to display",
+    category: "business_info",
+    valueType: "string",
+    defaultValue: "10K+",
+    displayOrder: 3,
+    affectedAreas: ["src/pages/AboutUs.tsx"],
+  },
+  {
+    key: "BUSINESS.YEARS_EXPERIENCE",
+    label: "Years of Experience",
+    description: "Years of experience to display",
+    category: "business_info",
+    valueType: "string",
+    defaultValue: "40+",
+    displayOrder: 4,
+    affectedAreas: ["src/pages/AboutUs.tsx"],
+  },
+  {
+    key: "BUSINESS.QUALITY_GUARANTEE",
+    label: "Quality Guarantee",
+    description: "Quality guarantee percentage or text",
+    category: "business_info",
+    valueType: "string",
+    defaultValue: "100%",
+    displayOrder: 5,
+    affectedAreas: ["src/pages/AboutUs.tsx"],
+  },
+  {
+    key: "BUSINESS.HOURS_WEEKDAYS",
+    label: "Weekday Business Hours",
+    description: "Business hours for weekdays",
+    category: "business_info",
+    valueType: "string",
+    defaultValue: "10:00 AM - 6:00 PM",
+    displayOrder: 6,
+    affectedAreas: ["src/pages/ContactUs.tsx"],
+  },
+  {
+    key: "BUSINESS.HOURS_WEEKENDS",
+    label: "Weekend Business Hours",
+    description: "Business hours for weekends",
+    category: "business_info",
+    valueType: "string",
+    defaultValue: "Closed",
+    displayOrder: 7,
+    affectedAreas: ["src/pages/ContactUs.tsx"],
+  },
+
+  // ============================================
+  // DISPLAY LIMITS (5 settings)
+  // ============================================
+  {
+    key: "DISPLAY.NEW_ARRIVALS_LIMIT",
+    label: "New Arrivals Limit",
+    description: "Number of products to show in new arrivals section",
+    category: "display",
+    valueType: "number",
+    defaultValue: "4",
+    minValue: 1,
+    maxValue: 20,
+    displayOrder: 1,
+    affectedAreas: ["src/components/NewArrivals.tsx"],
+  },
+  {
+    key: "DISPLAY.BEST_SELLERS_LIMIT",
+    label: "Best Sellers Limit",
+    description: "Number of products to show in best sellers section",
+    category: "display",
+    valueType: "number",
+    defaultValue: "3",
+    minValue: 1,
+    maxValue: 20,
+    displayOrder: 2,
+    affectedAreas: ["src/components/BestSeller.tsx"],
+  },
+  {
+    key: "DISPLAY.WINTER_WEAR_LIMIT",
+    label: "Winter Wear Limit",
+    description: "Number of products to show in winter wear section",
+    category: "display",
+    valueType: "number",
+    defaultValue: "6",
+    minValue: 1,
+    maxValue: 20,
+    displayOrder: 3,
+    affectedAreas: ["src/components/WinterWear.tsx"],
+  },
+  {
+    key: "DISPLAY.RELATED_PRODUCTS_LIMIT",
+    label: "Related Products Limit",
+    description: "Number of related products to show on product detail page",
+    category: "display",
+    valueType: "number",
+    defaultValue: "6",
+    minValue: 1,
+    maxValue: 20,
+    displayOrder: 4,
+    affectedAreas: ["src/pages/ProductDetail.tsx"],
+  },
+  {
+    key: "DISPLAY.BULK_ORDER_LIMIT",
+    label: "Bulk Order Products Limit",
+    description: "Maximum number of products to load in bulk order page",
+    category: "display",
+    valueType: "number",
+    defaultValue: "100",
+    minValue: 10,
+    maxValue: 500,
+    displayOrder: 5,
+    affectedAreas: ["src/pages/wholesale/BulkOrder.tsx"],
+  },
+
+  // ============================================
+  // LEGAL PAGES (6 settings)
+  // ============================================
+  {
+    key: "LEGAL.PRIVACY_POLICY_TITLE",
+    label: "Privacy Policy Title",
+    description: "Title displayed for privacy policy page",
+    category: "legal",
+    valueType: "string",
+    defaultValue: "Privacy Policy",
+    displayOrder: 1,
+    affectedAreas: ["src/pages/PrivacyPolicy.tsx"],
+  },
+  {
+    key: "LEGAL.PRIVACY_POLICY_CONTENT",
+    label: "Privacy Policy Content",
+    description: "Full content for privacy policy page (HTML supported)",
+    category: "legal",
+    valueType: "text",
+    defaultValue: "",
+    displayOrder: 2,
+    affectedAreas: ["src/pages/PrivacyPolicy.tsx"],
+  },
+  {
+    key: "LEGAL.PRIVACY_POLICY_EDITED_AT",
+    label: "Privacy Policy Last Edited",
+    description: "Timestamp when privacy policy was last edited (auto-managed)",
+    category: "legal",
+    valueType: "string",
+    defaultValue: "",
+    displayOrder: 3,
+    affectedAreas: ["src/pages/PrivacyPolicy.tsx"],
+  },
+  {
+    key: "LEGAL.TERMS_OF_SERVICE_TITLE",
+    label: "Terms of Service Title",
+    description: "Title displayed for terms of service page",
+    category: "legal",
+    valueType: "string",
+    defaultValue: "Terms of Service",
+    displayOrder: 4,
+    affectedAreas: ["src/pages/TermsOfService.tsx"],
+  },
+  {
+    key: "LEGAL.TERMS_OF_SERVICE_CONTENT",
+    label: "Terms of Service Content",
+    description: "Full content for terms of service page (HTML supported)",
+    category: "legal",
+    valueType: "text",
+    defaultValue: "",
+    displayOrder: 5,
+    affectedAreas: ["src/pages/TermsOfService.tsx"],
+  },
+  {
+    key: "LEGAL.TERMS_OF_SERVICE_EDITED_AT",
+    label: "Terms of Service Last Edited",
+    description: "Timestamp when terms of service was last edited (auto-managed)",
+    category: "legal",
+    valueType: "string",
+    defaultValue: "",
+    displayOrder: 6,
+    affectedAreas: ["src/pages/TermsOfService.tsx"],
+  },
+  // ============================================
+  // CATEGORIES SETTINGS
+  // ============================================
+  {
+    key: "CATEGORIES.ENABLE_DYNAMIC",
+    label: "Enable Dynamic Categories",
+    description: "Use database-driven categories instead of hardcoded values. When enabled, Header, Footer, and Shop pages will use categories from the database.",
+    category: "display",
+    valueType: "boolean",
+    defaultValue: "false",
+    displayOrder: 1,
+    affectedAreas: ["Header", "Footer", "Shop", "CategorySplit"],
+  },
+  {
+    key: "CATEGORIES.SHOW_IN_HEADER",
+    label: "Categories to Show in Header",
+    description: "Comma-separated list of category slugs to show in the header navigation (only used when dynamic categories is enabled)",
+    category: "display",
+    valueType: "string",
+    defaultValue: "new-arrival,mens,womens,kids,winter",
+    displayOrder: 2,
+    affectedAreas: ["Header"],
+  },
+  {
+    key: "DISPLAY.NEW_ARRIVALS_CATEGORY",
+    label: "New Arrivals Category",
+    description: "Category slug to use for the New Arrivals section",
+    category: "display",
+    valueType: "string",
+    defaultValue: "new-arrival",
+    displayOrder: 3,
+    affectedAreas: ["NewArrivals"],
+  },
+  {
+    key: "DISPLAY.WINTER_WEAR_CATEGORY",
+    label: "Winter Wear Category",
+    description: "Category slug to use for the Winter Wear section",
+    category: "display",
+    valueType: "string",
+    defaultValue: "winter",
+    displayOrder: 4,
+    affectedAreas: ["WinterWear"],
   },
 ];
 

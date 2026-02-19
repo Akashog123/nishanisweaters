@@ -576,7 +576,13 @@ export default defineSchema({
       v.literal("abandoned_cart"),
       v.literal("email"),
       v.literal("contact"),
-      v.literal("social_links")
+      v.literal("social_links"),
+      v.literal("images"),
+      v.literal("branding"),
+      v.literal("content"),
+      v.literal("display"),
+      v.literal("business_info"),
+      v.literal("legal")
     ),
     // Value type for proper input rendering and validation
     valueType: v.union(
@@ -586,6 +592,7 @@ export default defineSchema({
       v.literal("duration_ms"),
       v.literal("duration_hours"),
       v.literal("string"),
+      v.literal("text"),
       v.literal("email"),
       v.literal("phone"),
       v.literal("url"),
@@ -631,6 +638,20 @@ export default defineSchema({
     .index("by_setting_key", ["settingKey"])
     .index("by_changed_by", ["changedBy"])
     .index("by_timestamp", ["timestamp"]),
+
+  // Settings Categories Table - Dynamic category management
+  settingsCategories: defineTable({
+    key: v.string(),           // Unique key: "pricing_tax", "branding", "custom_shipping"
+    label: v.string(),         // Display label: "Pricing & Tax", "Branding"
+    description: v.string(),  // Category description
+    icon: v.string(),         // Icon name for UI
+    displayOrder: v.number(),  // Sorting order
+    isSystem: v.boolean(),    // true for built-in categories (cannot delete)
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_key", ["key"])
+    .index("by_display_order", ["displayOrder"]),
 
   // =========================================================================
   // SECURITY INFRASTRUCTURE TABLES
