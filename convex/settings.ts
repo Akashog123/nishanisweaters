@@ -937,7 +937,7 @@ export const createSettingsCategory = mutation({
     displayOrder: v.number(),
   },
   handler: async (ctx, args) => {
-    const admin = await requireAdmin(ctx);
+    await requireAdmin(ctx);
 
     // Check if key already exists
     const existing = await ctx.db
@@ -986,7 +986,7 @@ export const updateSettingsCategory = mutation({
     displayOrder: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const admin = await requireAdmin(ctx);
+    await requireAdmin(ctx);
 
     const category = await ctx.db
       .query("settingsCategories")
@@ -1025,7 +1025,7 @@ export const updateSettingsCategory = mutation({
 export const deleteSettingsCategory = mutation({
   args: { key: v.string() },
   handler: async (ctx, args) => {
-    const admin = await requireAdmin(ctx);
+    await requireAdmin(ctx);
 
     const category = await ctx.db
       .query("settingsCategories")

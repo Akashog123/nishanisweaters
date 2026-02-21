@@ -139,6 +139,7 @@ function validateString(registry: SettingDefinition, value: string): void {
 
   // Reject control characters (OWASP recommendation)
   // This prevents null bytes and other dangerous control characters
+  // eslint-disable-next-line no-control-regex
   if (/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(value)) {
     throw createValidationError(
       `${registry.label} contains invalid characters`
@@ -163,6 +164,7 @@ function validateText(registry: SettingDefinition, value: string): void {
   }
 
   // Reject control characters
+  // eslint-disable-next-line no-control-regex
   if (/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(value)) {
     throw createValidationError(
       `${registry.label} contains invalid characters`
