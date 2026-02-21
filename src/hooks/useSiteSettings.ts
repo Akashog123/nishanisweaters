@@ -26,7 +26,7 @@ export function useSiteSettings() {
 
     // Business info
     establishedYear: settings?.businessInfo?.establishedYear ?? "2013",
-    businessLocation: settings?.businessInfo?.location ?? "Ludhiana, Punjab",
+    businessLocation: settings?.businessInfo?.location ?? "Sikandarpur, Uttarpradesh",
     customersCount: settings?.businessInfo?.customersCount ?? "10K+",
     yearsExperience: settings?.businessInfo?.yearsExperience ?? "40+",
     qualityGuarantee: settings?.businessInfo?.qualityGuarantee ?? "100%",

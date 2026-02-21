@@ -1,7 +1,10 @@
 import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Lenis from 'lenis';
 
 export const useSmoothScroll = () => {
+  const location = useLocation();
+
   useEffect(() => {
     const lenis = new Lenis({
       duration: 1.2,
@@ -22,6 +25,9 @@ export const useSmoothScroll = () => {
       lenis.scrollTo(0, { immediate: true });
     };
 
+    // Listen to React Router location changes
+    handleRouteChange();
+
     window.addEventListener('popstate', handleRouteChange);
 
     return () => {
@@ -30,5 +36,5 @@ export const useSmoothScroll = () => {
       lenis.destroy();
       window.removeEventListener('popstate', handleRouteChange);
     };
-  }, []);
+  }, [location]);
 };

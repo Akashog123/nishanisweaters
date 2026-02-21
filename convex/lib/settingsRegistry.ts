@@ -28,6 +28,7 @@ export type SettingCategory =
   | "content"
   | "display"
   | "business_info"
+  | "categories"
   | "legal";
 
 export type SettingValueType =
@@ -76,6 +77,7 @@ export const CATEGORY_LABELS: Record<SettingCategory, string> = {
   display: "Display Settings",
   business_info: "Business Information",
   legal: "Legal Pages",
+  categories: "Categories",
 };
 
 export const CATEGORY_DESCRIPTIONS: Record<SettingCategory, string> = {
@@ -94,6 +96,7 @@ export const CATEGORY_DESCRIPTIONS: Record<SettingCategory, string> = {
   display: "Configure product display limits and grid settings",
   business_info: "Manage business information displayed to customers",
   legal: "Configure legal page content and policies",
+  categories: "Configure category slugs for special sections",
 };
 
 export const CATEGORY_ICONS: Record<SettingCategory, string> = {
@@ -112,6 +115,7 @@ export const CATEGORY_ICONS: Record<SettingCategory, string> = {
   display: "LayoutGrid",
   business_info: "Building",
   legal: "Scale",
+  categories: "FolderTree",
 };
 
 // ============================================
@@ -414,23 +418,13 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     affectedAreas: ["convex/emails.ts - sendShippingUpdateEmail"],
   },
   {
-    key: "EMAIL.FROM_WHOLESALE",
-    label: "Wholesale Email Sender",
-    description: "From address for wholesale-related emails",
-    category: "email",
-    valueType: "email",
-    defaultValue: "support@nidhiclothing.com",
-    displayOrder: 3,
-    affectedAreas: ["convex/emails.ts - sendWholesaleStatusEmail"],
-  },
-  {
     key: "EMAIL.FROM_CART",
     label: "Cart Recovery Email Sender",
     description: "From address for abandoned cart emails",
     category: "email",
     valueType: "email",
     defaultValue: "support@nidhiclothing.com",
-    displayOrder: 4,
+    displayOrder: 3,
     affectedAreas: ["convex/emails.ts - sendAbandonedCartEmail"],
   },
   {
@@ -458,7 +452,6 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     affectedAreas: [
       "src/pages/wholesale/BulkOrder.tsx",
       "src/pages/wholesale/WholesaleDashboard.tsx",
-      "convex/emails.ts - Wholesale approval email",
     ],
   },
   {
@@ -1066,20 +1059,20 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     affectedAreas: ["Header"],
   },
   {
-    key: "DISPLAY.NEW_ARRIVALS_CATEGORY",
+    key: "CATEGORIES.NEW_ARRIVALS_CATEGORY",
     label: "New Arrivals Category",
     description: "Category slug to use for the New Arrivals section",
-    category: "display",
+    category: "categories",
     valueType: "string",
     defaultValue: "new-arrival",
     displayOrder: 3,
     affectedAreas: ["NewArrivals"],
   },
   {
-    key: "DISPLAY.WINTER_WEAR_CATEGORY",
+    key: "CATEGORIES.WINTER_WEAR_CATEGORY",
     label: "Winter Wear Category",
     description: "Category slug to use for the Winter Wear section",
-    category: "display",
+    category: "categories",
     valueType: "string",
     defaultValue: "winter",
     displayOrder: 4,

@@ -302,8 +302,8 @@ export const getAllPublicSettings = query({
       categories: {
         enableDynamic: getValue("CATEGORIES.ENABLE_DYNAMIC"),
         showInHeader: getValue("CATEGORIES.SHOW_IN_HEADER"),
-        newArrivalsCategory: getValue("DISPLAY.NEW_ARRIVALS_CATEGORY"),
-        winterWearCategory: getValue("DISPLAY.WINTER_WEAR_CATEGORY"),
+        newArrivalsCategory: getValue("CATEGORIES.NEW_ARRIVALS_CATEGORY"),
+        winterWearCategory: getValue("CATEGORIES.WINTER_WEAR_CATEGORY"),
       },
     };
   },

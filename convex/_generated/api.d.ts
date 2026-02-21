@@ -33,9 +33,9 @@ import type * as lib_emailTemplates_contactInquiry from "../lib/emailTemplates/c
 import type * as lib_emailTemplates_disputeAlert from "../lib/emailTemplates/disputeAlert.js";
 import type * as lib_emailTemplates_newsletterWelcome from "../lib/emailTemplates/newsletterWelcome.js";
 import type * as lib_emailTemplates_orderConfirmation from "../lib/emailTemplates/orderConfirmation.js";
+import type * as lib_emailTemplates_orderDelivered from "../lib/emailTemplates/orderDelivered.js";
 import type * as lib_emailTemplates_shippingUpdate from "../lib/emailTemplates/shippingUpdate.js";
 import type * as lib_emailTemplates_welcomeEmail from "../lib/emailTemplates/welcomeEmail.js";
-import type * as lib_emailTemplates_wholesaleStatus from "../lib/emailTemplates/wholesaleStatus.js";
 import type * as lib_errors from "../lib/errors.js";
 import type * as lib_getSettings from "../lib/getSettings.js";
 import type * as lib_logger from "../lib/logger.js";
@@ -105,9 +105,9 @@ declare const fullApi: ApiFromModules<{
   "lib/emailTemplates/disputeAlert": typeof lib_emailTemplates_disputeAlert;
   "lib/emailTemplates/newsletterWelcome": typeof lib_emailTemplates_newsletterWelcome;
   "lib/emailTemplates/orderConfirmation": typeof lib_emailTemplates_orderConfirmation;
+  "lib/emailTemplates/orderDelivered": typeof lib_emailTemplates_orderDelivered;
   "lib/emailTemplates/shippingUpdate": typeof lib_emailTemplates_shippingUpdate;
   "lib/emailTemplates/welcomeEmail": typeof lib_emailTemplates_welcomeEmail;
-  "lib/emailTemplates/wholesaleStatus": typeof lib_emailTemplates_wholesaleStatus;
   "lib/errors": typeof lib_errors;
   "lib/getSettings": typeof lib_getSettings;
   "lib/logger": typeof lib_logger;

@@ -153,10 +153,70 @@ export function isPaymentError(error: unknown): error is PaymentError {
   return error instanceof PaymentError;
 }
 
+// User-friendly messages for Convex error codes (especially promo codes)
+const CONVEX_ERROR_MESSAGES: Record<string, string> = {
+  // Promo code errors
+  INVALID_CODE: "This promo code is not valid.",
+  INACTIVE_CODE: "This promo code is no longer active.",
+  CODE_NOT_STARTED: "This promo code is not valid yet.",
+  EXPIRED: "This promo code has expired.",
+  LIMIT_REACHED: "This promo code is no longer available.",
+  USER_LIMIT: "You've already used this promo code.",
+  EMPTY_CART: "Please add items to your cart first.",
+  MIN_NOT_MET: "Your cart doesn't meet the minimum order requirement.",
+  CATEGORY_NOT_APPLICABLE: "This promo code doesn't apply to items in your cart.",
+  DUPLICATE_CODE: "A promo code with this code already exists.",
+  INVALID_CODE_FORMAT: "Invalid promo code format.",
+  INVALID_DISCOUNT: "Invalid discount value.",
+  INVALID_DATES: "Invalid date range.",
+  // Generic errors
+  NOT_FOUND: "The requested resource was not found.",
+  UNAUTHORIZED: "You need to be signed in to continue.",
+  FORBIDDEN: "You don't have permission to do this.",
+  VALIDATION_ERROR: "Please check your input and try again.",
+  CART_NOT_FOUND: "Your cart could not be found.",
+  PRODUCT_NOT_FOUND: "This product could not be found.",
+  INSUFFICIENT_STOCK: "This item is out of stock.",
+  ORDER_NOT_FOUND: "Order not found.",
+  PAYMENT_ERROR: "Payment processing failed. Please try again.",
+};
+
+function mapConvexCodeToAppCode(code: string): ErrorCodeType {
+  const mapping: Record<string, ErrorCodeType> = {
+    NOT_FOUND: ErrorCode.NOT_FOUND,
+    UNAUTHORIZED: ErrorCode.UNAUTHORIZED,
+    FORBIDDEN: ErrorCode.FORBIDDEN,
+    PRODUCT_NOT_FOUND: ErrorCode.PRODUCT_NOT_FOUND,
+    ORDER_NOT_FOUND: ErrorCode.ORDER_NOT_FOUND,
+    USER_NOT_FOUND: ErrorCode.USER_NOT_FOUND,
+    PAYMENT_ERROR: ErrorCode.PAYMENT_FAILED,
+    CART_NOT_FOUND: ErrorCode.CART_EMPTY,
+    EMPTY_CART: ErrorCode.CART_EMPTY,
+    INSUFFICIENT_STOCK: ErrorCode.OUT_OF_STOCK,
+    NETWORK_ERROR: ErrorCode.NETWORK_ERROR,
+  };
+  return mapping[code] ?? ErrorCode.VALIDATION_ERROR;
+}
+
 // Error parsing utilities
 export function parseConvexError(error: unknown): AppError {
   if (isAppError(error)) {
     return error;
+  }
+
+  // Handle ConvexError with structured .data property
+  if (error && typeof error === 'object' && 'data' in error) {
+    const data = (error as { data: unknown }).data;
+    if (data && typeof data === 'object' && 'code' in data) {
+      const { code, message } = data as { code: string; message?: string };
+      const friendlyMessage = CONVEX_ERROR_MESSAGES[code] ?? message ?? 'Something went wrong. Please try again.';
+      return new AppError(
+        friendlyMessage,
+        mapConvexCodeToAppCode(code),
+        undefined,
+        { originalError: error, convexCode: code }
+      );
+    }
   }
 
   if (error instanceof Error) {

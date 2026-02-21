@@ -89,3 +89,9 @@ test-results/
 .github/*
 !.github/workflows/
 .vercel
+
+# Local development files
+docs/plans/
+email-previews/
+scripts/preview-emails.ts
+nul
