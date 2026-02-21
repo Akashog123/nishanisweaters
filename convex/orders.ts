@@ -30,6 +30,7 @@ import {
 import {
   validateOrderItems,
   calculateOrderPricing,
+  applyPromoCode,
   deductInventory,
   restoreInventory,
   recordPromoUsage,
@@ -511,6 +512,13 @@ export const updateOrderStatus = mutation({
       );
     }
 
+    // Validate tracking info when marking as shipped
+    if (args.orderStatus === "shipped" && (!args.trackingNumber || !args.shippingCarrier)) {
+      throw validationError(
+        "Tracking number and shipping carrier are required when marking order as shipped to send customer notification"
+      );
+    }
+
     const now = Date.now();
     const updates: {
       orderStatus: OrderStatus;
@@ -544,6 +552,13 @@ export const updateOrderStatus = mutation({
       }
     } else if (args.orderStatus === "delivered") {
       updates.deliveredAt = now;
+
+      // Send delivery confirmation email
+      await ctx.scheduler.runAfter(0, internal.emails.sendOrderDeliveredEmail, {
+        to: order.userEmail,
+        customerName: order.shippingAddress.name,
+        orderNumber: order.orderNumber,
+      });
     }
 
     await ctx.db.patch(args.orderId, updates);
@@ -652,6 +667,7 @@ export const getOrderPreview = query({
       variantSku: v.string(),
       quantity: v.number(),
     })),
+    promoCode: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Get user info for pricing (optional - guests get retail prices)
@@ -723,19 +739,30 @@ export const getOrderPreview = query({
 
     const subtotal = previewItems.reduce((sum, item) => sum + item.subtotal, 0);
 
+    // Apply promo code if provided
+    let promoDiscount = 0;
+    if (args.promoCode) {
+      const promoResult = await applyPromoCode(ctx, args.promoCode, subtotal, orderType, _user?._id);
+      if (promoResult.isValid) {
+        promoDiscount = promoResult.discount;
+      }
+    }
+
     // Get dynamic settings for tax and shipping
     const taxRate = await getTaxRate(ctx);
     const { freeThreshold, standardCost } = await getShippingConfig(ctx);
 
-    const tax = subtotal * taxRate;
+    const taxableAmount = Math.max(0, subtotal - promoDiscount);
+    const tax = taxableAmount * taxRate;
     const shippingCost = subtotal >= freeThreshold ? 0 : standardCost;
-    const total = subtotal + tax + shippingCost;
+    const total = taxableAmount + tax + shippingCost;
 
     return {
       items: previewItems,
       subtotal,
       tax,
       taxRate,
+      promoDiscount: promoDiscount > 0 ? promoDiscount : undefined,
       shippingCost,
       freeShippingThreshold: freeThreshold,
       total,

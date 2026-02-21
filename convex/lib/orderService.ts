@@ -241,9 +241,14 @@ export async function calculateOrderPricing(
   const taxRate = await getTaxRate(ctx);
   const { freeThreshold, standardCost } = await getShippingConfig(ctx);
 
-  const tax = subtotal * taxRate;
+  // Apply tax to the discounted subtotal (total promo price)
+  const taxableAmount = Math.max(0, subtotal - promoDiscount);
+  const tax = taxableAmount * taxRate;
+
+  // Shipping is calculated based on original subtotal to avoid penalizing customers who use promos
   const shippingCost = subtotal >= freeThreshold ? 0 : standardCost;
-  const total = subtotal + tax + shippingCost - promoDiscount;
+
+  const total = taxableAmount + tax + shippingCost;
 
   return {
     subtotal,

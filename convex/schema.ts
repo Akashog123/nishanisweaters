@@ -511,7 +511,6 @@ export default defineSchema({
       v.literal("shipping_update"),
       v.literal("abandoned_cart"),
       v.literal("welcome"),
-      v.literal("wholesale_status"),
       v.literal("newsletter_welcome"),
       v.literal("contact_inquiry")
     ),
@@ -582,7 +581,8 @@ export default defineSchema({
       v.literal("content"),
       v.literal("display"),
       v.literal("business_info"),
-      v.literal("legal")
+      v.literal("legal"),
+      v.literal("categories")
     ),
     // Value type for proper input rendering and validation
     valueType: v.union(

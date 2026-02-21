@@ -101,6 +101,24 @@ export const SHIPPING_CARRIERS = [
 
 export type ShippingCarrier = typeof SHIPPING_CARRIERS[number]["value"];
 
+// Valid order status transitions (must match backend in convex/orders.ts)
+export const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
+  pending: ["confirmed", "cancelled"],
+  confirmed: ["processing", "cancelled"],
+  processing: ["shipped", "cancelled"],
+  shipped: ["delivered"],
+  delivered: [],
+  cancelled: [],
+};
+
+/**
+ * Get valid next statuses for an order based on its current status.
+ * Used to filter the status dropdown in admin UI.
+ */
+export function getValidNextStatuses(currentStatus: string): string[] {
+  return VALID_STATUS_TRANSITIONS[currentStatus] || [];
+}
+
 // Order Status Options for Select dropdowns
 export const ORDER_STATUS_OPTIONS = [
   { value: "pending", label: "Pending" },

@@ -16,7 +16,7 @@ import { EmailService } from "./lib/emailService";
 // Import email template generators
 import { generateOrderConfirmationTemplate } from "./lib/emailTemplates/orderConfirmation";
 import { generateShippingUpdateTemplate } from "./lib/emailTemplates/shippingUpdate";
-import { generateWholesaleStatusTemplate } from "./lib/emailTemplates/wholesaleStatus";
+import { generateOrderDeliveredTemplate } from "./lib/emailTemplates/orderDelivered";
 import { generateNewsletterWelcomeTemplate } from "./lib/emailTemplates/newsletterWelcome";
 import { generateWelcomeEmailTemplate } from "./lib/emailTemplates/welcomeEmail";
 import {
@@ -125,39 +125,28 @@ export const sendShippingUpdateEmail = internalAction({
   },
 });
 
-// ============================================================================
-// WHOLESALE EMAILS
-// ============================================================================
-
 /**
- * Send wholesale application status email
+ * Send order delivered email
  */
-export const sendWholesaleStatusEmail = internalAction({
+export const sendOrderDeliveredEmail = internalAction({
   args: {
     to: v.string(),
     customerName: v.string(),
-    status: v.union(v.literal("approved"), v.literal("rejected")),
-    rejectionReason: v.optional(v.string()),
+    orderNumber: v.string(),
   },
   handler: async (ctx, args) => {
     const emailService = new EmailService();
 
-    const html = generateWholesaleStatusTemplate({
+    const html = generateOrderDeliveredTemplate({
       customerName: args.customerName,
-      status: args.status,
-      rejectionReason: args.rejectionReason,
+      orderNumber: args.orderNumber,
     });
 
-    const subject =
-      args.status === "approved"
-        ? "Welcome to the Nidhi Clothing Co. Wholesale Program!"
-        : "Wholesale Application Update";
-
-    return emailService.sendWholesaleEmail(ctx, {
+    return emailService.sendOrderEmail(ctx, {
       to: args.to,
-      subject,
+      subject: `Your Order ${args.orderNumber} Has Been Delivered!`,
       html,
-      status: args.status,
+      orderNumber: args.orderNumber,
     });
   },
 });
