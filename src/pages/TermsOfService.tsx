@@ -2,40 +2,10 @@ import Layout from "@/components/Layout";
 import { BackButton } from "@/components/BackButton";
 import { useLegalSettings } from "@/hooks/useSiteSettings";
 
-// Default fallback content when settings are not configured
-const DEFAULT_CONTENT = `Welcome to Nidhi Clothing Co. By accessing and using our website, you agree to be bound by these Terms of Service. Please read them carefully before using our services.
-
-## 1. Acceptance of Terms
-
-By accessing, browsing, or using the Nidhi Clothing Co. website ("we," "our," or "us"), you acknowledge that you have read, understood, and agree to be bound by these Terms of Service, along with our Privacy Policy. If you do not agree to these terms, please do not use our website.
-
-## 2. Use License
-
-Permission is granted to temporarily use the Nidhi Clothing Co. website for personal, non-commercial transitory viewing only. This is the grant of a license, not a transfer of title, and under this license you may not:
-
-- Modify or copy the materials
-- Use the materials for any commercial purpose or public display
-- Transfer the materials to another person or entity
-- Attempt to reverse engineer any software contained on the website
-- Remove any copyright or other proprietary notations from the materials
-
-## 3. User Accounts
-
-When you create an account with us, you must provide accurate, complete, and current information. You are responsible for maintaining the confidentiality of your account and password.
-
-## 4. Product Information
-
-We strive to display our products as accurately as possible. However, we cannot guarantee that your monitor's display of any color will be accurate.
-
-## 5. Pricing
-
-All prices are in Indian Rupees (INR) and are subject to change without notice.`;
-
 export default function TermsOfService() {
-  const { termsOfServiceTitle, termsOfServiceEditedAt, termsOfServiceContent, isLoading } = useLegalSettings();
+  const { termsOfServiceTitle, termsOfServiceEditedAt, isLoading } = useLegalSettings();
 
   // Use settings content if available, otherwise use default
-  const content = termsOfServiceContent || DEFAULT_CONTENT;
   const lastUpdated = termsOfServiceEditedAt || "February 19, 2026";
 
   return isLoading ? (

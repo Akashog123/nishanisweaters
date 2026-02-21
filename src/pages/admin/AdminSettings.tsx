@@ -299,7 +299,7 @@ function SettingInput({ setting, localValue, onChange }: SettingInputProps) {
         />
       );
 
-    case "url":
+    case "url": {
       const showImagePreview = setting.category === "images";
       return (
         <div>
@@ -312,6 +312,7 @@ function SettingInput({ setting, localValue, onChange }: SettingInputProps) {
           {showImagePreview && <ImagePreview url={localValue} />}
         </div>
       );
+    }
 
     case "phone":
       return (

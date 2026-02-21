@@ -2,35 +2,11 @@ import Layout from "@/components/Layout";
 import { BackButton } from "@/components/BackButton";
 import { useLegalSettings, useSiteSettings } from "@/hooks/useSiteSettings";
 
-// Default fallback content when settings are not configured
-const DEFAULT_CONTENT = `At Nidhi Clothing Co., we value your privacy and are committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your data when you visit our website or make a purchase.
-
-## Information We Collect
-
-We collect information that you provide directly to us, including:
-- Name, email address, and phone number
-- Shipping and billing addresses
-- Payment information
-- Order history and preferences
-
-## How We Use Your Information
-
-We use the information we collect to:
-- Process and fulfill your orders
-- Communicate with you about your orders
-- Improve our website and services
-- Send you marketing communications (with your consent)
-
-## Data Security
-
-We implement appropriate security measures to protect your personal information.`;
-
 export default function PrivacyPolicy() {
-  const { privacyPolicyTitle, privacyPolicyEditedAt, privacyPolicyContent, isLoading } = useLegalSettings();
+  const { privacyPolicyTitle, privacyPolicyEditedAt, isLoading } = useLegalSettings();
   const { siteName, businessLocation } = useSiteSettings();
 
   // Use settings content if available, otherwise use default
-  const content = privacyPolicyContent || DEFAULT_CONTENT;
   const lastUpdated = privacyPolicyEditedAt || "February 19, 2026";
 
   return isLoading ? (

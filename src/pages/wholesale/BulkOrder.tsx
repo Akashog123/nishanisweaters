@@ -23,7 +23,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCart } from "@/context/CartContext";
-import { useImageSettings } from "@/hooks/useImageSettings";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/formatting";
 import { WHATSAPP_BULK_PRICING_CONTACT, WHATSAPP_BULK_PRICING_URL } from "@/lib/constants";
@@ -57,7 +56,6 @@ interface BulkOrderItem {
 export default function BulkOrder() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { placeholderUrl } = useImageSettings();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");

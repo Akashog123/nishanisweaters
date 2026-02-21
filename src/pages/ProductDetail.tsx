@@ -187,7 +187,7 @@ const ProductDetail = () => {
         handleError(error, "ProductDetail.handleAddToCart");
       }
     }
-  }, [selectedSize, selectedColor, quantity, product, addToCart, handleError]);
+  }, [selectedSize, selectedColor, quantity, product, addToCart, handleError, placeholderUrl]);
 
   const handleBuyNow = useCallback(() => {
     try {

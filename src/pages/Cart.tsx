@@ -93,6 +93,7 @@ function SavedItem({
   isLoading: boolean;
 }) {
   const [selectedVariant, setSelectedVariant] = useState<string>("");
+  const { placeholderUrl } = useImageSettings();
 
   if (!item.product) {
     return (
@@ -181,7 +182,6 @@ export default function Cart() {
   const navigate = useNavigate();
   const { items, removeFromCart, updateQuantity, getSubtotal, getTotalItems, isLoading, error, clearCart } = useCart();
   const { isSignedIn } = useUser();
-  const { placeholderUrl } = useImageSettings();
 
   // Wishlist queries and mutations (only for signed-in users)
   const wishlist = useQuery(
