@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +25,7 @@ import { Id } from "../../../../convex/_generated/dataModel";
 import { ProductFormData, initialFormData, ProductImage, ProductVideo } from "./types";
 import { generateSlug } from "./utils";
 import { ProductMediaUpload } from "../ProductMediaUpload";
+import { VariantEditor } from "./VariantEditor";
 
 interface ProductFormDialogProps {
   product?: ProductFormData & {
@@ -32,7 +35,7 @@ interface ProductFormDialogProps {
   };
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: ProductFormData, id?: Id<"products">) => Promise<void>;
+  onSubmit: (data: ProductFormData, id?: Id<"products">) => Promise<Id<"products"> | undefined>;
 }
 
 export function ProductFormDialog({
@@ -46,6 +49,16 @@ export function ProductFormDialog({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
+  const [createdProductId, setCreatedProductId] = useState<Id<"products"> | null>(null);
+
+  // Determine which product ID to use for media queries
+  const effectiveProductId = createdProductId || product?._id;
+
+  // Fetch the product after creation to get fresh data (including images)
+  const createdProduct = useQuery(
+    api.products.getProductById,
+    effectiveProductId ? { productId: effectiveProductId } : "skip"
+  );
 
   // Reset form when product changes
   useEffect(() => {
@@ -55,27 +68,45 @@ export function ProductFormDialog({
       setFormData(initialFormData);
     }
     setActiveTab("details");
+    setCreatedProductId(null);
   }, [product, open]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Handle product creation + media upload flow
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await onSubmit(formData, product?._id);
-      onOpenChange(false);
-      setFormData(initialFormData);
+      const newProductId = await onSubmit(formData, product?._id);
+
+      if (!product?._id && newProductId) {
+        // New product created - switch to media tab
+        setCreatedProductId(newProductId);
+        setActiveTab("media");
+      } else {
+        onOpenChange(false);
+        setFormData(initialFormData);
+        setCreatedProductId(null);
+      }
     } catch {
       // Error is handled by parent
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [onSubmit, formData, product?._id, onOpenChange]);
 
-  const isEditing = !!product?._id;
+  // Handler for switching back to details after adding media
+  const handleBackToDetails = useCallback(() => {
+    setActiveTab("details");
+    setCreatedProductId(null);
+    onOpenChange(false);
+    setFormData(initialFormData);
+  }, [onOpenChange]);
+
+  const isEditing = !!product?._id || !!createdProductId;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {product ? "Edit Product" : "Add New Product"}
@@ -87,44 +118,68 @@ export function ProductFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {isEditing ? (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="details">Product Details</TabsTrigger>
-              <TabsTrigger value="media">Images & Videos</TabsTrigger>
-            </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="details">Product Details</TabsTrigger>
+            <TabsTrigger value="stock">Stock & Variants</TabsTrigger>
+            <TabsTrigger value="media">Images & Videos</TabsTrigger>
+          </TabsList>
 
-            <TabsContent value="details" className="mt-4">
-              <ProductDetailsForm
-                formData={formData}
-                setFormData={setFormData}
-                onSubmit={handleSubmit}
-                onCancel={() => onOpenChange(false)}
-                isSubmitting={isSubmitting}
-                isEditing={isEditing}
+          <TabsContent value="details" className="mt-4">
+            <ProductDetailsForm
+              formData={formData}
+              setFormData={setFormData}
+              onSubmit={handleSubmit}
+              onCancel={createdProductId ? handleBackToDetails : () => onOpenChange(false)}
+              isSubmitting={isSubmitting}
+              isEditing={isEditing}
+              showDoneButton={!!createdProductId}
+            />
+          </TabsContent>
+
+          <TabsContent value="stock" className="mt-4">
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Manage product variants (size/color combinations) and their stock levels.
+              </p>
+              <VariantEditor
+                variants={formData.variants}
+                onVariantsChange={(variants) => setFormData({ ...formData, variants })}
+                slug={formData.slug}
               />
-            </TabsContent>
+              <DialogFooter className="mt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={createdProductId ? handleBackToDetails : () => onOpenChange(false)}
+                >
+                  {createdProductId ? "Done" : "Cancel"}
+                </Button>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Saving..." : isEditing ? "Update Product" : "Add Product"}
+                </Button>
+              </DialogFooter>
+            </div>
+          </TabsContent>
 
-            <TabsContent value="media" className="mt-4">
-              {product._id && (
-                <ProductMediaUpload
-                  productId={product._id}
-                  images={product.images || []}
-                  videos={product.videos || []}
-                />
-              )}
-            </TabsContent>
-          </Tabs>
-        ) : (
-          <ProductDetailsForm
-            formData={formData}
-            setFormData={setFormData}
-            onSubmit={handleSubmit}
-            onCancel={() => onOpenChange(false)}
-            isSubmitting={isSubmitting}
-            isEditing={isEditing}
-          />
-        )}
+          <TabsContent value="media" className="mt-4">
+            {effectiveProductId ? (
+              <ProductMediaUpload
+                productId={effectiveProductId}
+                images={createdProduct ? createdProduct.images : product?.images || []}
+                videos={createdProduct ? createdProduct.videos : product?.videos || []}
+              />
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <p className="text-sm">Please save the product first to add images and videos.</p>
+                <p className="text-xs mt-1">Click "Add Product" in the Product Details tab to create the product first.</p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
@@ -138,6 +193,7 @@ function ProductDetailsForm({
   onCancel,
   isSubmitting,
   isEditing,
+  showDoneButton = false,
 }: {
   formData: ProductFormData;
   setFormData: (data: ProductFormData) => void;
@@ -145,6 +201,7 @@ function ProductDetailsForm({
   onCancel: () => void;
   isSubmitting: boolean;
   isEditing: boolean;
+  showDoneButton?: boolean;
 }) {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -340,11 +397,13 @@ function ProductDetailsForm({
           variant="outline"
           onClick={onCancel}
         >
-          Cancel
+          {showDoneButton ? "Done" : "Cancel"}
         </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Saving..." : isEditing ? "Update Product" : "Add Product"}
-        </Button>
+        {!showDoneButton && (
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Saving..." : isEditing ? "Update Product" : "Add Product"}
+          </Button>
+        )}
       </DialogFooter>
     </form>
   );

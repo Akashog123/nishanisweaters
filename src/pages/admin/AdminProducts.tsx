@@ -58,6 +58,7 @@ const AdminProducts = () => {
       featured: product.featured,
       bestseller: product.bestseller,
       newArrival: product.newArrival,
+      variants: product.variants || [],
     });
   };
 

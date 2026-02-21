@@ -15,7 +15,7 @@ export function useProductMutations() {
   const deleteProduct = useMutation(api.products.deleteProduct);
 
   const handleProductSubmit = useCallback(
-    async (data: ProductFormData, id?: Id<"products">) => {
+    async (data: ProductFormData, id?: Id<"products">): Promise<Id<"products"> | undefined> => {
       try {
         if (id) {
           await updateProduct({
@@ -30,10 +30,25 @@ export function useProductMutations() {
             featured: data.featured,
             bestseller: data.bestseller,
             newArrival: data.newArrival,
+            variants: data.variants,
           });
           toast.success("Product updated successfully");
+          return id;
         } else {
-          await createProduct({
+          // Generate default variants if none provided
+          const variants = data.variants.length > 0
+            ? data.variants
+            : [
+                {
+                  sku: `${data.slug}-M-BLK`,
+                  size: "M",
+                  color: "Black",
+                  stockQuantity: 10,
+                  lowStockThreshold: 5,
+                },
+              ];
+
+          const newProductId = await createProduct({
             name: data.name,
             slug: data.slug,
             description: data.description,
@@ -42,15 +57,7 @@ export function useProductMutations() {
             retailPrice: data.retailPrice,
             wholesalePrice: data.wholesalePrice || undefined,
             images: [{ url: "/placeholder.svg", alt: data.name, order: 0 }],
-            variants: [
-              {
-                sku: `${data.slug}-M-BLK`,
-                size: "M",
-                color: "Black",
-                stockQuantity: 10,
-                lowStockThreshold: 5,
-              },
-            ],
+            variants,
             tags: [data.category],
             featured: data.featured,
             bestseller: data.bestseller,
@@ -58,6 +65,7 @@ export function useProductMutations() {
             minOrderQuantity: data.minOrderQuantity || undefined,
           });
           toast.success("Product created successfully");
+          return newProductId;
         }
         setEditingProduct(null);
       } catch (error) {

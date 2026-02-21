@@ -51,7 +51,7 @@ export function OrderStatsCards({
   onFilterChange,
 }: OrderStatsCardsProps) {
   return (
-    <div className="grid gap-4 md:grid-cols-6">
+    <div className="grid gap-4 md:grid-cols-8">
       {/* All Orders */}
       <StatCard
         title="All Orders"
@@ -82,6 +82,15 @@ export function OrderStatsCards({
         colorClass="text-amber-600"
       />
 
+      {/* Confirmed */}
+      <StatCard
+        title="Confirmed"
+        count={counts.confirmed}
+        isActive={statusFilter === "confirmed"}
+        onClick={() => onFilterChange("confirmed", "all")}
+        colorClass="text-teal-600"
+      />
+
       {/* Processing */}
       <StatCard
         title="Processing"
@@ -107,6 +116,15 @@ export function OrderStatsCards({
         isActive={statusFilter === "delivered"}
         onClick={() => onFilterChange("delivered", "all")}
         colorClass="text-green-600"
+      />
+
+      {/* Cancelled */}
+      <StatCard
+        title="Cancelled"
+        count={counts.cancelled}
+        isActive={statusFilter === "cancelled"}
+        onClick={() => onFilterChange("cancelled", "all")}
+        colorClass="text-gray-600"
       />
     </div>
   );

@@ -43,6 +43,7 @@ import {
   getPaymentStatusConfig,
   ORDER_STATUS_OPTIONS,
   SHIPPING_CARRIERS,
+  getValidNextStatuses,
 } from "@/lib/constants/orderStatus";
 import { OrderItem, OrderDetailsDialogProps } from "./types";
 
@@ -330,6 +331,7 @@ export function OrderDetailsDialog({
   );
   const [adminNotes, setAdminNotes] = useState(order?.adminNotes || "");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Reset form when order changes
   useEffect(() => {
@@ -338,6 +340,7 @@ export function OrderDetailsDialog({
       setTrackingNumber(order.trackingNumber || "");
       setShippingCarrier(order.shippingCarrier || "");
       setAdminNotes(order.adminNotes || "");
+      setError(null);
     }
   }, [order]);
 
@@ -345,6 +348,7 @@ export function OrderDetailsDialog({
 
   const handleStatusUpdate = async () => {
     setIsUpdating(true);
+    setError(null);
     try {
       await onUpdateStatus(
         order._id,
@@ -354,8 +358,11 @@ export function OrderDetailsDialog({
         adminNotes || undefined
       );
       onOpenChange(false);
-    } catch (error) {
-      logger.error("Error updating status", error);
+    } catch (err) {
+      logger.error("Error updating status", err);
+      // Extract error message from ConvexError if available
+      const errorMessage = err instanceof Error ? err.message : "Failed to update status";
+      setError(errorMessage);
     } finally {
       setIsUpdating(false);
     }
@@ -407,7 +414,9 @@ export function OrderDetailsDialog({
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
-                      {ORDER_STATUS_OPTIONS.map((option) => (
+                      {ORDER_STATUS_OPTIONS.filter((option) =>
+                        getValidNextStatuses(order.orderStatus).includes(option.value)
+                      ).map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
                         </SelectItem>
@@ -432,6 +441,11 @@ export function OrderDetailsDialog({
                       ))}
                     </SelectContent>
                   </Select>
+                  {newStatus === "shipped" && !shippingCarrier && (
+                    <p className="text-sm text-amber-600">
+                      Required for shipping update email notification
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -442,6 +456,11 @@ export function OrderDetailsDialog({
                   onChange={(e) => setTrackingNumber(e.target.value)}
                   placeholder="Enter tracking number"
                 />
+                {newStatus === "shipped" && !trackingNumber && (
+                  <p className="text-sm text-amber-600">
+                    Required for shipping update email notification
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -457,11 +476,24 @@ export function OrderDetailsDialog({
           </Card>
         </div>
 
+        {error && (
+          <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleStatusUpdate} disabled={isUpdating}>
+          <Button
+            onClick={handleStatusUpdate}
+            disabled={
+              isUpdating ||
+              newStatus === order.orderStatus ||
+              (newStatus === "shipped" && (!trackingNumber || !shippingCarrier))
+            }
+          >
             {isUpdating ? "Updating..." : "Update Order"}
           </Button>
         </DialogFooter>

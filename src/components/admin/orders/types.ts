@@ -84,9 +84,11 @@ export interface OrderStatsCardsProps {
   counts: {
     all: number;
     pending: number;
+    confirmed: number;
     processing: number;
     shipped: number;
     delivered: number;
+    cancelled: number;
     disputed: number;
   };
   statusFilter: OrderStatusFilter;

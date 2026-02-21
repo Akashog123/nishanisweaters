@@ -38,6 +38,7 @@ export interface ProductFormData {
   featured: boolean;
   bestseller: boolean;
   newArrival: boolean;
+  variants: ProductVariant[]; // Stock is managed at variant level
 }
 
 export const initialFormData: ProductFormData = {
@@ -53,6 +54,15 @@ export const initialFormData: ProductFormData = {
   featured: false,
   bestseller: false,
   newArrival: true,
+  variants: [
+    {
+      sku: "",
+      size: "M",
+      color: "Black",
+      stockQuantity: 10,
+      lowStockThreshold: 5,
+    },
+  ],
 };
 
 export type StockFilterType = "all" | "in_stock" | "low_stock" | "out_of_stock";

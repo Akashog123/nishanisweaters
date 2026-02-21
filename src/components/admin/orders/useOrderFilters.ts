@@ -20,9 +20,11 @@ export interface OrderFiltersState {
 export interface OrderCounts {
   all: number;
   pending: number;
+  confirmed: number;
   processing: number;
   shipped: number;
   delivered: number;
+  cancelled: number;
   disputed: number;
 }
 
@@ -121,9 +123,11 @@ export function useOrderFilters(): UseOrderFiltersReturn {
     return {
       all: orders.length,
       pending: orders.filter((o) => o.orderStatus === "pending").length,
+      confirmed: orders.filter((o) => o.orderStatus === "confirmed").length,
       processing: orders.filter((o) => o.orderStatus === "processing").length,
       shipped: orders.filter((o) => o.orderStatus === "shipped").length,
       delivered: orders.filter((o) => o.orderStatus === "delivered").length,
+      cancelled: orders.filter((o) => o.orderStatus === "cancelled").length,
       disputed: orders.filter((o) => o.paymentStatus === "disputed").length,
     };
   }, []);
