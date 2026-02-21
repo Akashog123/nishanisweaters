@@ -95,3 +95,6 @@ docs/plans/
 email-previews/
 scripts/preview-emails.ts
 nul
+
+# Claude Code settings
+.claude/settings.local.json
