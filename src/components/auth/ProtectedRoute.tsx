@@ -1,5 +1,5 @@
 import { useUser, useClerk } from "@clerk/clerk-react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 
@@ -12,7 +12,6 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
   const { isSignedIn, isLoaded } = useUser();
   const { openSignIn } = useClerk();
-  const location = useLocation();
 
   // SECURITY: Use server-side identity verification - never pass client clerkId
   const dbUser = useQuery(

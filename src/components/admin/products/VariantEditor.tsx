@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Trash2, Plus, Save } from "lucide-react";
+import { Trash2, Plus } from "lucide-react";
 import { ProductVariant } from "./types";
 
 interface VariantEditorProps {
@@ -29,18 +29,6 @@ interface VariantEditorProps {
 }
 
 const COMMON_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL"];
-const COMMON_COLORS = [
-  { name: "Black", hex: "#000000" },
-  { name: "White", hex: "#FFFFFF" },
-  { name: "Navy", hex: "#000080" },
-  { name: "Grey", hex: "#808080" },
-  { name: "Red", hex: "#FF0000" },
-  { name: "Blue", hex: "#0000FF" },
-  { name: "Green", hex: "#008000" },
-  { name: "Brown", hex: "#8B4513" },
-  { name: "Beige", hex: "#F5F5DC" },
-  { name: "Pink", hex: "#FFC0CB" },
-];
 
 export function VariantEditor({ variants, onVariantsChange, slug }: VariantEditorProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -52,7 +40,6 @@ export function VariantEditor({ variants, onVariantsChange, slug }: VariantEdito
     lowStockThreshold: 5,
     sku: "",
   });
-  const [editingSku, setEditingSku] = useState<string | null>(null);
 
   // Generate SKU based on slug and variant attributes
   const generateSku = (variant: Partial<ProductVariant>) => {
