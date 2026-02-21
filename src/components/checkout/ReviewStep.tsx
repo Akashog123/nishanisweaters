@@ -56,9 +56,16 @@ export function ReviewStep({
                   {item.size} / {item.color} x {item.quantity}
                 </p>
               </div>
-              <span className="font-medium text-sm">
-                {formatCurrency(item.price * item.quantity)}
-              </span>
+              <div className="flex items-center gap-2">
+                {item.originalPrice && item.originalPrice !== item.price && (
+                  <span className="text-sm text-muted-foreground line-through">
+                    {formatCurrency(item.originalPrice * item.quantity)}
+                  </span>
+                )}
+                <span className="font-medium text-sm">
+                  {formatCurrency(item.price * item.quantity)}
+                </span>
+              </div>
             </div>
           ))}
         </div>
@@ -98,20 +105,20 @@ export function ReviewStep({
             <span>Subtotal</span>
             <span>{formatCurrency(subtotal)}</span>
           </div>
-          <div className="flex justify-between">
-            <span>Shipping</span>
-            <span>{shipping === 0 ? "FREE" : formatCurrency(shipping)}</span>
-          </div>
+          {promoDiscount > 0 && (
+            <div className="flex justify-between text-green-600">
+              <span>Promo Discount ({Math.round((promoDiscount / subtotal) * 100)}%)</span>
+              <span>-{formatCurrency(promoDiscount)}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span>Tax ({(taxRate * 100).toFixed(0)}% GST)</span>
             <span>{formatCurrency(tax)}</span>
           </div>
-          {promoDiscount > 0 && (
-            <div className="flex justify-between text-green-600">
-              <span>Promo Discount</span>
-              <span>-{formatCurrency(promoDiscount)}</span>
-            </div>
-          )}
+          <div className="flex justify-between">
+            <span>Shipping</span>
+            <span>{shipping === 0 ? "FREE" : formatCurrency(shipping)}</span>
+          </div>
           <div className="flex justify-between font-bold text-lg pt-2 border-t">
             <span>Total</span>
             <span>{formatCurrency(total)}</span>

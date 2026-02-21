@@ -13,6 +13,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import { useState } from "react";
 import { PromoCodeInput } from "@/components/PromoCodeInput";
 import { useImageSettings } from "@/hooks/useImageSettings";
+import { formatCurrency } from "@/lib/constants";
 import {
   Select,
   SelectContent,
@@ -130,7 +131,7 @@ function SavedItem({
         <Link to={`/product/${item.product.slug}`} className="hover:underline">
           <h4 className="font-medium">{item.product.name}</h4>
         </Link>
-        <p className="text-sm font-bold mt-1">${item.product.retailPrice.toFixed(2)}</p>
+        <p className="text-sm font-bold mt-1">{formatCurrency(item.product.retailPrice)}</p>
 
         {availableVariants.length > 0 ? (
           <div className="flex items-center gap-2 mt-2">
@@ -360,17 +361,11 @@ export default function Cart() {
                   </p>
                   <div className="flex items-center gap-2 mt-1">
                     <p className="font-bold">
-                      {typeof item.price === 'number'
-                        ? `$${item.price.toFixed(2)}`
-                        : item.price
-                      }
+                      {formatCurrency(item.price)}
                     </p>
                     {item.originalPrice && item.originalPrice !== item.price && (
                       <p className="text-sm text-muted-foreground line-through">
-                        ${typeof item.originalPrice === 'number'
-                          ? item.originalPrice.toFixed(2)
-                          : item.originalPrice
-                        }
+                        {formatCurrency(item.originalPrice)}
                       </p>
                     )}
                   </div>
@@ -466,13 +461,13 @@ export default function Cart() {
                     {isLoading ? (
                       <Skeleton className="h-4 w-16 inline-block" />
                     ) : (
-                      `$${subtotal.toFixed(2)}`
+                      formatCurrency(subtotal)
                     )}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Shipping</span>
-                  <span>{shipping === 0 ? "FREE" : `$${shipping}`}</span>
+                  <span>{shipping === 0 ? "FREE" : formatCurrency(shipping)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Tax (18% GST)</span>
@@ -480,14 +475,14 @@ export default function Cart() {
                     {isLoading ? (
                       <Skeleton className="h-4 w-16 inline-block" />
                     ) : (
-                      `$${tax.toFixed(2)}`
+                      formatCurrency(tax)
                     )}
                   </span>
                 </div>
                 {promoDiscount > 0 && (
                   <div className="flex justify-between text-green-600">
-                    <span>Promo Discount</span>
-                    <span>-${promoDiscount.toFixed(2)}</span>
+                    <span>Promo Discount ({Math.round((promoDiscount / subtotal) * 100)}%)</span>
+                    <span>-{formatCurrency(promoDiscount)}</span>
                   </div>
                 )}
                 <div className="border-t pt-2 mt-2">
@@ -497,7 +492,7 @@ export default function Cart() {
                       {isLoading ? (
                         <Skeleton className="h-6 w-24 inline-block" />
                       ) : (
-                        `$${total.toFixed(2)}`
+                        formatCurrency(total)
                       )}
                     </span>
                   </div>
@@ -511,7 +506,7 @@ export default function Cart() {
 
               {subtotal < 1000 && (
                 <p className="text-sm text-muted-foreground mt-4">
-                  Add ${(1000 - subtotal).toFixed(2)} more for free shipping!
+                  Add {formatCurrency(1000 - subtotal)} more for free shipping!
                 </p>
               )}
 

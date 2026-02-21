@@ -1,5 +1,6 @@
 import { memo, useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { CURRENCY_SYMBOL } from "@/lib/constants";
 
 interface ProductCardProps {
   id: string;
@@ -181,10 +182,10 @@ const ProductCard = memo(({ id, image, hoverImage, name, price, originalPrice }:
           {name}
         </h3>
         <div className="flex items-center gap-2">
-          <span className="font-bold text-lg">₹{price}</span>
+          <span className="font-bold text-lg">{CURRENCY_SYMBOL}{price}</span>
           {originalPrice && (
             <span className="text-muted-foreground line-through text-sm">
-              ₹{originalPrice}
+              {CURRENCY_SYMBOL}{originalPrice}
             </span>
           )}
         </div>

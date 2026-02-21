@@ -512,6 +512,7 @@ const AdminCustomers = () => {
 
         {/* Customer Details Dialog */}
         <CustomerDetailsDialog
+          key={selectedCustomer?._id || "new"}
           customer={selectedCustomer}
           open={!!selectedCustomer}
           onOpenChange={(open) => {

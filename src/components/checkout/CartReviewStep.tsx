@@ -7,6 +7,7 @@ export interface CartItem {
   productId: string;
   name: string;
   price: number;
+  originalPrice?: number;
   image: string;
   size: string;
   color: string;
@@ -16,10 +17,11 @@ export interface CartItem {
 export interface CartReviewStepProps {
   items: CartItem[];
   subtotal: number;
+  promoDiscount?: number;
   onNext: () => void;
 }
 
-export function CartReviewStep({ items, subtotal, onNext }: CartReviewStepProps) {
+export function CartReviewStep({ items, subtotal, promoDiscount = 0, onNext }: CartReviewStepProps) {
   return (
     <div className="space-y-6">
       <div className="border rounded-lg divide-y">
@@ -37,18 +39,43 @@ export function CartReviewStep({ items, subtotal, onNext }: CartReviewStepProps)
               </p>
               <div className="flex items-center justify-between mt-2">
                 <span className="text-sm">Qty: {item.quantity}</span>
-                <span className="font-medium">
-                  {formatCurrency(item.price * item.quantity)}
-                </span>
+                <div className="flex items-center gap-2">
+                  {item.originalPrice && item.originalPrice !== item.price && (
+                    <span className="text-sm text-muted-foreground line-through">
+                      {formatCurrency(item.originalPrice * item.quantity)}
+                    </span>
+                  )}
+                  <span className="font-medium">
+                    {formatCurrency(item.price * item.quantity)}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-        <span className="font-medium">Subtotal ({items.length} items)</span>
-        <span className="text-xl font-bold">{formatCurrency(subtotal)}</span>
+      <div className="flex flex-col gap-2 p-4 bg-muted rounded-lg">
+        <div className="flex items-center justify-between">
+          <span className="font-medium">Subtotal ({items.length} items)</span>
+          <div className="flex items-center gap-2">
+            {promoDiscount > 0 && (
+              <span className="text-muted-foreground line-through text-lg">
+                {formatCurrency(subtotal)}
+              </span>
+            )}
+            <span className="text-xl font-bold">
+              {formatCurrency(subtotal - promoDiscount)}
+            </span>
+          </div>
+        </div>
+
+        {promoDiscount > 0 && (
+          <div className="flex items-center justify-between text-sm text-green-600 font-medium border-t border-border/50 pt-2 mt-1">
+            <span>Promo Code Savings ({Math.round((promoDiscount / subtotal) * 100)}%)</span>
+            <span>-{formatCurrency(promoDiscount)}</span>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-4">

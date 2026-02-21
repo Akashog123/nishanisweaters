@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useConvexError } from "@/hooks/useConvexError";
 import { Loader2, Tag, X, Check } from "lucide-react";
 
 interface PromoCodeInputProps {
@@ -19,6 +20,7 @@ export function PromoCodeInput({
   onPromoRemoved,
 }: PromoCodeInputProps) {
   const { toast } = useToast();
+  const { handleError } = useConvexError({ showToast: false });
   const [code, setCode] = useState("");
   const [isApplying, setIsApplying] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
@@ -55,13 +57,10 @@ export function PromoCodeInput({
       setCode("");
       onPromoApplied?.(result.discount, result.code);
     } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Invalid promo code. Please try again.";
+      const parsed = handleError(error, "PromoCodeInput.handleApply");
       toast({
-        title: "Invalid code",
-        description: errorMessage,
+        title: "Couldn't apply code",
+        description: parsed.message,
         variant: "destructive",
       });
     } finally {
@@ -78,10 +77,11 @@ export function PromoCodeInput({
         description: "The discount has been removed from your cart.",
       });
       onPromoRemoved?.();
-    } catch (_error) {
+    } catch (error) {
+      const parsed = handleError(error, "PromoCodeInput.handleRemove");
       toast({
         title: "Error",
-        description: "Failed to remove promo code. Please try again.",
+        description: parsed.message,
         variant: "destructive",
       });
     } finally {

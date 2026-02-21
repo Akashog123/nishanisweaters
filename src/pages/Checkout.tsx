@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
-import { useMutation, useQuery, useAction } from "convex/react";
+import { useMutation, useQuery, useAction, useConvexAuth } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import Layout from "@/components/Layout";
@@ -40,10 +40,12 @@ import {
   clearCartAbandonmentTracking,
 } from "@/lib/observability";
 import { validateAddress } from "@/lib/validation";
+import { getSessionId } from "@/lib/session";
 
 export default function Checkout() {
   const navigate = useNavigate();
   const { user } = useUser();
+  const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
   const { items, getSubtotal, clearCart, isLoading: cartLoading, error: cartError } = useCart();
   const createOrder = useMutation(api.orders.createOrder);
   const validateCart = useMutation(api.cart.validateCart);
@@ -62,6 +64,7 @@ export default function Checkout() {
             variantSku: item._variantSku || `${item.size}-${item.color}`,
             quantity: item.quantity,
           })),
+          promoCode: cartData?.appliedPromoCode,
         }
       : "skip"
   );
@@ -87,11 +90,19 @@ export default function Checkout() {
   // Server prices are authoritative and prevent price manipulation
   const clientSubtotal = getSubtotal();
   const subtotal = orderPreview?.subtotal ?? clientSubtotal;
-  const shipping = orderPreview?.shippingCost ?? (clientSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST);
-  const tax = orderPreview?.tax ?? clientSubtotal * TAX_RATE;
-  const promoDiscount = cartData?.promoDiscount ?? 0;
+  const promoDiscount = orderPreview?.promoDiscount ?? cartData?.promoDiscount ?? 0;
+
+  // Tax is calculated on the subtotal minus promo discount
+  const taxableAmount = Math.max(0, subtotal - promoDiscount);
+  const tax = orderPreview?.tax ?? taxableAmount * TAX_RATE;
+
+  // Shipping uses original subtotal to check free shipping threshold
+  const shipping = orderPreview?.shippingCost ?? (subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST);
+
   const appliedPromoCode = cartData?.appliedPromoCode;
-  const total = orderPreview?.total ?? (subtotal + shipping + tax - promoDiscount);
+
+  // Server total now correctly includes promo discount calculation
+  const total = orderPreview?.total ?? (taxableAmount + tax + shipping);
   const serverTaxRate = orderPreview?.taxRate ?? TAX_RATE;
 
   // Memoize cart items for step components
@@ -99,6 +110,7 @@ export default function Checkout() {
     productId: item.productId,
     name: item.name,
     price: item.price,
+    originalPrice: item.originalPrice,
     image: item.image,
     size: item.size,
     color: item.color,
@@ -199,8 +211,11 @@ export default function Checkout() {
    * @returns Order ID for the created order
    */
   const createOrderWithPayment = useCallback(async (): Promise<Id<"orders">> => {
-    // Validate cart before checkout
-    const validation = await validateCart({});
+    // Validate cart before checkout - only pass sessionId for guest users
+    // For authenticated users, the server uses server-side identity
+    // Use Convex auth state to ensure server-side identity is ready
+    const sessionId = (user && isConvexAuthenticated) ? undefined : getSessionId();
+    const validation = await validateCart({ sessionId });
 
     if (!validation.isValid) {
       toast.error(validation.errors.join(", "));
@@ -221,7 +236,7 @@ export default function Checkout() {
     });
 
     return orderId;
-  }, [validateCart, createOrder, items, shippingAddress, paymentMethod, customerNotes, appliedPromoCode]);
+  }, [user, isConvexAuthenticated, validateCart, createOrder, items, shippingAddress, paymentMethod, customerNotes, appliedPromoCode]);
 
   /**
    * Processes Razorpay payment verification response
@@ -411,11 +426,12 @@ export default function Checkout() {
     }
   };
 
-  // Redirect to cart if empty
-  if (!cartLoading && items.length === 0) {
-    navigate("/cart");
-    return null;
-  }
+  // Redirect to cart if empty (useEffect to avoid navigation during render)
+  useEffect(() => {
+    if (!cartLoading && items.length === 0) {
+      navigate("/cart");
+    }
+  }, [cartLoading, items.length, navigate]);
 
   // Loading skeleton
   if (cartLoading && items.length === 0) {
@@ -458,6 +474,7 @@ export default function Checkout() {
           <CartReviewStep
             items={cartItems}
             subtotal={subtotal}
+            promoDiscount={promoDiscount}
             onNext={() => setCurrentStep(2)}
           />
         )}

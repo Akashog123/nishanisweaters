@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle } from "lucide-react";
 import { Id } from "../../convex/_generated/dataModel";
 import NotFoundError from "@/components/NotFoundError";
+import { formatCurrency } from "@/lib/constants";
 
 export default function OrderConfirmation() {
   const { orderId } = useParams<{ orderId: string }>();
@@ -67,7 +68,7 @@ export default function OrderConfirmation() {
                       {item.size} / {item.color} x {item.quantity}
                     </p>
                   </div>
-                  <p className="font-medium">${item.subtotal.toFixed(2)}</p>
+                  <p className="font-medium">{formatCurrency(item.subtotal)}</p>
                 </div>
               ))}
             </div>
@@ -75,19 +76,25 @@ export default function OrderConfirmation() {
             <div className="border-t mt-4 pt-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Subtotal</span>
-                <span>${order.subtotal.toFixed(2)}</span>
+                <span>{formatCurrency(order.subtotal)}</span>
+              </div>
+              {order.promoDiscount && order.promoDiscount > 0 && (
+                <div className="flex justify-between text-sm text-green-600">
+                  <span>Promo Discount ({Math.round((order.promoDiscount / order.subtotal) * 100)}%)</span>
+                  <span>-{formatCurrency(order.promoDiscount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm">
+                <span>Tax</span>
+                <span>{formatCurrency(order.tax)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Shipping</span>
-                <span>{order.shippingCost === 0 ? "FREE" : `$${order.shippingCost}`}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Tax</span>
-                <span>${order.tax.toFixed(2)}</span>
+                <span>{order.shippingCost === 0 ? "FREE" : formatCurrency(order.shippingCost)}</span>
               </div>
               <div className="flex justify-between font-bold text-lg border-t pt-2">
                 <span>Total</span>
-                <span>${order.total.toFixed(2)}</span>
+                <span>{formatCurrency(order.total)}</span>
               </div>
             </div>
           </div>

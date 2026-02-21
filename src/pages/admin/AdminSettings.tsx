@@ -49,6 +49,7 @@ import {
   Share2,
   Image,
   ExternalLink,
+  Scale,
 } from "lucide-react";
 
 // ============================================
@@ -96,6 +97,7 @@ const CATEGORY_ICON_MAP: Record<string, React.ElementType> = {
   Mail: Mail,
   Phone: Phone,
   Share2: Share2,
+  Scale: Scale,
 };
 
 // ============================================
@@ -212,6 +214,18 @@ function ImagePreview({ url }: { url: string }) {
 
 function SettingInput({ setting, localValue, onChange }: SettingInputProps) {
   const inputValue = formatForInput(localValue, setting.valueType);
+
+  // Use Textarea for text type (long-form content like legal pages)
+  if (setting.valueType === "text") {
+    return (
+      <Textarea
+        value={localValue}
+        onChange={(e) => onChange(e.target.value)}
+        className="min-h-[200px] max-w-3xl font-mono text-sm"
+        placeholder={setting.description}
+      />
+    );
+  }
 
   switch (setting.valueType) {
     case "percentage":
@@ -360,6 +374,57 @@ function PreviewPanel({ affectedAreas }: { affectedAreas: string[] }) {
           </li>
         )}
       </ul>
+    </div>
+  );
+}
+
+// ============================================
+// LEGAL PAGE PREVIEW COMPONENT
+// ============================================
+
+interface LegalPreviewProps {
+  title: string;
+  content: string;
+  type: "privacy" | "terms";
+  lastEdited?: string;
+}
+
+function LegalPreview({ title, content, type, lastEdited }: LegalPreviewProps) {
+  const previewUrl = type === "privacy" ? "/privacy-policy" : "/terms-of-service";
+
+  return (
+    <div className="mt-4 p-4 border rounded-lg bg-background">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-green-600" />
+          <span className="text-sm font-medium">Page Preview</span>
+        </div>
+        <a
+          href={previewUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-primary hover:underline flex items-center gap-1"
+        >
+          <ExternalLink className="h-3 w-3" />
+          Open full page
+        </a>
+      </div>
+
+      <div className="border rounded-md bg-muted/30 p-4 max-h-64 overflow-y-auto">
+        <h2 className="text-lg font-bold mb-2">{title || (type === "privacy" ? "Privacy Policy" : "Terms of Service")}</h2>
+        {lastEdited && (
+          <p className="text-xs text-muted-foreground mb-3">Last updated: {lastEdited}</p>
+        )}
+        <div className="prose prose-sm max-w-none">
+          {content ? (
+            <div className="text-sm whitespace-pre-wrap">{content}</div>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">
+              No content configured yet. Add content in the text area above.
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -897,6 +962,28 @@ export default function AdminSettings() {
                               )}
 
                               <PreviewPanel affectedAreas={setting.affectedAreas} />
+
+                              {/* Legal Page Preview */}
+                              {setting.category === "legal" && setting.valueType === "text" && (
+                                <LegalPreview
+                                  title={
+                                    setting.key === "LEGAL.PRIVACY_POLICY_TITLE" || setting.key === "LEGAL.TERMS_OF_SERVICE_TITLE"
+                                      ? currentValue
+                                      : setting.key === "LEGAL.PRIVACY_POLICY_CONTENT"
+                                      ? getCurrentValue("LEGAL.PRIVACY_POLICY_TITLE")
+                                      : getCurrentValue("LEGAL.TERMS_OF_SERVICE_TITLE")
+                                  }
+                                  content={
+                                    setting.key.includes("CONTENT") ? currentValue : ""
+                                  }
+                                  type={
+                                    setting.key.includes("PRIVACY") ? "privacy" : "terms"
+                                  }
+                                  lastEdited={
+                                    setting.key.includes("EDITED_AT") ? currentValue : undefined
+                                  }
+                                />
+                              )}
                             </div>
 
                             <div className="flex flex-col gap-2">

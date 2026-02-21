@@ -11,6 +11,7 @@ import { useCartItems, useCartActions, CartItem } from "@/context/CartContext";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
+import { formatCurrency } from "@/lib/constants";
 
 interface CartDrawerProps {
   open: boolean;
@@ -112,17 +113,11 @@ const CartItemRow = memo(function CartItemRow({
         </div>
         <div className="flex items-center gap-2">
           <span className="font-bold">
-            {typeof item.price === 'number'
-              ? `$${item.price.toFixed(2)}`
-              : `$${item.price}`
-            }
+            {formatCurrency(item.price)}
           </span>
           {item.originalPrice && (
             <span className="text-sm text-muted-foreground line-through">
-              ${typeof item.originalPrice === 'number'
-                ? item.originalPrice.toFixed(2)
-                : item.originalPrice
-              }
+              {formatCurrency(item.originalPrice)}
             </span>
           )}
         </div>
@@ -201,7 +196,7 @@ const CartDrawer = ({ open, onOpenChange }: CartDrawerProps) => {
                     {isLoading ? (
                       <Skeleton className="h-6 w-20 inline-block" />
                     ) : (
-                      `₹${subtotal.toFixed(2)}`
+                      formatCurrency(subtotal)
                     )}
                   </span>
                 </div>

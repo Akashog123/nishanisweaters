@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 
 import Layout from "@/components/Layout";
-import { BackButton } from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
@@ -157,7 +156,7 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 const ContactUs = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const { responseTime, hoursWeekdays, hoursWeekends, businessLocation } = useSiteSettings();
+  const { responseTime, hoursWeekdays, hoursWeekends } = useSiteSettings();
 
   const submitContactForm = useMutation(api.contact.submitContactForm);
 

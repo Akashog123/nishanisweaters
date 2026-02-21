@@ -19,6 +19,7 @@ import NotFoundError from "@/components/NotFoundError";
 import { useConvexError } from "@/hooks/useConvexError";
 import { ValidationError } from "@/lib/errors";
 import { useImageSettings } from "@/hooks/useImageSettings";
+import { CURRENCY_SYMBOL } from "@/lib/constants";
 
 const ProductDetailSkeleton = () => {
   return (
@@ -272,10 +273,10 @@ const ProductDetail = () => {
             <div>
               <h1 className="text-3xl lg:text-5xl font-bold mb-4">{product.name}</h1>
               <div className="flex items-center gap-3 mb-6">
-                <span className="text-3xl font-bold">${product.retailPrice.toFixed(2)}</span>
+                <span className="text-3xl font-bold">{CURRENCY_SYMBOL}{product.retailPrice.toFixed(2)}</span>
                 {product.compareAtPrice && (
                   <span className="text-xl text-muted-foreground line-through">
-                    ${product.compareAtPrice.toFixed(2)}
+                    {CURRENCY_SYMBOL}{product.compareAtPrice.toFixed(2)}
                   </span>
                 )}
               </div>

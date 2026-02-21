@@ -1,4 +1,4 @@
-import { useUser } from "@clerk/clerk-react";
+import { useUser, useClerk } from "@clerk/clerk-react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -11,6 +11,7 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
   const { isSignedIn, isLoaded } = useUser();
+  const { openSignIn } = useClerk();
   const location = useLocation();
 
   // SECURITY: Use server-side identity verification - never pass client clerkId
@@ -28,7 +29,9 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   }
 
   if (!isSignedIn) {
-    return <Navigate to="/" state={{ from: location }} replace />;
+    // Open Clerk sign-in modal directly instead of redirecting to home
+    openSignIn();
+    return null;
   }
 
   // If role check is required, wait for user data (undefined means still loading)

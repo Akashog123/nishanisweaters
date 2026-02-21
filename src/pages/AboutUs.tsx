@@ -204,13 +204,11 @@ const AboutUs = () => {
         <div className="container mx-auto px-4 lg:px-8 relative">
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <h2 className="text-4xl lg:text-6xl font-bold text-white tracking-tight">
-              Experience the Nidhi Difference
+              Experience the Premium in Budget
             </h2>
             <p className="text-xl text-primary-foreground/90 leading-relaxed max-w-2xl mx-auto font-light">
-              Discover our collection of premium woolens, crafted with care in
-              {businessLocation.split(',')[0]} and delivered to your doorstep. Join thousands of
-              satisfied customers who trust {siteName} for quality and
-              style.
+              Discover our collection of premium woolens, crafted with care in {businessLocation.split(',')[0]} and delivered to your doorstep. Join thousands of
+              satisfied customers who trust {siteName} for quality and style.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Button
