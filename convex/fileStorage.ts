@@ -1,7 +1,7 @@
 import { mutation, query, action, ActionCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { ConvexError } from "convex/values";
-import { requireAuth, requireAdmin, requireAuthAction } from "./lib/auth";
+import { requireAuth, requireAdmin, requireAuthAction, requireAdminFromUser } from "./lib/auth";
 import { MAX_FILE_SIZE_BYTES, ALLOWED_DOCUMENT_TYPES, ALLOWED_IMAGE_TYPES, FILE_MAGIC_BYTES } from "./lib/constants";
 import { Id } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api";
@@ -224,22 +224,9 @@ export const saveProductImage = action({
     imageUrl: string;
   }> => {
     // SECURITY: Verify admin role via server-side identity
-    // This uses Clerk's verified identity, never trusting client-provided IDs
+    // Use the centralized requireAdminFromUser helper for proper validation
     const user = await ctx.runQuery(api.users.getCurrentUser, {});
-
-    if (!user) {
-      throw new ConvexError({
-        code: "UNAUTHORIZED",
-        message: "Authentication required. Please sign in to continue.",
-      });
-    }
-
-    if (user.role !== "admin") {
-      throw new ConvexError({
-        code: "FORBIDDEN",
-        message: "Access denied. Admin role required.",
-      });
-    }
+    requireAdminFromUser(user);
 
     // Validate content-type is allowed for images
     if (!isAllowedImageType(args.contentType)) {

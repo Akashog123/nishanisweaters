@@ -97,7 +97,14 @@ export function ProductMediaUpload({
 
         // Get upload URL
         setUploadProgress((completedFiles / totalFiles) * 50);
-        const uploadUrl = await generateUploadUrl();
+        let uploadUrl;
+        try {
+          uploadUrl = await generateUploadUrl();
+        } catch (err) {
+          console.error("Failed to get upload URL:", err);
+          toast.error("Failed to get upload URL. Are you still logged in?");
+          continue;
+        }
 
         // Upload file
         setUploadProgress((completedFiles / totalFiles) * 50 + 25);
@@ -108,17 +115,29 @@ export function ProductMediaUpload({
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to upload ${file.name}`);
+          const errorText = await response.text();
+          console.error("File upload failed:", response.status, errorText);
+          throw new Error(`Failed to upload ${file.name}: ${response.status}`);
         }
 
         const { storageId } = await response.json();
+        if (!storageId) {
+          console.error("No storageId in response:", await response.json());
+          throw new Error("No storage ID returned from upload");
+        }
 
         // Save to product
-        await saveImage({
-          storageId,
-          productId,
-          alt: file.name.replace(/\.[^/.]+$/, ""),
-        });
+        try {
+          await saveImage({
+            storageId,
+            productId,
+            alt: file.name.replace(/\.[^/.]+$/, ""),
+            contentType: file.type,
+          });
+        } catch (err) {
+          console.error("Failed to save image to product:", err);
+          throw err;
+        }
 
         completedFiles++;
         setUploadProgress((completedFiles / totalFiles) * 100);
@@ -126,6 +145,7 @@ export function ProductMediaUpload({
 
       toast.success(`Uploaded ${completedFiles} image(s)`);
     } catch (error) {
+      console.error("Upload error:", error);
       toast.error(error instanceof Error ? error.message : "Upload failed");
     } finally {
       setIsUploading(false);

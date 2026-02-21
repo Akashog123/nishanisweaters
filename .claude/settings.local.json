@@ -1,8 +1,10 @@
 {
-  "outputStyle": "Explanatory",
   "permissions": {
     "allow": [
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "mcp__searxng__searxng_web_search",
+      "mcp__searxng__web_url_read"
     ]
-  }
+  },
+  "outputStyle": "Explanatory"
 }
