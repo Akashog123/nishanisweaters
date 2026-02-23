@@ -113,16 +113,18 @@ export const canUserReview = query({
       return { canReview: false, reason: "already_reviewed", reviewId: existingReview._id };
     }
 
-    // Check if user has purchased this product
-    const orders = await ctx.db
+    // Check if user has purchased this product — iterate and break early
+    // instead of .collect() which loads all delivered orders
+    let hasPurchased = false;
+    for await (const order of ctx.db
       .query("orders")
       .withIndex("by_user_id", (q) => q.eq("userId", currentUser.clerkId))
-      .filter((q) => q.eq(q.field("orderStatus"), "delivered"))
-      .collect();
-
-    const hasPurchased = orders.some((order) =>
-      order.items.some((item) => item.productId === args.productId)
-    );
+      .filter((q) => q.eq(q.field("orderStatus"), "delivered"))) {
+      if (order.items.some((item) => item.productId === args.productId)) {
+        hasPurchased = true;
+        break;
+      }
+    }
 
     return {
       canReview: hasPurchased,
@@ -182,16 +184,17 @@ export const submitReview = mutation({
       });
     }
 
-    // Check if user has purchased this product (required for submitting reviews)
-    const orders = await ctx.db
+    // Check if user has purchased this product — iterate and break early
+    let purchaseOrder = null;
+    for await (const order of ctx.db
       .query("orders")
       .withIndex("by_user_id", (q) => q.eq("userId", clerkId))
-      .filter((q) => q.eq(q.field("orderStatus"), "delivered"))
-      .collect();
-
-    const purchaseOrder = orders.find((order) =>
-      order.items.some((item) => item.productId === args.productId)
-    );
+      .filter((q) => q.eq(q.field("orderStatus"), "delivered"))) {
+      if (order.items.some((item) => item.productId === args.productId)) {
+        purchaseOrder = order;
+        break;
+      }
+    }
 
     // Enforce: Only customers who have purchased can submit reviews
     if (!purchaseOrder) {
@@ -376,20 +379,15 @@ export const moderateReview = mutation({
     if (args.status === "approved") {
       const product = await ctx.db.get(review.productId);
       if (product) {
-        // Get all approved reviews for this product
-        const approvedReviews = await ctx.db
-          .query("reviews")
-          .withIndex("by_product_id", (q) => q.eq("productId", review.productId))
-          .filter((q) => q.eq(q.field("status"), "approved"))
-          .collect();
-
-        // Include the current review being approved
-        const allRatings = [...approvedReviews.map(r => r.rating), review.rating];
-        const averageRating = allRatings.reduce((sum, r) => sum + r, 0) / allRatings.length;
+        // Incremental update — no need to collect all reviews
+        const oldCount = product.reviewCount || 0;
+        const oldAvg = product.averageRating || 0;
+        const newCount = oldCount + 1;
+        const newAvg = (oldAvg * oldCount + review.rating) / newCount;
 
         await ctx.db.patch(review.productId, {
-          averageRating: Math.round(averageRating * 10) / 10,
-          reviewCount: allRatings.length,
+          averageRating: Math.round(newAvg * 10) / 10,
+          reviewCount: newCount,
         });
       }
     }

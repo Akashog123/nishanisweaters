@@ -11,6 +11,7 @@ import {
   addressValidator,
   paymentMethodValidator,
   orderItemInputValidator,
+  orderTypeValidator,
   type OrderStatus,
   type PaymentStatus,
   type DisputeStatus,
@@ -395,6 +396,27 @@ export const getUserOrders = query({
   },
 });
 
+// Query: Get the last shipping address from the user's most recent order
+// Lightweight alternative to getUserOrders when only the address is needed
+export const getLastShippingAddress = query({
+  args: {},
+  handler: async (ctx) => {
+    const { clerkId } = await requireAuth(ctx);
+
+    const lastOrder = await ctx.db
+      .query("orders")
+      .withIndex("by_user_id", (q) => q.eq("userId", clerkId))
+      .order("desc")
+      .first();
+
+    if (!lastOrder?.shippingAddress) {
+      return null;
+    }
+
+    return lastOrder.shippingAddress;
+  },
+});
+
 // Query: Get single order (with ownership verification)
 export const getOrder = query({
   args: { orderId: v.id("orders") },
@@ -434,10 +456,13 @@ export const getOrderByNumber = query({
 
 // Query: List all orders (Admin only)
 // Optimized: Uses indexes for status filtering and cursor-based pagination
+// Supports server-side search, status, payment, and type filtering
 export const listAllOrders = query({
   args: {
     orderStatus: v.optional(orderStatusValidator),
-    orderType: v.optional(v.string()),
+    paymentStatus: v.optional(paymentStatusValidator),
+    orderType: v.optional(orderTypeValidator),
+    searchTerm: v.optional(v.string()),
     limit: v.optional(v.number()),
     cursor: v.optional(v.string()),
   },
@@ -445,23 +470,67 @@ export const listAllOrders = query({
     // Require admin authorization
     await requireAdmin(ctx);
 
-    const limit = args.limit || 50;
+    const limit = args.limit || 25;
     let query;
 
     // Use appropriate index based on filters
+    // Priority: orderStatus (most common filter) > paymentStatus > default
     const orderStatus = args.orderStatus;
+    const paymentStatus = args.paymentStatus;
     if (orderStatus) {
-      // Use compound index by_status_created for status + ordering
       query = ctx.db
         .query("orders")
         .withIndex("by_status_created", (q) => q.eq("orderStatus", orderStatus))
         .order("desc");
+    } else if (paymentStatus) {
+      query = ctx.db
+        .query("orders")
+        .withIndex("by_payment_created", (q) => q.eq("paymentStatus", paymentStatus))
+        .order("desc");
     } else {
-      // Use by_created_at index for ordering when no status filter
       query = ctx.db
         .query("orders")
         .withIndex("by_created_at")
         .order("desc");
+    }
+
+    // Apply in-memory filters for non-indexed fields
+    if (args.paymentStatus && orderStatus) {
+      // paymentStatus wasn't used as index, apply as filter
+      query = query.filter((q) =>
+        q.eq(q.field("paymentStatus"), args.paymentStatus!)
+      );
+    }
+    if (args.orderType) {
+      query = query.filter((q) =>
+        q.eq(q.field("orderType"), args.orderType!)
+      );
+    }
+
+    // Apply search filter server-side (orderNumber or userEmail)
+    const searchTerm = args.searchTerm?.trim().toLowerCase();
+    if (searchTerm) {
+      // Collect with filter since search needs string matching
+      const allFiltered = await query.collect();
+      const searched = allFiltered.filter(
+        (o) =>
+          o.orderNumber.toLowerCase().includes(searchTerm) ||
+          o.userEmail.toLowerCase().includes(searchTerm)
+      );
+      // Manual pagination for search results
+      const cursorIndex = args.cursor
+        ? searched.findIndex((o) => o._id === args.cursor)
+        : -1;
+      const startIndex = cursorIndex >= 0 ? cursorIndex + 1 : 0;
+      const page = searched.slice(startIndex, startIndex + limit);
+      const isDone = startIndex + limit >= searched.length;
+
+      return {
+        orders: page,
+        continueCursor: page.length > 0 ? page[page.length - 1]._id : null,
+        isDone,
+        totalCount: searched.length,
+      };
     }
 
     // Apply pagination
@@ -470,16 +539,50 @@ export const listAllOrders = query({
       cursor: args.cursor ?? null,
     });
 
-    // Apply orderType filter in memory (less common filter)
-    let filteredOrders = paginatedResults.page;
-    if (args.orderType) {
-      filteredOrders = filteredOrders.filter(o => o.orderType === args.orderType);
-    }
-
     return {
-      orders: filteredOrders,
+      orders: paginatedResults.page,
       continueCursor: paginatedResults.continueCursor,
       isDone: paginatedResults.isDone,
+    };
+  },
+});
+
+// Query: Get order counts by status (Admin only)
+// Lightweight query for stats cards — avoids fetching full order data
+export const getOrderCounts = query({
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+
+    // Run independent count queries in parallel using indexes
+    const [
+      pending,
+      confirmed,
+      processing,
+      shipped,
+      delivered,
+      cancelled,
+      disputed,
+      allOrders,
+    ] = await Promise.all([
+      ctx.db.query("orders").withIndex("by_order_status", (q) => q.eq("orderStatus", "pending")).collect(),
+      ctx.db.query("orders").withIndex("by_order_status", (q) => q.eq("orderStatus", "confirmed")).collect(),
+      ctx.db.query("orders").withIndex("by_order_status", (q) => q.eq("orderStatus", "processing")).collect(),
+      ctx.db.query("orders").withIndex("by_order_status", (q) => q.eq("orderStatus", "shipped")).collect(),
+      ctx.db.query("orders").withIndex("by_order_status", (q) => q.eq("orderStatus", "delivered")).collect(),
+      ctx.db.query("orders").withIndex("by_order_status", (q) => q.eq("orderStatus", "cancelled")).collect(),
+      ctx.db.query("orders").withIndex("by_payment_status", (q) => q.eq("paymentStatus", "disputed")).collect(),
+      ctx.db.query("orders").withIndex("by_created_at").collect(),
+    ]);
+
+    return {
+      all: allOrders.length,
+      pending: pending.length,
+      confirmed: confirmed.length,
+      processing: processing.length,
+      shipped: shipped.length,
+      delivered: delivered.length,
+      cancelled: cancelled.length,
+      disputed: disputed.length,
     };
   },
 });

@@ -10,6 +10,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { ConvexError } from "convex/values";
+import { Id } from "./_generated/dataModel";
 import { requireAdmin } from "./lib/auth";
 
 // ============================================
@@ -84,6 +85,7 @@ export const listCategories = query({
 
 /**
  * Get category statistics (product counts)
+ * Uses per-category indexed queries instead of loading all products
  */
 export const getCategoryStats = query({
   args: {},
@@ -91,23 +93,25 @@ export const getCategoryStats = query({
     await requireAdmin(ctx);
 
     const categories = await ctx.db.query("categories").collect();
-    const products = await ctx.db.query("products").collect();
 
-    // Count products per category
-    const stats = categories.map((category) => {
-      const productCount = products.filter(
-        (p) => p.category === category.slug
-      ).length;
-      const activeProductCount = products.filter(
-        (p) => p.category === category.slug && p.isActive
-      ).length;
+    // Query products per category using index instead of loading all products
+    const stats = await Promise.all(
+      categories.map(async (category) => {
+        const products = await ctx.db
+          .query("products")
+          .withIndex("by_category", (q) => q.eq("category", category.slug))
+          .collect();
 
-      return {
-        ...category,
-        productCount,
-        activeProductCount,
-      };
-    });
+        const productCount = products.length;
+        const activeProductCount = products.filter((p) => p.isActive).length;
+
+        return {
+          ...category,
+          productCount,
+          activeProductCount,
+        };
+      })
+    );
 
     return stats.sort((a, b) => a.displayOrder - b.displayOrder);
   },
@@ -125,6 +129,8 @@ export const createCategory = mutation({
     name: v.string(),
     slug: v.string(),
     description: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+    imageStorageId: v.optional(v.string()),
     showInHeader: v.boolean(),
     displayOrder: v.number(),
   },
@@ -154,11 +160,22 @@ export const createCategory = mutation({
       });
     }
 
+    // Resolve the actual Convex storage URL from the storageId
+    let imageUrl = args.imageUrl;
+    if (args.imageStorageId) {
+      const resolvedUrl = await ctx.storage.getUrl(args.imageStorageId as Id<"_storage">);
+      if (resolvedUrl) {
+        imageUrl = resolvedUrl;
+      }
+    }
+
     const now = Date.now();
     return await ctx.db.insert("categories", {
       name: args.name,
       slug: args.slug,
       description: args.description,
+      imageUrl,
+      imageStorageId: args.imageStorageId,
       isActive: true,
       showInHeader: args.showInHeader,
       displayOrder: args.displayOrder,
@@ -178,6 +195,8 @@ export const updateCategory = mutation({
     name: v.optional(v.string()),
     slug: v.optional(v.string()),
     description: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+    imageStorageId: v.optional(v.string()),
     isActive: v.optional(v.boolean()),
     showInHeader: v.optional(v.boolean()),
     displayOrder: v.optional(v.number()),
@@ -229,6 +248,20 @@ export const updateCategory = mutation({
     if (updates.slug !== undefined) updateData.slug = updates.slug;
     if (updates.description !== undefined)
       updateData.description = updates.description;
+    if (updates.imageStorageId !== undefined) {
+      updateData.imageStorageId = updates.imageStorageId;
+      // Resolve the actual Convex storage URL from the storageId
+      if (updates.imageStorageId) {
+        const resolvedUrl = await ctx.storage.getUrl(updates.imageStorageId as Id<"_storage">);
+        if (resolvedUrl) {
+          updateData.imageUrl = resolvedUrl;
+        }
+      } else {
+        updateData.imageUrl = updates.imageUrl;
+      }
+    } else if (updates.imageUrl !== undefined) {
+      updateData.imageUrl = updates.imageUrl;
+    }
     if (updates.isActive !== undefined) updateData.isActive = updates.isActive;
     if (updates.showInHeader !== undefined)
       updateData.showInHeader = updates.showInHeader;

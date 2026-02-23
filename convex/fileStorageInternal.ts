@@ -26,15 +26,53 @@ export const internalSaveProductImage = internalMutation({
       });
     }
 
+    // Filter out the placeholder image if it exists
+    const existingImages = product.images.filter((img) => img.url !== "/placeholder.svg");
+
     const newImage = {
       url: args.url,
       storageId: args.storageId as unknown as string,
       alt: args.alt || product.name,
-      order: args.order ?? product.images.length,
+      order: args.order ?? existingImages.length,
     };
 
     await ctx.db.patch(args.productId, {
-      images: [...product.images, newImage],
+      images: [...existingImages, newImage],
+      updatedAt: Date.now(),
+    });
+
+    return { success: true as const, imageUrl: args.url };
+  },
+});
+
+// Internal mutation to save category image record to database
+export const internalSaveCategoryImage = internalMutation({
+  args: {
+    storageId: v.id("_storage"),
+    categoryId: v.id("categories"),
+    url: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const category = await ctx.db.get(args.categoryId);
+    if (!category) {
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: "Category not found",
+      });
+    }
+
+    // If the category already has an image, delete the old one from storage (best effort)
+    if (category.imageStorageId && category.imageStorageId !== args.storageId) {
+      try {
+        await ctx.storage.delete(category.imageStorageId as import("./_generated/dataModel").Id<"_storage">);
+      } catch (e) {
+        console.error("Failed to delete old category image from storage:", e);
+      }
+    }
+
+    await ctx.db.patch(args.categoryId, {
+      imageUrl: args.url,
+      imageStorageId: args.storageId,
       updatedAt: Date.now(),
     });
 

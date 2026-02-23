@@ -112,6 +112,8 @@ export default defineSchema({
     name: v.string(),           // Display name: "Men's Wear"
     slug: v.string(),           // URL slug: "mens"
     description: v.optional(v.string()),
+    imageUrl: v.optional(v.string()), // Image URL for category display
+    imageStorageId: v.optional(v.string()), // Storage ID for the image
 
     // Display settings
     isActive: v.boolean(),      // Whether category is active
@@ -760,4 +762,20 @@ export default defineSchema({
     .index("by_identifier", ["identifier"])
     .index("by_category", ["category"])
     .index("by_expires_at", ["expiresAt"]),
+
+  // Testimonials Table - Customer testimonials for homepage
+  testimonials: defineTable({
+    quote: v.string(),
+    author: v.string(),
+    role: v.string(),
+    rating: v.number(), // 1-5 stars
+    isActive: v.boolean(),
+    displayOrder: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    createdBy: v.string(),
+  })
+    .index("by_is_active", ["isActive"])
+    .index("by_display_order", ["displayOrder"])
+    .index("by_active_order", ["isActive", "displayOrder"]),
 });

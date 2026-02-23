@@ -215,6 +215,7 @@ export const listProducts = query({
 export const getFilterOptions = query({
   args: {
     category: v.optional(v.string()),
+    newArrival: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     // Get all active products (optionally filtered by category)
@@ -224,6 +225,12 @@ export const getFilterOptions = query({
         .query("products")
         .withIndex("by_category_active", (q) =>
           q.eq("category", args.category!).eq("isActive", true)
+        );
+    } else if (args.newArrival) {
+      query = ctx.db
+        .query("products")
+        .withIndex("by_new_arrival_active", (q) =>
+          q.eq("newArrival", true).eq("isActive", true)
         );
     } else {
       query = ctx.db
@@ -259,7 +266,7 @@ export const getProductBySlug = query({
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .first();
 
-    if (!product) {
+    if (!product || !product.isActive) {
       return null;
     }
 
@@ -344,6 +351,34 @@ export const getBestsellerProducts = query({
     const canSeeWholesale = await canViewWholesalePrices(ctx);
 
     return products.map(p => sanitizeProductPricing(p, canSeeWholesale));
+  },
+});
+
+// Query: Get related products by category, excluding a specific product
+export const getRelatedProducts = query({
+  args: {
+    productId: v.id("products"),
+    category: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit || 4;
+
+    // Fetch one extra to account for filtering out the current product
+    const products = await ctx.db
+      .query("products")
+      .withIndex("by_category_active", (q) =>
+        q.eq("category", args.category).eq("isActive", true)
+      )
+      .take(limit + 1);
+
+    // Exclude the current product and trim to limit
+    const related = products
+      .filter((p) => p._id !== args.productId)
+      .slice(0, limit);
+
+    const canSeeWholesale = await canViewWholesalePrices(ctx);
+    return related.map((p) => sanitizeProductPricing(p, canSeeWholesale));
   },
 });
 
@@ -547,6 +582,7 @@ export const updateProduct = mutation({
     retailPrice: v.optional(v.number()),
     compareAtPrice: v.optional(v.number()),
     wholesalePrice: v.optional(v.number()),
+    minOrderQuantity: v.optional(v.number()),
     images: v.optional(v.array(v.object({
       url: v.string(),
       storageId: v.optional(v.string()),
@@ -617,26 +653,49 @@ export const deleteProduct = mutation({
     // Require admin authorization
     await requireAdmin(ctx);
 
-    await ctx.db.patch(args.productId, { isActive: false, updatedAt: Date.now() });
+    // Check for references in inventoryLogs (sales)
+    const salesLogs = await ctx.db
+      .query("inventoryLogs")
+      .withIndex("by_product_id", (q) => q.eq("productId", args.productId))
+      .filter((q) => q.eq(q.field("changeType"), "sale"))
+      .first();
+
+    // Check for references in reviews
+    const reviews = await ctx.db
+      .query("reviews")
+      .withIndex("by_product_id", (q) => q.eq("productId", args.productId))
+      .first();
+
+    const hasReferences = !!salesLogs || !!reviews;
+
+    if (hasReferences) {
+      // Soft delete: mark as inactive
+      await ctx.db.patch(args.productId, { isActive: false, updatedAt: Date.now() });
+      return { deleted: false, reason: "has_references" };
+    } else {
+      // Hard delete
+      await ctx.db.delete(args.productId);
+
+      // Clean up remaining inventory logs for this product
+      const allLogs = await ctx.db
+        .query("inventoryLogs")
+        .withIndex("by_product_id", (q) => q.eq("productId", args.productId))
+        .collect();
+
+      for (const log of allLogs) {
+        await ctx.db.delete(log._id);
+      }
+
+      return { deleted: true };
+    }
   },
 });
 
 /**
  * Query: Get aggregated product statistics for admin dashboard
  *
- * PERFORMANCE OPTIMIZATION:
- * -------------------------
- * This query replaces the inefficient pattern of fetching all products (up to 1000)
- * just to calculate stats. Instead, it uses targeted index queries to count products
- * efficiently without loading full product documents into memory.
- *
- * APPROACH:
- * - Uses indexed queries with .collect() for counting (Convex doesn't have COUNT)
- * - Leverages existing indexes: by_is_active, by_has_low_stock, by_category_active
- * - Returns only aggregated numbers, not product data
- *
- * COMPLEXITY: O(N) where N is total products, but with minimal memory footprint
- * since we only need to count, not process full documents.
+ * Uses targeted indexed queries instead of loading all products into memory.
+ * Each index query loads only the subset needed for that specific count.
  */
 export const getProductStats = query({
   args: {},
@@ -644,29 +703,28 @@ export const getProductStats = query({
     // Require admin authorization
     await requireAdmin(ctx);
 
-    // Fetch all products once for counting (more efficient than multiple queries)
-    const allProducts = await ctx.db.query("products").collect();
+    // Use indexed queries for efficient counting
+    const [activeProducts, allProducts, lowStockProducts] = await Promise.all([
+      ctx.db
+        .query("products")
+        .withIndex("by_is_active", (q) => q.eq("isActive", true))
+        .collect(),
+      ctx.db.query("products").collect(),
+      ctx.db
+        .query("products")
+        .withIndex("by_has_low_stock", (q) => q.eq("hasLowStock", true))
+        .collect(),
+    ]);
 
-    // Calculate stats
-    let totalCount = 0;
-    let activeCount = 0;
-    let lowStockCount = 0;
+    const totalCount = allProducts.length;
+    const activeCount = activeProducts.length;
+    const lowStockCount = lowStockProducts.length;
+
+    // Out of stock: only check active products (smaller set)
     let outOfStockCount = 0;
     const categoryCountMap = new Map<string, number>();
 
-    for (const product of allProducts) {
-      totalCount++;
-
-      if (product.isActive) {
-        activeCount++;
-      }
-
-      // Check low stock using denormalized flag
-      if (product.hasLowStock) {
-        lowStockCount++;
-      }
-
-      // Check out of stock by summing variant quantities
+    for (const product of activeProducts) {
       const totalStock = product.variants.reduce(
         (sum, variant) => sum + variant.stockQuantity,
         0
@@ -675,19 +733,13 @@ export const getProductStats = query({
         outOfStockCount++;
       }
 
-      // Count by category (only active products)
-      if (product.isActive) {
-        const currentCount = categoryCountMap.get(product.category) || 0;
-        categoryCountMap.set(product.category, currentCount + 1);
-      }
+      const currentCount = categoryCountMap.get(product.category) || 0;
+      categoryCountMap.set(product.category, currentCount + 1);
     }
 
-    // Convert category map to array for easier consumption
     const productsByCategory = Array.from(categoryCountMap.entries()).map(
       ([category, count]) => ({ category, count })
     );
-
-    // Sort categories by count (descending)
     productsByCategory.sort((a, b) => b.count - a.count);
 
     return {

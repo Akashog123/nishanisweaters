@@ -2,6 +2,21 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAuth } from "./lib/auth";
 
+// Query: Get user's wishlist count (lightweight - doesn't fetch products)
+// SECURITY: Uses server-side authentication, no client-provided userId
+export const getWishlistCount = query({
+  handler: async (ctx) => {
+    const { clerkId } = await requireAuth(ctx);
+
+    const wishlist = await ctx.db
+      .query("wishlist")
+      .withIndex("by_user_id", (q) => q.eq("userId", clerkId))
+      .first();
+
+    return wishlist?.items.length || 0;
+  },
+});
+
 // Query: Get user's wishlist
 // Optimized: Uses Promise.all for parallel fetches (Convex batches these automatically)
 // Added pagination support for large wishlists

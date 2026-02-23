@@ -37,11 +37,13 @@ export const getSalesAnalytics = query({
       return acc;
     }, {} as Record<string, { revenue: number; orders: number }>);
 
-    // Get customer count using role index
+    // Get customer count efficiently — take limited batch and count
+    // This avoids loading all customer records into memory
+    const MAX_CUSTOMER_COUNT = 10000;
     const customers = await ctx.db
       .query("users")
       .withIndex("by_role", (q) => q.eq("role", "customer"))
-      .collect();
+      .take(MAX_CUSTOMER_COUNT);
 
     return {
       totalRevenue,
@@ -140,7 +142,7 @@ export const getOrderTypeBreakdown = query({
 });
 
 // Query: Get dashboard overview (Admin only)
-// Optimized: Uses indexes instead of full table scans and parallel queries
+// Optimized: Uses indexes, limits unbounded collects, and parallel queries
 export const getDashboardOverview = query({
   handler: async (ctx) => {
     // Require admin authorization
@@ -164,17 +166,17 @@ export const getDashboardOverview = query({
         .order("desc")
         .take(5),
 
-      // Pending orders - use index for status filtering
+      // Pending orders count — take up to 200 (sufficient for badge display)
       ctx.db
         .query("orders")
         .withIndex("by_order_status", (q) => q.eq("orderStatus", "pending"))
-        .collect(),
+        .take(200),
 
-      // Low stock products - use the hasLowStock index
+      // Low stock count — take up to 200 (sufficient for badge display)
       ctx.db
         .query("products")
         .withIndex("by_has_low_stock", (q) => q.eq("hasLowStock", true))
-        .collect(),
+        .take(200),
 
       // Paid orders in last 30 days - use compound index
       ctx.db
@@ -184,11 +186,11 @@ export const getDashboardOverview = query({
         )
         .collect(),
 
-      // Disputed orders - filter by payment status (no index, but disputes are rare)
+      // Disputed orders — use index instead of filter, take up to 100
       ctx.db
         .query("orders")
-        .filter((q) => q.eq(q.field("paymentStatus"), "disputed"))
-        .collect(),
+        .withIndex("by_payment_status", (q) => q.eq("paymentStatus", "disputed"))
+        .take(100),
     ]);
 
     // Calculate metrics from the indexed query results

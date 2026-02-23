@@ -60,8 +60,8 @@ export const MAX_NOTES_LENGTH = 500;
 // FILE UPLOADS
 // ============================================
 
-/** Maximum file size for uploads (5MB) */
-export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+/** Maximum file size for uploads (20MB) */
+export const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 
 /** Allowed image file types */
 export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;

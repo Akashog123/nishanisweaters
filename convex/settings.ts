@@ -305,6 +305,37 @@ export const getAllPublicSettings = query({
         newArrivalsCategory: getValue("CATEGORIES.NEW_ARRIVALS_CATEGORY"),
         winterWearCategory: getValue("CATEGORIES.WINTER_WEAR_CATEGORY"),
       },
+      // Image settings (consolidated from getImageSettings)
+      images: {
+        heroUrl: getValue("IMAGES.HERO_URL") || "",
+        placeholderUrl: getValue("IMAGES.PLACEHOLDER_URL") || "/placeholder.svg",
+        categoryBannerUrl: getValue("IMAGES.CATEGORY_BANNER_URL") || "",
+      },
+      // Social links (consolidated from getSocialLinks)
+      socialLinks: (() => {
+        const platforms = [
+          "INSTAGRAM", "FACEBOOK", "YOUTUBE", "WHATSAPP",
+          "TWITTER", "LINKEDIN", "PINTEREST", "TELEGRAM",
+        ];
+        const labelMap: Record<string, string> = {
+          INSTAGRAM: "INSTAGRAM", FACEBOOK: "FACEBOOK", YOUTUBE: "YOUTUBE",
+          WHATSAPP: "WHATSAPP", TWITTER: "X/TWITTER", LINKEDIN: "LINKEDIN",
+          PINTEREST: "PINTEREST", TELEGRAM: "TELEGRAM",
+        };
+        const result: Array<{ platform: string; url: string; label: string }> = [];
+        for (const platform of platforms) {
+          const url = settingsMap.get(`SOCIAL.${platform}_URL`) || "";
+          const enabled = settingsMap.get(`SOCIAL.${platform}_ENABLED`) === "true";
+          if (url && enabled) {
+            result.push({
+              platform: platform.toLowerCase(),
+              url,
+              label: labelMap[platform] || platform,
+            });
+          }
+        }
+        return result;
+      })(),
     };
   },
 });
