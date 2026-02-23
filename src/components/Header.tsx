@@ -1,20 +1,21 @@
-import { ShoppingCart, Heart, Menu, Package, Settings, Phone, MapPin, Bell } from "lucide-react";
-import { useState, memo, useCallback } from "react";
+import { ShoppingCart, Heart, Menu, Package, Settings } from "lucide-react";
+import { useState, memo, useCallback, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
-import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/clerk-react";
+import { SignInButton, SignUpButton, useUser } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import CartDrawer from "@/components/CartDrawer";
 import CartBadge from "@/components/CartBadge";
 import WishlistBadge from "@/components/WishlistBadge";
 import SearchBar from "@/components/SearchBar";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { ContactInfoPage } from "@/components/account/ContactInfoPage";
-import { ClerkAddressesPage } from "@/components/account/ClerkAddressesPage";
-import { ClerkNotificationsPage } from "@/components/account/ClerkNotificationsPage";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useHeaderCategories } from "@/hooks/useCategories";
 import { useCartUI } from "@/context/cart";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+
+// Lazy-load the heavy UserButton with custom profile pages
+// Defers Clerk UI rendering + ContactInfoPage/AddressesPage/NotificationsPage imports
+const HeaderUserButton = lazy(() => import("./HeaderUserButton"));
 
 // Navigation links - defined outside component to prevent recreation on each render
 // These are fallback defaults when dynamic categories are not enabled
@@ -198,56 +199,9 @@ const Header = () => {
             {isLoaded && (
               <>
                 {isSignedIn ? (
-                  <UserButton
-                    afterSignOutUrl="/"
-                    appearance={{
-                      elements: {
-                        avatarBox: "h-8 w-8"
-                      }
-                    }}
-                  >
-                    <UserButton.UserProfilePage
-                      label="Contact Info"
-                      labelIcon={<Phone className="h-4 w-4" />}
-                      url="contact"
-                    >
-                      <ContactInfoPage />
-                    </UserButton.UserProfilePage>
-
-                    <UserButton.UserProfilePage
-                      label="Addresses"
-                      labelIcon={<MapPin className="h-4 w-4" />}
-                      url="addresses"
-                    >
-                      <ClerkAddressesPage />
-                    </UserButton.UserProfilePage>
-
-                    <UserButton.UserProfilePage
-                      label="Notifications"
-                      labelIcon={<Bell className="h-4 w-4" />}
-                      url="notifications"
-                    >
-                      <ClerkNotificationsPage />
-                    </UserButton.UserProfilePage>
-
-                    <UserButton.MenuItems>
-                      {/* Order History - hidden for admin users */}
-                      {!isAdmin && (
-                        <UserButton.Link
-                          label="Order History"
-                          labelIcon={<Package className="h-4 w-4" />}
-                          href="/orders"
-                        />
-                      )}
-                      {isAdmin && (
-                        <UserButton.Link
-                          label="Admin Dashboard"
-                          labelIcon={<Settings className="h-4 w-4" />}
-                          href="/admin"
-                        />
-                      )}
-                    </UserButton.MenuItems>
-                  </UserButton>
+                  <Suspense fallback={<div className="w-8 h-8 rounded-full bg-muted animate-pulse" />}>
+                    <HeaderUserButton isAdmin={isAdmin} />
+                  </Suspense>
                 ) : (
                   <div className="hidden sm:flex items-center gap-2">
                     <SignInButton mode="modal">

@@ -74,6 +74,38 @@ function heroPreloadPlugin(): Plugin {
   };
 }
 
+/**
+ * Converts the main CSS <link> to async loading to eliminate render-blocking.
+ * Uses the media="print" swap trick: browser downloads CSS without blocking render,
+ * then swaps to media="all" once loaded.
+ *
+ * Safe because index.html already has inline critical CSS covering:
+ * - CSS variables (theme colors)
+ * - Box-sizing, font-smoothing
+ * - Loading skeleton with logo animation
+ * - Font loading fallback (.font-loading class)
+ */
+function asyncCssPlugin(): Plugin {
+  return {
+    name: "async-css-loading",
+    enforce: "post",
+    transformIndexHtml: {
+      order: "post",
+      handler(html) {
+        // Only transform in production builds
+        return html.replace(
+          /(<link\s+[^>]*rel="stylesheet"[^>]*href="\/assets\/[^"]*\.css"[^>]*)\/?\>/gi,
+          (match, linkTag) => {
+            const asyncLink = `${linkTag} media="print" onload="this.media='all'" />`;
+            const noscriptFallback = `<noscript>${match}</noscript>`;
+            return `${asyncLink}\n    ${noscriptFallback}`;
+          }
+        );
+      },
+    },
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
@@ -102,6 +134,7 @@ export default defineConfig(({ mode }) => ({
     react(),
     imagetools(), // Process images with query parameters for responsive sizes
     heroPreloadPlugin(), // Inject hero image preload for LCP optimization
+    asyncCssPlugin(), // Convert CSS to non-render-blocking async loading
     mode === "development" && componentTagger(),
   ].filter(Boolean),
   resolve: {
@@ -115,7 +148,9 @@ export default defineConfig(({ mode }) => ({
     target: "es2020",
 
     // Source maps only in development
-    sourcemap: mode === "development",
+    // Hidden source maps: generated but not referenced in output JS
+    // Invisible to browsers but satisfies Lighthouse and enables error tracking (Sentry, etc.)
+    sourcemap: mode === "development" ? true : "hidden",
     chunkSizeWarningLimit: 500,
 
     // Use esbuild minifier (default, built-in, very fast)

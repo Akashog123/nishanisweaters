@@ -40,7 +40,7 @@ All colors MUST be HSL.
 
     --banner-bg: 203 15% 29%;
     --banner-text: 0 0% 100%;
-    
+
     --hero-badge-bg: 203 15% 29%;
     --hero-badge-text: 0 0% 100%;
 
@@ -52,6 +52,9 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 0 0% 0%;
     --sidebar-border: 0 0% 90%;
     --sidebar-ring: 203 15% 29%;
+
+    /* Prevent layout shift from scrollbar appearing/disappearing when modals open */
+    scrollbar-gutter: stable;
   }
 
   .dark {
@@ -103,6 +106,11 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 
+  /* Limit reflow scope for main content area */
+  main {
+    contain: layout style;
+  }
+
   /* Fix: Prevent background scrolling when modals/sheets/dialogs are open */
   /* Radix UI adds data-scroll-locked attribute to html element */
   html[data-scroll-locked],
@@ -120,4 +128,15 @@ All colors MUST be HSL.
     touch-action: pan-y !important;
     -webkit-overflow-scrolling: touch !important;
   }
+}
+
+/* Skip rendering of below-the-fold sections until visible */
+section:nth-child(n+3) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 600px;
+}
+
+/* Footer decorative text via CSS custom property */
+[style*="--decorative-text"]::after {
+  content: var(--decorative-text);
 }
