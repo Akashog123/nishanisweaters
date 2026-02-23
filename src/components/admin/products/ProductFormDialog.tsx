@@ -84,9 +84,10 @@ export function ProductFormDialog({
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const newProductId = await onSubmit(formData, product?._id);
+      const existingId = product?._id || createdProductId || undefined;
+      const newProductId = await onSubmit(formData, existingId);
 
-      if (!product?._id && newProductId) {
+      if (!existingId && newProductId) {
         // New product created - switch to media tab
         setCreatedProductId(newProductId);
         setActiveTab("media");
@@ -100,7 +101,7 @@ export function ProductFormDialog({
     } finally {
       setIsSubmitting(false);
     }
-  }, [onSubmit, formData, product?._id, onOpenChange]);
+  }, [onSubmit, formData, product?._id, createdProductId, onOpenChange]);
 
   // Handler for switching back to details after adding media
   const handleBackToDetails = useCallback(() => {
