@@ -499,7 +499,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     description: "Physical business address displayed on contact page",
     category: "contact",
     valueType: "string",
-    defaultValue: "Nidhi Clothing Co., Main Market Road, Ludhiana, Punjab 141001, India",
+    defaultValue: "Nidhi Clothing Co., Sikandapur, Uttar Pradesh, India",
     displayOrder: 5,
     affectedAreas: [
       "Contact page",
@@ -850,7 +850,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     description: "City and state where business is located",
     category: "business_info",
     valueType: "string",
-    defaultValue: "Ludhiana, Punjab",
+    defaultValue: "Sikandapur, Uttar Pradesh",
     displayOrder: 2,
     affectedAreas: [
       "src/pages/AboutUs.tsx",

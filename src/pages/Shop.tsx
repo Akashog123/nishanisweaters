@@ -16,7 +16,7 @@ import { SEO, getBreadcrumbSchema, getCollectionPageSchema, getItemListSchema } 
 
 // Default category titles as fallback
 const DEFAULT_CATEGORY_TITLES: Record<string, string> = {
-  "new-arrival": "NEW ARRIVAL",
+  "new-arrival": "NEW ARRIVALS",
   "mens": "MEN'S COLLECTION",
   "womens": "WOMEN'S COLLECTION",
   "kids": "KIDS COLLECTION",
@@ -248,7 +248,7 @@ const Shop = () => {
             products.slice(0, 10).map((p, i) => ({
               name: p.name,
               url: `/product/${p.slug}`,
-              image: p.images.filter(img => img.url !== "/placeholder.svg")[0]?.url,
+              image: p.images.filter((img: { url: string; }) => img.url !== "/placeholder.svg")[0]?.url,
               position: i + 1,
             }))
           )] : []),
@@ -274,7 +274,7 @@ const Shop = () => {
 
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-8">
           {products.map((product) => {
-            const realImages = product.images.filter(img => img.url !== "/placeholder.svg");
+            const realImages = product.images.filter((img: { url: string; }) => img.url !== "/placeholder.svg");
             return (
               <ProductCard
                 key={product._id}

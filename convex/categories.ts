@@ -170,7 +170,7 @@ export const createCategory = mutation({
     }
 
     const now = Date.now();
-    return await ctx.db.insert("categories", {
+    const categoryId = await ctx.db.insert("categories", {
       name: args.name,
       slug: args.slug,
       description: args.description,
@@ -183,6 +183,9 @@ export const createCategory = mutation({
       updatedAt: now,
       createdBy: admin.clerkId,
     });
+
+    // Return the created category for proper client-side query invalidation
+    return await ctx.db.get(categoryId);
   },
 });
 
@@ -248,17 +251,19 @@ export const updateCategory = mutation({
     if (updates.slug !== undefined) updateData.slug = updates.slug;
     if (updates.description !== undefined)
       updateData.description = updates.description;
+
     if (updates.imageStorageId !== undefined) {
-      updateData.imageStorageId = updates.imageStorageId;
-      // Resolve the actual Convex storage URL from the storageId
-      if (updates.imageStorageId) {
+      if (updates.imageStorageId && updates.imageStorageId !== category.imageStorageId) {
+        updateData.imageStorageId = updates.imageStorageId;
         const resolvedUrl = await ctx.storage.getUrl(updates.imageStorageId as Id<"_storage">);
         if (resolvedUrl) {
           updateData.imageUrl = resolvedUrl;
         }
-      } else {
-        updateData.imageUrl = updates.imageUrl;
+      } else if (!updates.imageStorageId) {
+        updateData.imageStorageId = undefined;
+        updateData.imageUrl = undefined;
       }
+
     } else if (updates.imageUrl !== undefined) {
       updateData.imageUrl = updates.imageUrl;
     }
@@ -269,6 +274,8 @@ export const updateCategory = mutation({
       updateData.displayOrder = updates.displayOrder;
 
     await ctx.db.patch(id, updateData);
+
+    return await ctx.db.get(id);
   },
 });
 
@@ -323,5 +330,11 @@ export const reorderCategories = mutation({
         updatedAt: Date.now(),
       });
     }
+
+    // Return the reordered categories for proper client-side query invalidation
+    const reordered = await Promise.all(
+      args.orderedIds.map(id => ctx.db.get(id))
+    );
+    return reordered;
   },
 });

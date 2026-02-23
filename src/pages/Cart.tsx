@@ -182,7 +182,7 @@ function SavedItem({
 
 export default function Cart() {
   const navigate = useNavigate();
-  const { items, removeFromCart, updateQuantity, getSubtotal, getTotalItems, isLoading, error, clearCart, promoDiscount, appliedPromoCode } = useCart();
+  const { items, removeFromCart, updateQuantity, getSubtotal, getTotalItems, isLoading, error, clearCart, promoDiscount } = useCart();
   const { isSignedIn } = useUser();
 
   // Wishlist: Check count first (lightweight), only fetch full data if non-empty

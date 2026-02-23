@@ -170,7 +170,7 @@ export default function TermsOfService() {
                 <section>
                   <h2 className="text-2xl font-bold mb-4">12. Governing Law</h2>
                   <p className="text-muted-foreground">
-                    These Terms of Service shall be governed by and construed in accordance with the laws of India. Any disputes arising from these terms shall be subject to the exclusive jurisdiction of the courts in Ludhiana, Punjab.
+                    These Terms of Service shall be governed by and construed in accordance with the laws of India. Any disputes arising from these terms shall be subject to the exclusive jurisdiction of the courts in Faridabad, Uttar Pradesh.
                   </p>
                 </section>
 
@@ -189,7 +189,7 @@ export default function TermsOfService() {
                   <div className="bg-muted p-6 rounded-lg">
                     <p className="font-medium mb-2">Nidhi Clothing Co.</p>
                     <p className="text-muted-foreground">Main Market Road</p>
-                    <p className="text-muted-foreground">Ludhiana, Punjab 141001, India</p>
+                    <p className="text-muted-foreground">Sikandapur, Uttar Pradesh, India</p>
                     <p className="text-muted-foreground mt-2">Email: support@nidhiclothing.com</p>
                     <p className="text-muted-foreground">Phone: +91 7458 816 343</p>
                   </div>
