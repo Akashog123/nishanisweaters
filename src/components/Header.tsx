@@ -7,7 +7,7 @@ import CartDrawer from "@/components/CartDrawer";
 import CartBadge from "@/components/CartBadge";
 import WishlistBadge from "@/components/WishlistBadge";
 import SearchBar from "@/components/SearchBar";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { ContactInfoPage } from "@/components/account/ContactInfoPage";
 import { ClerkAddressesPage } from "@/components/account/ClerkAddressesPage";
 import { ClerkNotificationsPage } from "@/components/account/ClerkNotificationsPage";
@@ -80,7 +80,8 @@ const Header = () => {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[300px] sm:w-[400px]">
+            <SheetContent side="left" className="w-[300px] sm:w-[400px]" aria-describedby={undefined}>
+              <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               <nav className="flex flex-col gap-4 mt-8">
                 {navLinks.map((link) => (
                   <Link

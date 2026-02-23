@@ -144,7 +144,7 @@ const CartDrawer = ({ open, onOpenChange }: CartDrawerProps) => {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg flex flex-col">
+      <SheetContent className="w-full sm:max-w-lg flex flex-col" aria-describedby={undefined}>
         <SheetHeader className="border-b pb-4">
           <div className="flex items-center justify-between">
             <SheetTitle className="text-2xl font-bold">

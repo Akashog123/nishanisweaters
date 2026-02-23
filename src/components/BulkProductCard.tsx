@@ -260,18 +260,17 @@ Please share the best price.`;
           <StarRating rating={averageRating} reviewCount={reviewCount} />
         )}
 
-        {/* Pricing Section - Show compareAtPrice as crossed out, bulk price as main */}
+        {/* Pricing Section - Retail price crossed out, bulk/wholesale as main */}
         <div className="space-y-1">
-          {/* Show MSRP/Regular Price with strikethrough if higher than retail */}
-          {compareAtPrice && compareAtPrice > retailPrice && (
-            <p className="text-xs text-muted-foreground/60 line-through">
-              Retail Price: {formatCurrency(compareAtPrice)}
-            </p>
-          )}
           <div className="flex items-baseline gap-2 flex-wrap">
             <span className="text-xl font-bold text-primary">
               {formatCurrency(wholesalePrice || retailPrice)}
             </span>
+            {wholesalePrice && wholesalePrice < retailPrice && (
+              <span className="text-sm text-muted-foreground line-through">
+                {formatCurrency(retailPrice)}
+              </span>
+            )}
           </div>
           <p className="text-xs text-muted-foreground">Bulk purchase price per unit</p>
         </div>
