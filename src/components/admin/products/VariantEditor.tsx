@@ -97,18 +97,18 @@ export function VariantEditor({ variants, onVariantsChange, slug }: VariantEdito
     setIsAddDialogOpen(true);
   };
 
-  const handleDeleteVariant = (sku: string) => {
+  const handleDeleteVariant = (index: number) => {
     if (variants.length <= 1) {
       alert("Cannot delete the last variant. At least one variant is required.");
       return;
     }
-    onVariantsChange(variants.filter((v) => v.sku !== sku));
+    onVariantsChange(variants.filter((_, i) => i !== index));
   };
 
-  const handleUpdateVariant = (sku: string, field: keyof ProductVariant, value: string | number) => {
+  const handleUpdateVariant = (index: number, field: keyof ProductVariant, value: string | number) => {
     onVariantsChange(
-      variants.map((v) =>
-        v.sku === sku ? { ...v, [field]: value } : v
+      variants.map((v, i) =>
+        i === index ? { ...v, [field]: value } : v
       )
     );
   };
@@ -158,7 +158,7 @@ export function VariantEditor({ variants, onVariantsChange, slug }: VariantEdito
                 <TableCell>
                   <select
                     value={variant.size}
-                    onChange={(e) => handleUpdateVariant(variant.sku, "size", e.target.value)}
+                    onChange={(e) => handleUpdateVariant(index, "size", e.target.value)}
                     className="w-full px-2 py-1 border rounded"
                   >
                     {COMMON_SIZES.map((size) => (
@@ -171,12 +171,12 @@ export function VariantEditor({ variants, onVariantsChange, slug }: VariantEdito
                     <input
                       type="color"
                       value={variant.colorHex || "#000000"}
-                      onChange={(e) => handleUpdateVariant(variant.sku, "colorHex", e.target.value)}
+                      onChange={(e) => handleUpdateVariant(index, "colorHex", e.target.value)}
                       className="w-8 h-8 rounded cursor-pointer"
                     />
                     <Input
                       value={variant.color}
-                      onChange={(e) => handleUpdateVariant(variant.sku, "color", e.target.value)}
+                      onChange={(e) => handleUpdateVariant(index, "color", e.target.value)}
                       className="w-24"
                       placeholder="Color"
                     />
@@ -185,7 +185,7 @@ export function VariantEditor({ variants, onVariantsChange, slug }: VariantEdito
                 <TableCell>
                   <Input
                     value={variant.sku}
-                    onChange={(e) => handleUpdateVariant(variant.sku, "sku", e.target.value)}
+                    onChange={(e) => handleUpdateVariant(index, "sku", e.target.value)}
                     className="w-40"
                     placeholder="SKU"
                   />
@@ -195,7 +195,7 @@ export function VariantEditor({ variants, onVariantsChange, slug }: VariantEdito
                     type="number"
                     min="0"
                     value={variant.stockQuantity}
-                    onChange={(e) => handleUpdateVariant(variant.sku, "stockQuantity", parseInt(e.target.value) || 0)}
+                    onChange={(e) => handleUpdateVariant(index, "stockQuantity", parseInt(e.target.value) || 0)}
                     className="w-24"
                   />
                 </TableCell>
@@ -204,7 +204,7 @@ export function VariantEditor({ variants, onVariantsChange, slug }: VariantEdito
                     type="number"
                     min="0"
                     value={variant.lowStockThreshold}
-                    onChange={(e) => handleUpdateVariant(variant.sku, "lowStockThreshold", parseInt(e.target.value) || 0)}
+                    onChange={(e) => handleUpdateVariant(index, "lowStockThreshold", parseInt(e.target.value) || 0)}
                     className="w-24"
                   />
                 </TableCell>
@@ -212,7 +212,7 @@ export function VariantEditor({ variants, onVariantsChange, slug }: VariantEdito
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDeleteVariant(variant.sku)}
+                    onClick={() => handleDeleteVariant(index)}
                     disabled={variants.length <= 1}
                     className="text-red-500 hover:text-red-700 hover:bg-red-50"
                   >
