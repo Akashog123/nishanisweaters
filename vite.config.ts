@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
         "style-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://fonts.googleapis.com",
         "font-src 'self' https://fonts.gstatic.com data:",
         "img-src 'self' data: blob: https: https://*.convex.cloud https://img.clerk.com",
-        "frame-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com",
+        "frame-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com https://www.google.com https://maps.google.co.in https://maps.google.com",
         "worker-src 'self' blob: https://*.clerk.accounts.dev https://*.clerk.com",
         "child-src 'self' blob: https://*.clerk.accounts.dev https://*.clerk.com",
         "form-action 'self' https://checkout.razorpay.com",
