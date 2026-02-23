@@ -373,12 +373,6 @@ export default function BulkOrder() {
                         />
                         <div className="flex-1">
                           <h4 className="font-medium line-clamp-1">{product.name}</h4>
-                          {/* Show MSRP (Regular Price) if higher than retail */}
-                          {product.compareAtPrice && product.compareAtPrice > product.retailPrice && (
-                            <p className="text-xs text-muted-foreground/60 line-through">
-                              Regular: {formatCurrency(product.compareAtPrice)}
-                            </p>
-                          )}
                           {product.wholesalePrice ? (
                             <>
                               <p className="text-lg font-bold text-green-600">
