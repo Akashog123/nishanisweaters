@@ -85,7 +85,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     if (cart?.items && cart.lastModified !== lastServerSync.current) {
       lastServerSync.current = cart.lastModified;
 
-      const serverItems: CartItem[] = cart.items.map((item) => ({
+      const serverItems: CartItem[] = cart.items.map((item: any) => ({
         productId: item.productId,
         name: item.name,
         price: item.price,
@@ -93,6 +93,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
         size: item.size,
         color: item.color,
         quantity: item.quantity,
+        isAvailable: item.isAvailable,
+        unavailableReason: item.unavailableReason,
         _convexProductId: item.productId as Id<"products">,
         _variantSku: item.variantSku,
       }));
@@ -382,12 +384,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   const items = optimisticState.optimisticItems;
 
   const totalItems = useMemo(
-    () => items.reduce((sum, item) => sum + item.quantity, 0),
+    () => items.reduce((sum, item) => sum + (item.isAvailable === false ? 0 : item.quantity), 0),
     [items]
   );
 
   const subtotal = useMemo(
-    () => items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    () => items.reduce((sum, item) => sum + (item.isAvailable === false ? 0 : item.price * item.quantity), 0),
     [items]
   );
 
@@ -396,6 +398,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const isLoading = cart === undefined && optimisticState.optimisticItems.length === 0;
   const hasPendingOperations = optimisticState.pendingOperations.size > 0;
+
+  // Extract promo data from the server cart
+  const promoDiscount = cart?.promoDiscount ?? 0;
+  const appliedPromoCode = cart?.appliedPromoCode ?? null;
 
   // ============================================
   // CONTEXT VALUES
@@ -408,8 +414,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       subtotal,
       isLoading: isLoading || hasPendingOperations,
       error,
+      promoDiscount,
+      appliedPromoCode,
     }),
-    [items, totalItems, subtotal, isLoading, hasPendingOperations, error]
+    [items, totalItems, subtotal, isLoading, hasPendingOperations, error, promoDiscount, appliedPromoCode]
   );
 
   const actionsContextValue: CartActionsContextType = useMemo(

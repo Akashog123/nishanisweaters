@@ -40,4 +40,7 @@ export {
   // Reducer (for testing)
   optimisticReducer,
   initialOptimisticState,
+  // UI Provider
+  CartUIProvider,
+  useCartUI,
 } from "./cart";

@@ -24,6 +24,9 @@ export interface CartItem {
   size: string;
   color: string;
   quantity: number;
+  // Availability status
+  isAvailable?: boolean;
+  unavailableReason?: string;
   // Internal fields for Convex integration
   _convexProductId?: Id<"products">;
   _variantSku?: string;
@@ -95,6 +98,8 @@ export interface CartItemsContextType {
   subtotal: number;
   isLoading: boolean;
   error: string | null;
+  promoDiscount: number;
+  appliedPromoCode: string | null;
 }
 
 /**

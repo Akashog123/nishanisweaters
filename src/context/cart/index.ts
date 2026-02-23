@@ -63,5 +63,8 @@ export {
   getUserFriendlyError,
 } from "./cartUtils";
 
+// Re-export UI context for cart drawer
+export { CartUIProvider, useCartUI } from "./CartUIContext";
+
 // Re-export reducer (for testing)
 export { optimisticReducer, initialOptimisticState } from "./cartReducer";
