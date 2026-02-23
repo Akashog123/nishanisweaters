@@ -87,15 +87,13 @@
     -->
 
     <!-- Preconnect to critical third-party origins (establish early connections) -->
-    <!-- Order matters: most critical first -->
+    <!-- Order matters: most critical first. Max 4 preconnects to avoid contention. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Convex real-time data - critical for initial render -->
     <link rel="preconnect" href="https://convex.cloud" crossorigin />
-    <!-- Clerk authentication (standard domain) -->
-    <link rel="preconnect" href="https://clerk.accounts.dev" crossorigin />
-    <link rel="preconnect" href="https://clerk.com" crossorigin />
-    <link rel="preconnect" href="https://img.clerk.com" crossorigin />
+    <!-- Clerk authentication (custom domain - used for SDK loading) -->
+    <link rel="preconnect" href="https://clerk.nidhiclothing.com" crossorigin />
 
     <!-- DNS Prefetch for secondary origins (payment) -->
     <link rel="dns-prefetch" href="https://checkout.razorpay.com" />
@@ -130,14 +128,10 @@
       - loading="eager" - Ensures immediate loading (not lazy)
       - decoding="sync" - Synchronous decode for fastest paint
 
-      NOTE: Static <link rel="preload"> is NOT used because vite-imagetools
-      generates hashed filenames in production (e.g., hero-blockhaus-C9a-omDe.jpg)
-      that don't match development paths (/src/assets/...). A static preload
-      would preload a non-existent resource in production, causing warnings
-      and wasted bandwidth.
-
-      For advanced preloading, consider vite-plugin-html to inject the correct
-      hashed paths dynamically during build.
+      A custom Vite plugin (heroPreloadPlugin in vite.config.ts) automatically
+      injects <link rel="preload" as="image" imagesrcset="..."> with the correct
+      hashed filenames at build time. This eliminates the JS-dependency chain delay
+      by letting the browser discover the hero image directly from the HTML <head>.
     -->
 
     <!-- Inline critical CSS for faster FCP -->

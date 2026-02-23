@@ -51,6 +51,9 @@ const CategorySplit = () => {
                 src={category.image}
                 alt={`${category.name} Collection`}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                width="693"
+                height="924"
+                loading="lazy"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src = placeholderUrl;

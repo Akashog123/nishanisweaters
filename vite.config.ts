@@ -1,8 +1,78 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { imagetools } from "vite-imagetools";
+
+/**
+ * Injects <link rel="preload"> for hero AVIF images into the built HTML.
+ *
+ * Problem: The hero image is imported in React JSX, so the browser can't discover
+ * it until the entire JS bundle chain loads (HTML → main.js → Index.js → hero).
+ * This creates a ~1.5s resource load delay on LCP.
+ *
+ * Solution: At build time, find the hero AVIF assets in the bundle, construct an
+ * imagesrcset preload, and inject it into <head>. The browser discovers the image
+ * immediately from the HTML, eliminating the JS-dependency chain delay.
+ */
+function heroPreloadPlugin(): Plugin {
+  return {
+    name: "hero-image-preload",
+    enforce: "post",
+    transformIndexHtml: {
+      order: "post",
+      handler(_html, ctx) {
+        // Only works during build when bundle is available
+        if (!ctx.bundle) return [];
+
+        // Find hero AVIF assets emitted by vite-imagetools and static imports
+        const heroAvifs = Object.entries(ctx.bundle)
+          .filter(
+            ([key]) =>
+              key.includes("hero-blockhaus") && key.endsWith(".avif")
+          )
+          .map(([key, chunk]) => ({
+            path: "/" + key,
+            // Determine byte size for sorting (smaller file = smaller dimensions)
+            size:
+              chunk.type === "asset" && chunk.source
+                ? typeof chunk.source === "string"
+                  ? chunk.source.length
+                  : chunk.source.byteLength
+                : 0,
+          }))
+          .sort((a, b) => a.size - b.size);
+
+        if (heroAvifs.length === 0) return [];
+
+        // Known responsive widths from HeroSection.tsx imports:
+        // heroAvif480 (480w), heroAvif768 (768w), heroAvif1024 (1024w), heroAvifOriginal (1920w)
+        const widths = [480, 768, 1024, 1920];
+
+        // Map sorted-by-size assets to widths (smallest file = smallest width)
+        const srcsetParts = heroAvifs.map(
+          (file, i) =>
+            `${file.path} ${widths[Math.min(i, widths.length - 1)]}w`
+        );
+
+        return [
+          {
+            tag: "link",
+            attrs: {
+              rel: "preload",
+              as: "image",
+              imagesrcset: srcsetParts.join(", "),
+              imagesizes: "100vw",
+              type: "image/avif",
+              fetchpriority: "high",
+            },
+            injectTo: "head" as const,
+          },
+        ];
+      },
+    },
+  };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -31,6 +101,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     imagetools(), // Process images with query parameters for responsive sizes
+    heroPreloadPlugin(), // Inject hero image preload for LCP optimization
     mode === "development" && componentTagger(),
   ].filter(Boolean),
   resolve: {

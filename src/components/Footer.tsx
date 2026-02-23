@@ -45,7 +45,7 @@ const Footer = () => {
           {/* Brand Section */}
           <div className="col-span-2 lg:col-span-1 space-y-4">
             <div className="flex items-center gap-3">
-              <img src={logoUrl} alt={`${siteName} Logo`} className="h-24 lg:h-28 w-auto" />
+              <img src={logoUrl} alt={`${siteName} Logo`} className="h-24 lg:h-28 w-auto" width="224" height="112" />
               {/* <h3 className="text-2xl lg:text-3xl font-bold">{siteName}</h3> */}
             </div>
             <p className="text-sm text-gray-600">
@@ -64,7 +64,7 @@ const Footer = () => {
 
           {/* Shops Links */}
           <div>
-            <h4 className="font-bold mb-4 lg:mb-6 text-xs lg:text-sm text-gray-400 uppercase tracking-wider">
+            <h4 className="font-bold mb-4 lg:mb-6 text-xs lg:text-sm text-gray-500 uppercase tracking-wider">
               SHOPS
             </h4>
             <ul className="space-y-2 lg:space-y-3">
@@ -80,7 +80,7 @@ const Footer = () => {
 
           {/* Brand Links */}
           <div>
-            <h4 className="font-bold mb-4 lg:mb-6 text-xs lg:text-sm text-gray-400 uppercase tracking-wider">
+            <h4 className="font-bold mb-4 lg:mb-6 text-xs lg:text-sm text-gray-500 uppercase tracking-wider">
               BRAND
             </h4>
             <ul className="space-y-2 lg:space-y-3">
@@ -100,7 +100,7 @@ const Footer = () => {
           {/* Follow Us - Dynamic Social Links (only shown when links are configured) */}
           {socialLinks && socialLinks.length > 0 && (
             <div>
-              <h4 className="font-bold mb-4 lg:mb-6 text-xs lg:text-sm text-gray-400 uppercase tracking-wider">
+              <h4 className="font-bold mb-4 lg:mb-6 text-xs lg:text-sm text-gray-500 uppercase tracking-wider">
                 FOLLOW US
               </h4>
               <ul className="space-y-2 lg:space-y-3">
@@ -123,11 +123,11 @@ const Footer = () => {
           )}
         </div>
 
-        {/* Background Text */}
-        <div className="absolute bottom-0 left-0 right-0 flex items-end justify-center pointer-events-none select-none overflow-hidden h-32 lg:h-48">
-          <h2 className="text-[2rem] sm:text-[2.5rem] md:text-[3.5rem] lg:text-[5rem] xl:text-[6rem] 2xl:text-[8rem] font-bold whitespace-nowrap opacity-[0.1] leading-none text-center">
+        {/* Background Text - decorative only, hidden from assistive tech */}
+        <div className="absolute bottom-0 left-0 right-0 flex items-end justify-center pointer-events-none select-none overflow-hidden h-32 lg:h-48" aria-hidden="true">
+          <span className="text-[2rem] sm:text-[2.5rem] md:text-[3.5rem] lg:text-[5rem] xl:text-[6rem] 2xl:text-[8rem] font-bold whitespace-nowrap opacity-[0.1] leading-none text-center">
             {footerBackgroundText}
-          </h2>
+          </span>
         </div>
       </div>
     </footer>

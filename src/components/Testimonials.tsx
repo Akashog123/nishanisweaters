@@ -73,11 +73,11 @@ const Testimonials = () => {
 
   return (
     <section className="py-20 lg:py-32 bg-secondary/20 relative overflow-hidden">
-      {/* Background Text */}
-      <div className="absolute bottom-0 left-0 right-0 flex items-end justify-center opacity-[0.06] pointer-events-none select-none">
-        <h2 className="text-[6rem] lg:text-[8rem] xl:text-[10rem] font-bold whitespace-nowrap tracking-tight leading-none">
+      {/* Background Text - decorative only, hidden from assistive tech */}
+      <div className="absolute bottom-0 left-0 right-0 flex items-end justify-center opacity-[0.06] pointer-events-none select-none" aria-hidden="true">
+        <span className="text-[6rem] lg:text-[8rem] xl:text-[10rem] font-bold whitespace-nowrap tracking-tight leading-none">
           WHAT PEOPLE SAY
-        </h2>
+        </span>
       </div>
 
       <div className="container mx-auto px-4 lg:px-8 relative">

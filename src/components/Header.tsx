@@ -76,7 +76,7 @@ const Header = () => {
           {/* Mobile Menu Button */}
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild className="lg:hidden">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" aria-label="Open menu">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -144,7 +144,7 @@ const Header = () => {
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 text-xl lg:text-3xl font-bold tracking-tight">
-            <img src={logoUrl} alt={`${siteName} Logo`} className="h-12 lg:h-20 w-auto" />
+            <img src={logoUrl} alt={`${siteName} Logo`} className="h-12 lg:h-20 w-auto" width="160" height="80" />
             {/* {siteName} */}
           </Link>
 
@@ -171,7 +171,7 @@ const Header = () => {
             {/* Wishlist - Only for signed in non-admin users */}
             {isSignedIn && !isAdmin && (
               <Link to="/wishlist">
-                <Button variant="ghost" size="icon" className="hover:bg-secondary hover:text-foreground relative">
+                <Button variant="ghost" size="icon" className="hover:bg-secondary hover:text-foreground relative" aria-label="Wishlist">
                   <Heart className="h-5 w-5" />
                   <WishlistBadge />
                 </Button>
@@ -187,6 +187,7 @@ const Header = () => {
                 size="icon"
                 className="hover:bg-secondary hover:text-foreground relative"
                 onClick={() => setIsCartOpen(true)}
+                aria-label="Shopping cart"
               >
                 <ShoppingCart className="h-5 w-5" />
                 <CartBadge />
