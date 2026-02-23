@@ -1,14 +1,50 @@
+# Nidhi Clothing Co. - Robots.txt
+# https://nidhiclothing.com
+
+# Allow all major search engine crawlers
 User-agent: Googlebot
 Allow: /
+Disallow: /admin
+Disallow: /checkout
+Disallow: /cart
+Disallow: /orders
+Disallow: /order-history
+Disallow: /order-confirmation
+Disallow: /wishlist
 
 User-agent: Bingbot
 Allow: /
+Disallow: /admin
+Disallow: /checkout
+Disallow: /cart
+Disallow: /orders
+Disallow: /order-history
+Disallow: /order-confirmation
+Disallow: /wishlist
 
+# Social media crawlers - allow for link previews
 User-agent: Twitterbot
 Allow: /
 
 User-agent: facebookexternalhit
 Allow: /
 
+User-agent: LinkedInBot
+Allow: /
+
+# All other bots
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /checkout
+Disallow: /cart
+Disallow: /orders
+Disallow: /order-history
+Disallow: /order-confirmation
+Disallow: /wishlist
+
+# Sitemap location
+Sitemap: https://nidhiclothing.com/sitemap.xml
+
+# Crawl-delay for polite bots (optional, Googlebot ignores this)
+# Crawl-delay: 1
