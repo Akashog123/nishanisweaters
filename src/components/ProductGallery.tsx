@@ -213,7 +213,7 @@ const ProductGallery = ({ images, videos = [], productName }: ProductGalleryProp
         </VisuallyHidden>
         <DialogContent
           hideClose
-          className="max-w-[100vw] w-[100vw] max-h-[100vh] h-[100vh] p-0 bg-transparent border-none shadow-none rounded-none focus-visible:outline-none overflow-hidden"
+          className="max-w-[100vw] w-[100vw] max-h-[100dvh] h-[100dvh] p-0 bg-transparent border-none shadow-none rounded-none focus-visible:outline-none overflow-hidden"
           onKeyDown={handleFullscreenKeyDown}
         >
           {/* Full viewport container */}
@@ -257,7 +257,7 @@ const ProductGallery = ({ images, videos = [], productName }: ProductGalleryProp
               <img
                 src={selectedItem.src}
                 alt={`${productName} fullscreen view`}
-                className="max-w-[92vw] md:max-w-[85vw] max-h-[88vh] object-contain select-none pointer-events-none"
+                className="max-w-[92vw] md:max-w-[85vw] max-h-[88dvh] object-contain select-none pointer-events-none"
                 draggable={false}
               />
             )}

@@ -235,6 +235,7 @@ export default defineSchema({
     // Pricing
     subtotal: v.number(),
     tax: v.number(),
+    taxRate: v.optional(v.number()),
     shippingCost: v.number(),
     discount: v.number(),
     total: v.number(),
@@ -307,6 +308,7 @@ export default defineSchema({
       v.literal("confirmed"),
       v.literal("processing"),
       v.literal("shipped"),
+      v.literal("out_for_delivery"),
       v.literal("delivered"),
       v.literal("cancelled"),
       v.literal("refunded")

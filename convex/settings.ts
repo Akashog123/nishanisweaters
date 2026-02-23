@@ -241,6 +241,30 @@ export const getImageSettings = query({
 });
 
 /**
+ * Get pricing configuration for frontend use (cart, checkout)
+ * Returns tax rate, free shipping threshold, and shipping cost
+ */
+export const getPricingConfig = query({
+  args: {},
+  handler: async (ctx) => {
+    const allSettings = await ctx.db.query("settings").collect();
+    const settingsMap = new Map(allSettings.map((s) => [s.key, s.value]));
+
+    const getValue = (key: string, fallback: string) => {
+      const val = settingsMap.get(key);
+      if (val !== undefined) return val;
+      return getSettingDefinition(key)?.defaultValue ?? fallback;
+    };
+
+    return {
+      taxRate: parseFloat(getValue("PRICING.TAX_RATE", "0.18")),
+      freeShippingThreshold: parseFloat(getValue("SHIPPING.FREE_THRESHOLD", "1000")),
+      shippingCost: parseFloat(getValue("SHIPPING.STANDARD_COST", "99")),
+    };
+  },
+});
+
+/**
  * Get all public settings at once - optimized single query for frontend
  * Returns branding, content, display, business info, and legal settings
  */

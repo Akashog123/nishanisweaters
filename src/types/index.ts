@@ -220,6 +220,7 @@ export type OrderStatus =
   | "confirmed"
   | "processing"
   | "shipped"
+  | "out_for_delivery"
   | "delivered"
   | "cancelled"
   | "refunded";
@@ -248,6 +249,7 @@ export interface ConvexOrder {
   items: OrderItem[];
   subtotal: number;
   tax: number;
+  taxRate?: number;
   shippingCost: number;
   discount: number;
   total: number;

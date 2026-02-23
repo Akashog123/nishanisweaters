@@ -69,6 +69,8 @@ import type * as rateLimitInternal from "../rateLimitInternal.js";
 import type * as reviews from "../reviews.js";
 import type * as seed from "../seed.js";
 import type * as settings from "../settings.js";
+import type * as telegramApi from "../telegramApi.js";
+import type * as telegramEvents from "../telegramEvents.js";
 import type * as testimonials from "../testimonials.js";
 import type * as users from "../users.js";
 import type * as webhookEventsInternal from "../webhookEventsInternal.js";
@@ -142,6 +144,8 @@ declare const fullApi: ApiFromModules<{
   reviews: typeof reviews;
   seed: typeof seed;
   settings: typeof settings;
+  telegramApi: typeof telegramApi;
+  telegramEvents: typeof telegramEvents;
   testimonials: typeof testimonials;
   users: typeof users;
   webhookEventsInternal: typeof webhookEventsInternal;

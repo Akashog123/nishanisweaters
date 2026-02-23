@@ -75,6 +75,7 @@ export const createOrder = mutation({
       items: validatedItems,
       subtotal: pricing.subtotal,
       tax: pricing.tax,
+      taxRate: pricing.taxRate,
       shippingCost: pricing.shippingCost,
       discount: pricing.discount,
       total: pricing.total,

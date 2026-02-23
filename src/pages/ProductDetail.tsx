@@ -89,6 +89,7 @@ const ProductDetail = () => {
   const { addToCart } = useCart();
   const { openCart } = useCartUI();
   const [showGoToCart, setShowGoToCart] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const { handleError } = useConvexError();
   const { isSignedIn } = useUser();
   const { placeholderUrl } = useImageSettings();
@@ -422,7 +423,31 @@ const ProductDetail = () => {
             {/* Description */}
             <div>
               <h3 className="text-sm font-medium mb-2">Description</h3>
-              <p className="text-muted-foreground leading-relaxed">{product.description}</p>
+              <p className="text-muted-foreground leading-relaxed">
+                {isDescriptionExpanded ? (
+                  product.description
+                ) : (
+                  <>
+                    {product.description.slice(0, 150)}
+                    {product.description.length > 150 && (
+                      <button
+                        onClick={() => setIsDescriptionExpanded(true)}
+                        className="text-sm font-medium text-primary hover:underline"
+                      >
+                        ...  See more
+                      </button>
+                    )}
+                  </>
+                )}
+              </p>
+              {isDescriptionExpanded && product.description.length > 150 && (
+                <button
+                  onClick={() => setIsDescriptionExpanded(false)}
+                  className="text-sm font-medium text-primary hover:underline mt-1"
+                >
+                  See less
+                </button>
+              )}
             </div>
 
             {/* Quantity - Hidden for admin */}

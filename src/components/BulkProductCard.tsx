@@ -104,7 +104,6 @@ const BulkProductCard = memo(({ product }: BulkProductCardProps) => {
     name,
     category,
     retailPrice,
-    compareAtPrice,
     wholesalePrice,
     minOrderQuantity = 10,
     averageRating = 0,

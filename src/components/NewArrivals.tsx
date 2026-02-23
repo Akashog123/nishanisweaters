@@ -22,7 +22,7 @@ const NewArrivals = () => {
     <section id="new-arrival" className="py-16 lg:py-24 bg-background">
       <div className="container mx-auto px-4 lg:px-8">
         <div className="flex items-center justify-between mb-12">
-          <h2 className="text-3xl lg:text-4xl font-bold">NEW ARRIVAL</h2>
+          <h2 className="text-3xl lg:text-4xl font-bold">NEW ARRIVALS</h2>
           <Link to={`/shop/${newArrivalsCategory}`}>
             <Button variant="outline" className="border-2 font-medium">
               Browse All

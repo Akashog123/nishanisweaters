@@ -401,7 +401,7 @@ function ProductDetailsForm({
             }
             className="rounded border-gray-300"
           />
-          <span className="text-sm">New Arrival</span>
+          <span className="text-sm">New Arrivals</span>
         </label>
       </div>
 

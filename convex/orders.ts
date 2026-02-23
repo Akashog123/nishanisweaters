@@ -46,7 +46,8 @@ const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
   pending: ["confirmed", "cancelled"],
   confirmed: ["processing", "cancelled"],
   processing: ["shipped", "cancelled"],
-  shipped: ["delivered"],
+  shipped: ["out_for_delivery", "delivered"],
+  out_for_delivery: ["delivered"],
   delivered: [], // Terminal state
   cancelled: [], // Terminal state
 };
@@ -110,6 +111,7 @@ export const createOrder = mutation({
       items: validatedItems,
       subtotal: pricing.subtotal,
       tax: pricing.tax,
+      taxRate: pricing.taxRate,
       shippingCost: pricing.shippingCost,
       discount: pricing.discount,
       total: pricing.total,
@@ -145,6 +147,30 @@ export const createOrder = mutation({
       createStatusHistory(ctx, orderId, undefined, "pending", "system", "Order created"),
       clearUserCart(ctx, userId),
     ]);
+
+    // Step 8: Fire Telegram notification (non-blocking)
+    await ctx.scheduler.runAfter(0, internal.telegramEvents.fireEvent, {
+      eventType: "order.created",
+      payload: JSON.stringify({
+        orderId,
+        orderNumber,
+        userId,
+        userEmail,
+        items: validatedItems,
+        shippingAddress: args.shippingAddress,
+        subtotal: pricing.subtotal,
+        tax: pricing.tax,
+        shippingCost: pricing.shippingCost,
+        discount: pricing.discount,
+        total: pricing.total,
+        paymentMethod: args.paymentMethod,
+        paymentStatus: "pending",
+        customerNotes: args.customerNotes,
+        promoCode: pricing.promoCode,
+        promoDiscount: pricing.promoDiscount,
+        createdAt: now,
+      }),
+    });
 
     return orderId;
   },
@@ -233,6 +259,30 @@ export const updatePaymentStatus = internalMutation({
     }
 
     await ctx.db.patch(args.orderId, updates);
+
+    // Fire Telegram payment event (non-blocking)
+    const paymentEventType =
+      args.paymentStatus === "paid" ? "payment.received" :
+      args.paymentStatus === "failed" ? "payment.failed" :
+      args.paymentStatus === "refunded" ? "refund.completed" :
+      args.paymentStatus === "refund_pending" ? "refund.initiated" :
+      args.paymentStatus === "refund_failed" ? "refund.failed" :
+      "payment.status_changed";
+
+    await ctx.scheduler.runAfter(0, internal.telegramEvents.fireEvent, {
+      eventType: paymentEventType,
+      payload: JSON.stringify({
+        orderId: args.orderId,
+        orderNumber: order.orderNumber,
+        paymentStatus: args.paymentStatus,
+        previousPaymentStatus: order.paymentStatus,
+        razorpayPaymentId: args.razorpayPaymentId,
+        total: order.total,
+        userEmail: order.userEmail,
+        customerName: order.shippingAddress.name,
+        paymentMethod: order.paymentMethod,
+      }),
+    });
   },
 });
 
@@ -675,6 +725,22 @@ export const updateOrderStatus = mutation({
       admin.clerkId,
       args.adminNotes
     );
+
+    // Fire Telegram notification (non-blocking)
+    await ctx.scheduler.runAfter(0, internal.telegramEvents.fireEvent, {
+      eventType: "order.status_changed",
+      payload: JSON.stringify({
+        orderId: args.orderId,
+        orderNumber: order.orderNumber,
+        previousStatus: order.orderStatus,
+        newStatus: args.orderStatus,
+        trackingNumber: args.trackingNumber,
+        shippingCarrier: args.shippingCarrier,
+        changedBy: admin.clerkId,
+        customerName: order.shippingAddress.name,
+        userEmail: order.userEmail,
+      }),
+    });
   },
 });
 
@@ -737,6 +803,22 @@ export const cancelOrder = mutation({
         sanitizedReason
       ),
     ]);
+
+    // Fire Telegram notification (non-blocking)
+    await ctx.scheduler.runAfter(0, internal.telegramEvents.fireEvent, {
+      eventType: "order.cancelled",
+      payload: JSON.stringify({
+        orderId: args.orderId,
+        orderNumber: order.orderNumber,
+        reason: sanitizedReason,
+        cancelledBy: changedBy,
+        isAdminCancel: isAdmin,
+        wasPaid: order.paymentStatus === "paid",
+        total: order.total,
+        customerName: order.shippingAddress.name,
+        userEmail: order.userEmail,
+      }),
+    });
   },
 });
 

@@ -295,7 +295,9 @@ export default function OrderHistory() {
                               </span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">Tax (18% GST)</span>
+                              <span className="text-muted-foreground">
+                                Tax {order.taxRate ? `(${(order.taxRate * 100).toFixed(0)}% GST)` : "(GST)"}
+                              </span>
                               <span>{formatCurrency(order.tax)}</span>
                             </div>
                             {order.discount > 0 && (

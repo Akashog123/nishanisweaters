@@ -200,6 +200,9 @@ export default function Cart() {
 
   // Promo discount comes from cart context (no separate query needed)
 
+  // Dynamic pricing config from admin settings
+  const pricingConfig = useQuery(api.settings.getPricingConfig);
+
   const [savingItem, setSavingItem] = useState<string | null>(null);
 
   const handleSaveForLater = async (productId: string, variantSku: string) => {
@@ -290,8 +293,11 @@ export default function Cart() {
   }
 
   const subtotal = getSubtotal();
-  const shipping = subtotal >= 1000 ? 0 : 99;
-  const tax = subtotal * 0.18;
+  const taxRate = pricingConfig?.taxRate ?? 0.18;
+  const freeThreshold = pricingConfig?.freeShippingThreshold ?? 1000;
+  const shippingCostVal = pricingConfig?.shippingCost ?? 99;
+  const shipping = subtotal >= freeThreshold ? 0 : shippingCostVal;
+  const tax = subtotal * taxRate;
   const total = subtotal + shipping + tax - promoDiscount;
 
   return (
@@ -484,7 +490,7 @@ export default function Cart() {
                   <span>{shipping === 0 ? "FREE" : formatCurrency(shipping)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Tax (18% GST)</span>
+                  <span>Tax ({(taxRate * 100).toFixed(0)}% GST)</span>
                   <span>
                     {isLoading ? (
                       <Skeleton className="h-4 w-16 inline-block" />
@@ -518,9 +524,9 @@ export default function Cart() {
                 <PromoCodeInput />
               </div>
 
-              {subtotal < 1000 && (
+              {subtotal < freeThreshold && (
                 <p className="text-sm text-muted-foreground mt-4">
-                  Add {formatCurrency(1000 - subtotal)} more for free shipping!
+                  Add {formatCurrency(freeThreshold - subtotal)} more for free shipping!
                 </p>
               )}
 
