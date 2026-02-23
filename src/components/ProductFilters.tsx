@@ -1,4 +1,4 @@
-import { useState, memo, useCallback } from "react";
+import { useState, memo, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -113,15 +113,18 @@ const FilterContent = memo(function FilterContent({
                     id={`color-${color}`}
                     checked={filters.colors.includes(color)}
                     onCheckedChange={() => onColorToggle(color)}
+                    className="sr-only" // Visually hide the actual checkbox
                   />
                   <Label
                     htmlFor={`color-${color}`}
                     className="text-sm font-normal cursor-pointer flex items-center gap-2"
                   >
-                    <span
-                      className="w-4 h-4 rounded-full border"
-                      style={{ backgroundColor: color.toLowerCase() }}
-                    />
+                    <div className="relative flex items-center justify-center">
+                      <span
+                        className={`w-5 h-5 rounded-full border shadow-sm ${filters.colors.includes(color) ? 'ring-2 ring-primary ring-offset-1' : ''}`}
+                        style={{ backgroundColor: color.toLowerCase() }}
+                      />
+                    </div>
                     {color}
                   </Label>
                 </div>
@@ -169,6 +172,16 @@ export function ProductFilters({
     filters.minPrice ?? filterOptions?.priceRange.min ?? 0,
     filters.maxPrice ?? filterOptions?.priceRange.max ?? 10000,
   ]);
+
+  // Sync local price range with options when they load or when filters change externally
+  useEffect(() => {
+    if (filterOptions) {
+      setLocalPriceRange([
+        filters.minPrice ?? filterOptions.priceRange.min,
+        filters.maxPrice ?? filterOptions.priceRange.max,
+      ]);
+    }
+  }, [filterOptions, filters.minPrice, filters.maxPrice]);
 
   // Memoized handlers to prevent unnecessary re-renders of FilterContent
   const handleSizeToggle = useCallback((size: string) => {

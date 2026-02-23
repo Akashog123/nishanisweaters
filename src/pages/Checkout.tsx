@@ -12,6 +12,7 @@ import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { useConvexError } from "@/hooks/useConvexError";
 import { ValidationError, PaymentError } from "@/lib/errors";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   TAX_RATE,
   FREE_SHIPPING_THRESHOLD,
@@ -41,17 +42,22 @@ import {
 } from "@/lib/observability";
 import { validateAddress } from "@/lib/validation";
 import { getSessionId } from "@/lib/session";
+import { SEO } from "@/components/SEO";
 
 export default function Checkout() {
   const navigate = useNavigate();
   const { user } = useUser();
   const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
-  const { items, getSubtotal, clearCart, isLoading: cartLoading, error: cartError } = useCart();
+  const { items, getSubtotal, clearCart, isLoading: cartLoading, error: cartError, promoDiscount: cartPromoDiscount, appliedPromoCode } = useCart();
   const createOrder = useMutation(api.orders.createOrder);
   const validateCart = useMutation(api.cart.validateCart);
   const createRazorpayOrder = useAction(api.payments.createRazorpayOrder);
   const verifyPayment = useAction(api.payments.verifyPayment);
-  const cartData = useQuery(api.cart.getCart, {});
+
+  // Fetch current user for address pre-fill
+  const { user: currentUser } = useCurrentUser();
+  // Fetch last used shipping address (lightweight, returns only address not full orders)
+  const lastShippingAddress = useQuery(api.orders.getLastShippingAddress);
 
   // SECURITY: Get server-side pricing to prevent frontend/backend pricing drift
   // The server calculates prices from the database, not from client-provided values
@@ -64,7 +70,7 @@ export default function Checkout() {
             variantSku: item._variantSku || `${item.size}-${item.color}`,
             quantity: item.quantity,
           })),
-          promoCode: cartData?.appliedPromoCode,
+          promoCode: appliedPromoCode || undefined,
         }
       : "skip"
   );
@@ -90,7 +96,7 @@ export default function Checkout() {
   // Server prices are authoritative and prevent price manipulation
   const clientSubtotal = getSubtotal();
   const subtotal = orderPreview?.subtotal ?? clientSubtotal;
-  const promoDiscount = orderPreview?.promoDiscount ?? cartData?.promoDiscount ?? 0;
+  const promoDiscount = orderPreview?.promoDiscount ?? cartPromoDiscount;
 
   // Tax is calculated on the subtotal minus promo discount
   const taxableAmount = Math.max(0, subtotal - promoDiscount);
@@ -98,8 +104,6 @@ export default function Checkout() {
 
   // Shipping uses original subtotal to check free shipping threshold
   const shipping = orderPreview?.shippingCost ?? (subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST);
-
-  const appliedPromoCode = cartData?.appliedPromoCode;
 
   // Server total now correctly includes promo discount calculation
   const total = orderPreview?.total ?? (taxableAmount + tax + shipping);
@@ -135,6 +139,54 @@ export default function Checkout() {
       setRazorpayLoaded(loaded);
     });
   }, []);
+
+  // Pre-fill shipping address for returning customers
+  // Priority: Default saved address → Most recent order's address → First saved address
+  useEffect(() => {
+    // Only pre-fill if user is authenticated and address is empty
+    if (!currentUser || shippingAddress.name || shippingAddress.street) {
+      return;
+    }
+
+    let addressToUse: ShippingAddress | null = null;
+
+    // Strategy 1: Find default saved address
+    const defaultAddress = currentUser.shippingAddresses?.find((addr) => addr.isDefault);
+    if (defaultAddress) {
+      addressToUse = {
+        name: defaultAddress.name,
+        phone: defaultAddress.phone,
+        street: defaultAddress.street,
+        city: defaultAddress.city,
+        state: defaultAddress.state,
+        postalCode: defaultAddress.postalCode,
+        country: defaultAddress.country,
+      };
+    }
+
+    // Strategy 2: Use most recent order's shipping address if no default saved address
+    if (!addressToUse && lastShippingAddress) {
+      addressToUse = lastShippingAddress;
+    }
+
+    // Strategy 3: Use first saved address if no default and no orders
+    if (!addressToUse && currentUser.shippingAddresses?.length > 0) {
+      const firstAddress = currentUser.shippingAddresses[0];
+      addressToUse = {
+        name: firstAddress.name,
+        phone: firstAddress.phone,
+        street: firstAddress.street,
+        city: firstAddress.city,
+        state: firstAddress.state,
+        postalCode: firstAddress.postalCode,
+        country: firstAddress.country,
+      };
+    }
+
+    if (addressToUse) {
+      setShippingAddress(addressToUse);
+    }
+  }, [currentUser, lastShippingAddress]);
 
   // OBSERVABILITY: Track checkout funnel steps for SLI/SLO measurement
   // This tracks user progress through the checkout funnel
@@ -448,6 +500,7 @@ export default function Checkout() {
 
   return (
     <Layout showAnnouncement={false}>
+      <SEO title="Checkout" noIndex={true} />
       <div className="container mx-auto px-4 py-8 max-w-3xl">
         <Button
           variant="ghost"

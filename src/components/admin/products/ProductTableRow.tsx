@@ -17,6 +17,7 @@ import { formatCurrency } from "@/lib/formatting";
 import { Product } from "./types";
 import { StockStatus } from "./StockStatus";
 import { Id } from "../../../../convex/_generated/dataModel";
+import { useActiveCategories } from "../../../hooks/useCategories";
 
 interface ProductTableRowProps {
   product: Product;
@@ -25,12 +26,15 @@ interface ProductTableRowProps {
 }
 
 export function ProductTableRow({ product, onEdit, onDelete }: ProductTableRowProps) {
+  const categoriesQuery = useActiveCategories();
+  const categoryName = categoriesQuery?.find(c => c.slug === product.category)?.name || product.category;
+
   return (
     <TableRow>
       <TableCell>
         <div className="w-12 h-12 rounded-md overflow-hidden bg-gray-100">
           <img
-            src={product.images[0]?.url || "/placeholder.svg"}
+            src={product.images.find(img => img.url !== "/placeholder.svg")?.url || "/placeholder.svg"}
             alt={product.name}
             className="w-full h-full object-cover"
           />
@@ -46,7 +50,7 @@ export function ProductTableRow({ product, onEdit, onDelete }: ProductTableRowPr
       </TableCell>
       <TableCell>
         <Badge variant="secondary" className="capitalize">
-          {product.category}
+          {categoryName}
         </Badge>
       </TableCell>
       <TableCell>
@@ -104,7 +108,8 @@ export function ProductTableRow({ product, onEdit, onDelete }: ProductTableRowPr
                 <AlertDialogTitle>Delete Product</AlertDialogTitle>
                 <AlertDialogDescription>
                   Are you sure you want to delete "{product.name}"?
-                  This action will mark the product as inactive.
+                  If this product has been ordered by customers or has reviews, it will be marked as inactive to preserve history.
+                  If it has no references, it will be permanently deleted.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

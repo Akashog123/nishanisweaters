@@ -1,5 +1,4 @@
-import { useState, useCallback } from "react";
-import { Doc } from "../../../../convex/_generated/dataModel";
+import { useState, useCallback, useMemo } from "react";
 import {
   OrderStatusFilter,
   PaymentStatusFilter,
@@ -31,6 +30,7 @@ export interface OrderCounts {
 export interface UseOrderFiltersReturn {
   // Filter state
   searchQuery: string;
+  debouncedSearch: string;
   statusFilter: OrderStatusFilter;
   paymentFilter: PaymentStatusFilter;
   typeFilter: OrderTypeFilter;
@@ -49,19 +49,18 @@ export interface UseOrderFiltersReturn {
   // Reset
   resetFilters: () => void;
 
-  // Computed values
-  filterOrders: (orders: Doc<"orders">[]) => Doc<"orders">[];
-  getOrderCounts: (orders: Doc<"orders">[]) => OrderCounts;
-  getPaginatedOrders: (filteredOrders: Doc<"orders">[], itemsPerPage: number) => Doc<"orders">[];
-  getTotalPages: (filteredOrders: Doc<"orders">[], itemsPerPage: number) => number;
+  // Query args for server-side filtering
+  queryArgs: Record<string, unknown>;
 }
 
 export function useOrderFilters(): UseOrderFiltersReturn {
   const [searchQuery, setSearchQueryState] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilterState] = useState<OrderStatusFilter>("all");
   const [paymentFilter, setPaymentFilterState] = useState<PaymentStatusFilter>("all");
   const [typeFilter, setTypeFilterState] = useState<OrderTypeFilter>("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   const resetPagination = useCallback(() => {
     setCurrentPage(1);
@@ -70,7 +69,14 @@ export function useOrderFilters(): UseOrderFiltersReturn {
   const setSearchQuery = useCallback((query: string) => {
     setSearchQueryState(query);
     resetPagination();
-  }, [resetPagination]);
+
+    // Debounce the search term sent to the server
+    if (debounceTimer) clearTimeout(debounceTimer);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(query);
+    }, 300);
+    setDebounceTimer(timer);
+  }, [resetPagination, debounceTimer]);
 
   const setStatusFilter = useCallback((filter: OrderStatusFilter) => {
     setStatusFilterState(filter);
@@ -95,62 +101,26 @@ export function useOrderFilters(): UseOrderFiltersReturn {
 
   const resetFilters = useCallback(() => {
     setSearchQueryState("");
+    setDebouncedSearch("");
     setStatusFilterState("all");
     setPaymentFilterState("all");
     setTypeFilterState("all");
     resetPagination();
   }, [resetPagination]);
 
-  const filterOrders = useCallback((orders: Doc<"orders">[]): Doc<"orders">[] => {
-    return orders.filter((order) => {
-      const matchesSearch =
-        order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.userEmail.toLowerCase().includes(searchQuery.toLowerCase());
-
-      const matchesStatus =
-        statusFilter === "all" || order.orderStatus === statusFilter;
-
-      const matchesPayment =
-        paymentFilter === "all" || order.paymentStatus === paymentFilter;
-
-      const matchesType = typeFilter === "all" || order.orderType === typeFilter;
-
-      return matchesSearch && matchesStatus && matchesPayment && matchesType;
-    });
-  }, [searchQuery, statusFilter, paymentFilter, typeFilter]);
-
-  const getOrderCounts = useCallback((orders: Doc<"orders">[]): OrderCounts => {
-    return {
-      all: orders.length,
-      pending: orders.filter((o) => o.orderStatus === "pending").length,
-      confirmed: orders.filter((o) => o.orderStatus === "confirmed").length,
-      processing: orders.filter((o) => o.orderStatus === "processing").length,
-      shipped: orders.filter((o) => o.orderStatus === "shipped").length,
-      delivered: orders.filter((o) => o.orderStatus === "delivered").length,
-      cancelled: orders.filter((o) => o.orderStatus === "cancelled").length,
-      disputed: orders.filter((o) => o.paymentStatus === "disputed").length,
-    };
-  }, []);
-
-  const getPaginatedOrders = useCallback(
-    (filteredOrders: Doc<"orders">[], itemsPerPage: number): Doc<"orders">[] => {
-      return filteredOrders.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-      );
-    },
-    [currentPage]
-  );
-
-  const getTotalPages = useCallback(
-    (filteredOrders: Doc<"orders">[], itemsPerPage: number): number => {
-      return Math.ceil(filteredOrders.length / itemsPerPage);
-    },
-    []
-  );
+  // Build query args for server-side filtering
+  const queryArgs = useMemo(() => {
+    const args: Record<string, unknown> = { limit: 25 };
+    if (statusFilter !== "all") args.orderStatus = statusFilter;
+    if (paymentFilter !== "all") args.paymentStatus = paymentFilter;
+    if (typeFilter !== "all") args.orderType = typeFilter;
+    if (debouncedSearch.trim()) args.searchTerm = debouncedSearch.trim();
+    return args;
+  }, [statusFilter, paymentFilter, typeFilter, debouncedSearch]);
 
   return {
     searchQuery,
+    debouncedSearch,
     statusFilter,
     paymentFilter,
     typeFilter,
@@ -162,9 +132,6 @@ export function useOrderFilters(): UseOrderFiltersReturn {
     setCurrentPage,
     setFilters,
     resetFilters,
-    filterOrders,
-    getOrderCounts,
-    getPaginatedOrders,
-    getTotalPages,
+    queryArgs,
   };
 }

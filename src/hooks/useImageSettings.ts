@@ -1,17 +1,17 @@
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { useSiteSettings } from "./useSiteSettings";
 
 /**
- * Hook to get image configuration settings from the backend
- * Returns hero URL, placeholder URL, and category banner URL
+ * Hook to get image configuration settings.
+ * Now delegates to useSiteSettings (which includes images)
+ * instead of making a separate query — saves one WebSocket subscription.
  */
 export function useImageSettings() {
-  const imageSettings = useQuery(api.settings.getImageSettings);
+  const { images, isLoading } = useSiteSettings();
 
   return {
-    heroUrl: imageSettings?.heroUrl ?? "",
-    placeholderUrl: imageSettings?.placeholderUrl ?? "/placeholder.svg",
-    categoryBannerUrl: imageSettings?.categoryBannerUrl ?? "",
-    isLoading: imageSettings === undefined,
+    heroUrl: images.heroUrl,
+    placeholderUrl: images.placeholderUrl,
+    categoryBannerUrl: images.categoryBannerUrl,
+    isLoading,
   };
 }

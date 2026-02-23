@@ -11,6 +11,7 @@ import {
   Loader2,
   Play,
   ExternalLink,
+  Star,
 } from "lucide-react";
 import { MAX_FILE_SIZE_BYTES, ALLOWED_IMAGE_TYPES } from "@/lib/constants";
 import { YouTubeVideoInput } from "./YouTubeVideoInput";
@@ -52,6 +53,7 @@ export function ProductMediaUpload({
   const generateUploadUrl = useMutation(api.fileStorage.generateAdminUploadUrl);
   const saveImage = useAction(api.fileStorage.saveProductImage);
   const deleteImage = useMutation(api.fileStorage.deleteProductImage);
+  const reorderImages = useMutation(api.fileStorage.reorderProductImages);
   const saveYouTubeVideo = useMutation(api.fileStorage.saveYouTubeVideo);
   const deleteYouTubeVideo = useMutation(api.fileStorage.deleteYouTubeVideo);
 
@@ -74,9 +76,15 @@ export function ProductMediaUpload({
   };
 
   const handleImageUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
+    // Copy the files to an array immediately before clearing the input
+    const filesList = event.target.files;
+    if (!filesList || filesList.length === 0) return;
 
+    // Create a static array of files so it doesn't get cleared when we reset the input
+    const filesToUpload = Array.from(filesList);
+    const totalFiles = filesToUpload.length;
+
+    // Now it's safe to clear the input
     if (imageInputRef.current) {
       imageInputRef.current.value = "";
     }
@@ -84,14 +92,17 @@ export function ProductMediaUpload({
     setIsUploading(true);
     setUploadProgress(0);
 
-    const totalFiles = files.length;
-    let completedFiles = 0;
-
     try {
-      for (const file of Array.from(files)) {
+      let skippedFiles = 0;
+      let completedFiles = 0;
+      console.log(`Starting upload process for ${totalFiles} file(s)`);
+
+      for (const file of filesToUpload) {
+        console.log(`Checking file: ${file.name} | type: "${file.type}" | size: ${file.size}`);
         const validation = validateImageFile(file);
         if (!validation.valid) {
           toast.error(`${file.name}: ${validation.error}`);
+          skippedFiles++;
           continue;
         }
 
@@ -102,8 +113,7 @@ export function ProductMediaUpload({
           uploadUrl = await generateUploadUrl();
         } catch (err) {
           console.error("Failed to get upload URL:", err);
-          toast.error("Failed to get upload URL. Are you still logged in?");
-          continue;
+          throw new Error("Failed to get upload URL. Are you an admin?");
         }
 
         // Upload file
@@ -131,19 +141,24 @@ export function ProductMediaUpload({
           await saveImage({
             storageId,
             productId,
-            alt: file.name.replace(/\.[^/.]+$/, ""),
-            contentType: file.type,
+            alt: file.name ? file.name.replace(/\.[^/.]+$/, "") : "Product Image",
+            contentType: file.type || "image/jpeg",
           });
         } catch (err) {
           console.error("Failed to save image to product:", err);
-          throw err;
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          throw new Error(`Failed saving image: ${errorMessage}`);
         }
 
         completedFiles++;
         setUploadProgress((completedFiles / totalFiles) * 100);
       }
 
-      toast.success(`Uploaded ${completedFiles} image(s)`);
+      if (skippedFiles > 0) {
+        toast.warning(`Uploaded ${completedFiles} image(s). Skipped ${skippedFiles} invalid file(s).`);
+      } else {
+        toast.success(`Uploaded ${completedFiles} image(s)`);
+      }
     } catch (error) {
       console.error("Upload error:", error);
       toast.error(error instanceof Error ? error.message : "Upload failed");
@@ -161,6 +176,27 @@ export function ProductMediaUpload({
       toast.error(error instanceof Error ? error.message : "Failed to delete image");
     }
   }, [deleteImage, productId]);
+
+  const handleSetPrimaryImage = useCallback(async (imageToMakePrimary: ProductImage) => {
+    try {
+      if (!imageToMakePrimary.storageId) return; // Can't make placeholder primary
+
+      const newOrder = images
+        .filter((img): img is ProductImage & { storageId: string } => !!img.storageId)
+        .map((img) => {
+          if (img.storageId === imageToMakePrimary.storageId) {
+            return { storageId: img.storageId, order: 0 };
+          }
+          // Shift other images down
+          return { storageId: img.storageId, order: img.order + 1 };
+        });
+
+      await reorderImages({ productId, imageOrder: newOrder });
+      toast.success("Primary image updated");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to set primary image");
+    }
+  }, [reorderImages, productId, images]);
 
   const handleAddYouTubeVideo = useCallback(async (videoInfo: {
     youtubeId: string;
@@ -227,16 +263,17 @@ export function ProductMediaUpload({
                 Click to upload product images
               </p>
               <p className="text-xs text-muted-foreground">
-                JPEG, PNG, or WebP up to 5MB each. Multiple files supported.
+                JPEG, PNG, or WebP up to 20MB each. Multiple files supported.
               </p>
             </>
           )}
         </div>
 
         {/* Image Grid */}
-        {images.length > 0 && (
+        {images.filter(img => img.url !== "/placeholder.svg").length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {images
+              .filter(img => img.url !== "/placeholder.svg")
               .sort((a, b) => a.order - b.order)
               .map((image, index) => (
                 <div
@@ -249,10 +286,26 @@ export function ProductMediaUpload({
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    {image.storageId && index !== 0 && (
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        title="Set as Primary Image"
+                        className="h-8 w-8 text-yellow-500 hover:text-yellow-600 hover:bg-yellow-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSetPrimaryImage(image);
+                        }}
+                        disabled={disabled}
+                      >
+                        <Star className="h-4 w-4" />
+                      </Button>
+                    )}
                     {image.storageId && (
                       <Button
                         variant="destructive"
                         size="icon"
+                        title="Delete Image"
                         className="h-8 w-8"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -265,7 +318,7 @@ export function ProductMediaUpload({
                     )}
                   </div>
                   {index === 0 && (
-                    <span className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
+                    <span className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded shadow-sm">
                       Primary
                     </span>
                   )}

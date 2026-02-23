@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { useActiveCategories } from "@/hooks/useCategories";
+import { useImageSettings } from "@/hooks/useImageSettings";
 import productHoodie1 from "@/assets/product-hoodie-1.jpg";
 import productHoodie2 from "@/assets/product-hoodie-2.jpg";
 
@@ -12,17 +14,27 @@ const DEFAULT_CATEGORY_SPLIT = [
 
 const CategorySplit = () => {
   const { settings } = useSiteSettings();
+  const activeCategories = useActiveCategories();
+  const { placeholderUrl } = useImageSettings();
 
   // Check if dynamic categories are enabled
   const enableDynamic = settings?.enableDynamic === "true";
 
-  // Get categories to show (for now, use defaults but this could be extended to use settings)
-  const categories = enableDynamic
-    ? [
-        { slug: "mens", name: "MEN'S", image: productHoodie1 },
-        { slug: "womens", name: "WOMEN'S", image: productHoodie2 },
-        { slug: "kids", name: "KIDS", image: productHoodie1 },
-      ]
+  // Use up to 3 active categories if dynamic is enabled, otherwise use defaults
+  // Exclude new-arrival and winter as they have their own sections
+  const dynamicCategories = activeCategories
+    ? activeCategories
+        .filter(c => c.slug !== "new-arrival" && c.slug !== "winter" && c.showInHeader)
+        .slice(0, 3)
+        .map((cat, index) => ({
+          slug: cat.slug,
+          name: cat.name.toUpperCase(),
+          image: cat.imageUrl || (index % 2 === 0 ? productHoodie1 : productHoodie2)
+        }))
+    : [];
+
+  const categories = enableDynamic && dynamicCategories.length > 0
+    ? dynamicCategories
     : DEFAULT_CATEGORY_SPLIT;
 
   return (
@@ -39,6 +51,10 @@ const CategorySplit = () => {
                 src={category.image}
                 alt={`${category.name} Collection`}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = placeholderUrl;
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
               <div className="absolute top-8 left-8 text-black">

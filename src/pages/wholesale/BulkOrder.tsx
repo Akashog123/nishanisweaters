@@ -1,9 +1,11 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { useImageSettings } from "@/hooks/useImageSettings";
+import { useActiveCategories } from "@/hooks/useCategories";
 import { Id } from "../../../convex/_generated/dataModel";
 import Layout from "@/components/Layout";
+import { PageLoader } from "@/components/routes/PageLoader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,9 +25,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCart } from "@/context/CartContext";
+import { useCartUI } from "@/context/cart";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/formatting";
 import { WHATSAPP_BULK_PRICING_CONTACT, WHATSAPP_BULK_PRICING_URL } from "@/lib/constants";
+import { SEO } from "@/components/SEO";
 import {
   ShoppingCart,
   Plus,
@@ -35,7 +39,6 @@ import {
   Package,
   AlertCircle,
   Loader2,
-  CheckCircle,
   Phone,
   MessageCircle,
 } from "lucide-react";
@@ -54,38 +57,53 @@ interface BulkOrderItem {
 }
 
 export default function BulkOrder() {
-  const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { openCart } = useCartUI();
+  const { placeholderUrl } = useImageSettings();
+  const [showGoToCart, setShowGoToCart] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [bulkItems, setBulkItems] = useState<BulkOrderItem[]>([]);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
-  // Get all products for bulk ordering
-  const productsData = useQuery(api.products.listProducts, { limit: 100 });
-  // Memoize to prevent dependency array issues in child hooks
-  const products = useMemo(() => productsData?.products || [], [productsData?.products]);
+  // Server-side filtering: pass category and search to the server
+  // instead of fetching all 100 products and filtering client-side
+  const searchResults = useQuery(
+    api.products.searchProducts,
+    searchTerm.length >= 2 ? { searchTerm, limit: 50 } : "skip"
+  );
+  const categoryProducts = useQuery(
+    api.products.listProducts,
+    searchTerm.length < 2
+      ? {
+          category: selectedCategory !== "all" ? selectedCategory : undefined,
+          limit: 50,
+        }
+      : "skip"
+  );
 
-  // Get unique categories from products
+  // Use search results when searching, category results otherwise
+  const products = useMemo(() => {
+    if (searchTerm.length >= 2) {
+      const results = searchResults ?? [];
+      // Apply category filter on search results if needed
+      if (selectedCategory !== "all") {
+        return results.filter(p => p.category === selectedCategory);
+      }
+      return results;
+    }
+    return categoryProducts?.products || [];
+  }, [searchResults, categoryProducts?.products, searchTerm, selectedCategory]);
+
+  // Get categories from the dedicated query (shared subscription via hook)
+  const activeCategoriesData = useActiveCategories();
   const categories = useMemo(() => {
-    const categorySet = new Set(products.map(p => p.category));
-    return Array.from(categorySet).sort();
-  }, [products]);
+    return (activeCategoriesData ?? []).map(c => c.slug).sort();
+  }, [activeCategoriesData]);
 
-  // Filter products based on search and category
-  const filteredProducts = useMemo(() => {
-    return products.filter(product => {
-      const matchesSearch = !searchTerm ||
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.variants.some(v => v.sku.toLowerCase().includes(searchTerm.toLowerCase()));
-
-      const matchesCategory = selectedCategory === "all" ||
-        product.category === selectedCategory;
-
-      return matchesSearch && matchesCategory;
-    });
-  }, [products, searchTerm, selectedCategory]);
+  // Products are already filtered server-side
+  const filteredProducts = products;
 
   // Calculate totals (now using wholesale prices directly)
   const orderSummary = useMemo(() => {
@@ -137,7 +155,7 @@ export default function BulkOrder() {
         {
           productId: product._id,
           productName: product.name,
-          productImage: product.images[0]?.url || "placeholderUrl",
+          productImage: product.images.filter(img => img.url !== "/placeholder.svg")[0]?.url || placeholderUrl,
           variantSku: variant.sku,
           size: variant.size,
           color: variant.color,
@@ -217,9 +235,8 @@ export default function BulkOrder() {
       }
 
       toast.success("Items added to cart");
-      setTimeout(() => {
-        navigate("/checkout");
-      }, 500);
+      // Show "Go to Cart" option
+      setShowGoToCart(true);
     } catch (_error) {
       toast.error("Failed to add items to cart");
     } finally {
@@ -227,21 +244,28 @@ export default function BulkOrder() {
     }
   };
 
+  // Loading state: check whichever query is active
+  const isProductsLoading = searchTerm.length >= 2
+    ? searchResults === undefined
+    : categoryProducts === undefined;
+
   // Loading state for products
-  if (productsData === undefined) {
+  if (isProductsLoading) {
     return (
       <Layout>
-        <div className="container mx-auto px-4 py-12">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        </div>
+        <PageLoader />
       </Layout>
     );
   }
 
   return (
     <Layout>
+      <SEO
+        title="Bulk Purchase & Wholesale Knitwear Orders"
+        description="Wholesale knitwear orders at Nidhi Clothing Co. Best prices for bulk sweaters, hoodies & winter wear. Ideal for retailers, businesses & organizations across India."
+        canonicalPath="/bulk-purchase"
+        keywords="wholesale knitwear, bulk sweater order, knitwear manufacturer India, bulk winter wear, wholesale clothing India, knitwear supplier, bulk hoodie order, wholesale sweater"
+      />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -321,7 +345,7 @@ export default function BulkOrder() {
 
             {/* Product Grid */}
             <div className="grid sm:grid-cols-2 gap-4">
-              {productsData === undefined ? (
+              {isProductsLoading ? (
                 // Loading
                 Array.from({ length: 4 }).map((_, i) => (
                   <Card key={i}>
@@ -343,7 +367,7 @@ export default function BulkOrder() {
                     <CardContent className="p-4">
                       <div className="flex gap-4">
                         <img
-                          src={product.images[0]?.url || "placeholderUrl"}
+                          src={product.images.filter(img => img.url !== "/placeholder.svg")[0]?.url || placeholderUrl}
                           alt={product.name}
                           className="w-24 h-24 object-cover rounded"
                         />
@@ -385,7 +409,6 @@ export default function BulkOrder() {
                         <div className="flex flex-wrap gap-1">
                           {product.variants
                             .filter((v) => v.stockQuantity > 0)
-                            .slice(0, 6)
                             .map((variant) => (
                               <Button
                                 key={variant.sku}
@@ -399,11 +422,6 @@ export default function BulkOrder() {
                               </Button>
                             ))}
                         </div>
-                        {product.variants.filter((v) => v.stockQuantity > 0).length > 6 && (
-                          <p className="text-xs text-muted-foreground">
-                            +{product.variants.filter((v) => v.stockQuantity > 0).length - 6} more variants
-                          </p>
-                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -519,30 +537,6 @@ export default function BulkOrder() {
                         </div>
                       </div>
                     )}
-
-                    {orderSummary.allMeetMOQ && bulkItems.length > 0 && (
-                      <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg text-green-800 text-sm">
-                        <CheckCircle className="h-4 w-4" />
-                        <p>Ready to checkout!</p>
-                      </div>
-                    )}
-
-                    {/* WhatsApp CTA */}
-                    <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <MessageCircle className="h-4 w-4 text-green-600" />
-                        <span className="text-sm font-medium text-green-800">Need custom pricing?</span>
-                      </div>
-                      <a
-                        href={WHATSAPP_BULK_PRICING_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-green-600 hover:text-green-700"
-                      >
-                        <Phone className="h-3 w-3" />
-                        Chat on WhatsApp: {WHATSAPP_BULK_PRICING_CONTACT}
-                      </a>
-                    </div>
                   </>
                 )}
               </CardContent>
@@ -550,13 +544,18 @@ export default function BulkOrder() {
                 <Button
                   className="w-full"
                   size="lg"
-                  onClick={handleProceedToCheckout}
+                  onClick={showGoToCart ? () => { openCart(); setShowGoToCart(false); } : handleProceedToCheckout}
                   disabled={bulkItems.length === 0 || !orderSummary.allMeetMOQ || isAddingToCart}
                 >
                   {isAddingToCart ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Adding to Cart...
+                    </>
+                  ) : showGoToCart ? (
+                    <>
+                      <ShoppingCart className="mr-2 h-4 w-4" />
+                      Go to Cart
                     </>
                   ) : (
                     <>
@@ -575,6 +574,22 @@ export default function BulkOrder() {
                     Clear Order
                   </Button>
                 )}
+                {/* WhatsApp CTA */}
+                <div className="p-3 bg-green-50 rounded-lg border border-green-200 w-full">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-800">Need custom pricing?</span>
+                  </div>
+                  <a
+                    href={WHATSAPP_BULK_PRICING_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-green-600 hover:text-green-700"
+                  >
+                    <Phone className="h-3 w-3" />
+                    Chat on WhatsApp: {WHATSAPP_BULK_PRICING_CONTACT}
+                  </a>
+                </div>
               </CardFooter>
             </Card>
           </div>

@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { SEO, getFAQSchema, getBreadcrumbSchema } from "@/components/SEO";
 
 // Contact form validation schema
 const contactFormSchema = z.object({
@@ -204,6 +205,19 @@ const ContactUs = () => {
 
   return (
     <Layout>
+      <SEO
+        title="Contact Us - Get in Touch"
+        description="Contact Nidhi Clothing Co. for orders, wholesale partnerships, or knitwear inquiries. Call +91 7458816343, email support@nidhiclothing.com. Fast response within 24 hours."
+        canonicalPath="/contact-us"
+        keywords="contact Nidhi Clothing, knitwear inquiry, wholesale knitwear India, customer support, buy sweaters online, knitwear order inquiry"
+        jsonLd={[
+          getFAQSchema(faqItems),
+          getBreadcrumbSchema([
+            { name: "Home", path: "/" },
+            { name: "Contact Us", path: "/contact-us" },
+          ]),
+        ]}
+      />
       {/* Hero Section - Using primary theme colors */}
       <section className="relative bg-zinc-900 text-white py-20 lg:py-28 overflow-hidden">
          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1596524430615-b46476dd9fdb?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-20" />
@@ -491,7 +505,7 @@ const ContactUs = () => {
               <Card className="overflow-hidden border-none shadow-lg">
                 <div className="relative h-64 bg-secondary">
                   <iframe 
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d109741.02912911311!2d75.77087864999999!3d30.900965!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x391a837462345a7d%3A0x681102348ec60610!2sLudhiana%2C%20Punjab!5e0!3m2!1sen!2sin!4v1716300000000!5m2!1sen!2sin" 
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d14404.837291879!2d84.03!3d26.037!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x399331e5eaaaaaab%3A0x1234567890abcdef!2sSikandarpur%2C%20Uttar%20Pradesh!5e0!3m2!1sen!2sin!4v1716300000000!5m2!1sen!2sin"
                     width="100%" 
                     height="100%" 
                     style={{ border: 0 }} 

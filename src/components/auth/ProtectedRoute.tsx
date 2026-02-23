@@ -2,6 +2,7 @@ import { useUser, useClerk } from "@clerk/clerk-react";
 import { Navigate } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { PageLoader } from "@/components/routes/PageLoader";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -20,11 +21,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   );
 
   if (!isLoaded) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <PageLoader fullScreen />;
   }
 
   if (!isSignedIn) {
@@ -35,11 +32,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
 
   // If role check is required, wait for user data (undefined means still loading)
   if (requiredRole && dbUser === undefined) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <PageLoader fullScreen />;
   }
 
   // Handle case where user is not found in database (null)

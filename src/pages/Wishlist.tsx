@@ -2,7 +2,9 @@ import { Link } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { useImageSettings } from "@/hooks/useImageSettings";
 import Layout from "@/components/Layout";
+import { PageLoader } from "@/components/routes/PageLoader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,10 +17,13 @@ import {
   Loader2,
   ExternalLink,
 } from "lucide-react";
+import { useState } from "react";
 import { useCart } from "@/context/CartContext";
+import { useCartUI } from "@/context/cart";
 import { toast } from "sonner";
 import type { Id } from "../../convex/_generated/dataModel";
 import { formatCurrency, calculateDiscount } from "@/lib/formatting";
+import { SEO } from "@/components/SEO";
 
 interface WishlistProduct {
   _id: Id<"products">;
@@ -45,6 +50,9 @@ interface WishlistItem {
 export default function Wishlist() {
   const { user, isSignedIn, isLoaded: isClerkLoaded } = useUser();
   const { addToCart } = useCart();
+  const { openCart } = useCartUI();
+  const { placeholderUrl } = useImageSettings();
+  const [showGoToCart, setShowGoToCart] = useState<string | null>(null);
 
   const wishlist = useQuery(
     api.wishlist.getWishlist,
@@ -58,12 +66,7 @@ export default function Wishlist() {
   if (!isClerkLoaded || wishlist === undefined) {
     return (
       <Layout showAnnouncement={false}>
-        <div className="flex-1 flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Loading your wishlist...</p>
-          </div>
-        </div>
+        <PageLoader />
       </Layout>
     );
   }
@@ -128,15 +131,23 @@ export default function Wishlist() {
       productId: product._id,
       name: product.name,
       price: product.retailPrice,
-      image: product.images[0]?.url || "",
+      image: product.images.filter(img => img.url !== "/placeholder.svg")[0]?.url || placeholderUrl,
       size: availableVariant.size,
       color: availableVariant.color,
       quantity: 1,
     });
 
+    // Show "Go to Cart" option for this product
+    setShowGoToCart(product._id);
+
     toast.success("Added to cart", {
       description: `${product.name} - ${availableVariant.size}/${availableVariant.color}`,
     });
+  };
+
+  const handleGoToCart = (productId: string) => {
+    openCart();
+    setShowGoToCart(null);
   };
 
   // Empty state
@@ -170,6 +181,7 @@ export default function Wishlist() {
 
   return (
     <Layout showAnnouncement={false}>
+      <SEO title="My Wishlist" noIndex={true} />
       <div className="container mx-auto px-4 py-8 lg:py-12">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
@@ -210,6 +222,7 @@ export default function Wishlist() {
                 ? calculateDiscount(product.compareAtPrice!, product.retailPrice)
                 : 0;
               const isOutOfStock = product.variants.every((v) => v.stockQuantity === 0);
+              const realImages = product.images.filter(img => img.url !== "/placeholder.svg");
 
               return (
                 <Card key={product._id} className="group overflow-hidden">
@@ -217,10 +230,10 @@ export default function Wishlist() {
                     {/* Product Image */}
                     <Link to={`/product/${product.slug || product._id}`}>
                       <div className="relative aspect-[3/4] overflow-hidden bg-muted">
-                        {product.images[0] ? (
+                        {realImages[0] ? (
                           <img
-                            src={product.images[0].url}
-                            alt={product.images[0].alt || product.name}
+                            src={realImages[0].url}
+                            alt={realImages[0].alt || product.name}
                             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                           />
                         ) : (
@@ -289,10 +302,10 @@ export default function Wishlist() {
                         className="flex-1"
                         size="sm"
                         disabled={isOutOfStock}
-                        onClick={() => handleAddToCart(product)}
+                        onClick={() => showGoToCart === product._id ? handleGoToCart(product._id) : handleAddToCart(product)}
                       >
                         <ShoppingCart className="h-4 w-4 mr-2" />
-                        {isOutOfStock ? "Unavailable" : "Add to Cart"}
+                        {isOutOfStock ? "Unavailable" : showGoToCart === product._id ? "Go to Cart" : "Add to Cart"}
                       </Button>
                       <Button
                         variant="outline"

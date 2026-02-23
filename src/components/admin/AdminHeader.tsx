@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, startTransition } from "react";
 import { Link } from "react-router-dom";
 import { useUser, useClerk } from "@clerk/clerk-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -76,7 +76,7 @@ export function AdminHeader({ breadcrumbs }: AdminHeaderProps) {
           <Button
             variant="outline"
             className="hidden sm:flex w-56 justify-start text-muted-foreground border-border/50 hover:border-border hover:bg-muted/50 transition-all"
-            onClick={() => setCommandOpen(true)}
+            onClick={() => startTransition(() => setCommandOpen(true))}
           >
             <Search className="mr-2 h-4 w-4" />
             <span className="flex-1 text-left text-sm">Search...</span>
@@ -90,7 +90,7 @@ export function AdminHeader({ breadcrumbs }: AdminHeaderProps) {
             variant="ghost"
             size="icon"
             className="sm:hidden hover:bg-muted"
-            onClick={() => setCommandOpen(true)}
+            onClick={() => startTransition(() => setCommandOpen(true))}
           >
             <Search className="h-5 w-5" />
           </Button>

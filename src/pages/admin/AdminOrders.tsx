@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { AdminLayout } from "@/components/AdminLayout";
@@ -12,7 +12,7 @@ import {
   Order,
 } from "@/components/admin/orders";
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 25;
 
 const AdminOrders = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -30,23 +30,27 @@ const AdminOrders = () => {
     setTypeFilter,
     setCurrentPage,
     setFilters,
-    filterOrders,
-    getOrderCounts,
-    getPaginatedOrders,
-    getTotalPages,
+    queryArgs,
   } = useOrderFilters();
 
   const { updateOrderStatus } = useOrderMutations();
 
-  // Fetch orders
-  const ordersResult = useQuery(api.orders.listAllOrders, { limit: 500 });
-  const allOrders = ordersResult?.orders ?? [];
+  // Server-side filtered orders — no more fetching 500 and filtering client-side
+  const ordersResult = useQuery(api.orders.listAllOrders, queryArgs);
+  const orders = ordersResult?.orders ?? [];
 
-  // Compute filtered and paginated orders
-  const filteredOrders = filterOrders(allOrders);
-  const paginatedOrders = getPaginatedOrders(filteredOrders, ITEMS_PER_PAGE);
-  const totalPages = getTotalPages(filteredOrders, ITEMS_PER_PAGE);
-  const orderCounts = getOrderCounts(allOrders);
+  // Lightweight server-side counts for stats cards
+  const orderCounts = useQuery(api.orders.getOrderCounts);
+
+  // Client-side pagination of the server-filtered results
+  const paginatedOrders = useMemo(
+    () => orders.slice(
+      (currentPage - 1) * ITEMS_PER_PAGE,
+      currentPage * ITEMS_PER_PAGE
+    ),
+    [orders, currentPage]
+  );
+  const totalPages = Math.ceil(orders.length / ITEMS_PER_PAGE);
 
   // Handle status update from dialog
   const handleUpdateStatus = async (
@@ -78,7 +82,10 @@ const AdminOrders = () => {
 
         {/* Stats Cards */}
         <OrderStatsCards
-          counts={orderCounts}
+          counts={orderCounts ?? {
+            all: 0, pending: 0, confirmed: 0, processing: 0,
+            shipped: 0, delivered: 0, cancelled: 0, disputed: 0,
+          }}
           statusFilter={statusFilter}
           paymentFilter={paymentFilter}
           onFilterChange={setFilters}
@@ -99,7 +106,7 @@ const AdminOrders = () => {
         {/* Orders Table */}
         <OrdersTable
           orders={paginatedOrders}
-          filteredCount={filteredOrders.length}
+          filteredCount={orders.length}
           currentPage={currentPage}
           totalPages={totalPages}
           itemsPerPage={ITEMS_PER_PAGE}

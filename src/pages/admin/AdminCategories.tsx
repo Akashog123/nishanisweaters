@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -9,6 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
+import { MAX_FILE_SIZE_BYTES, ALLOWED_IMAGE_TYPES } from "@/lib/constants";
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+} from "@hello-pangea/dnd";
 import {
   Table,
   TableBody,
@@ -54,6 +62,8 @@ import {
   Eye,
   EyeOff,
   GripVertical,
+  Image as ImageIcon,
+  X,
 } from "lucide-react";
 
 interface Category {
@@ -61,6 +71,8 @@ interface Category {
   name: string;
   slug: string;
   description?: string;
+  imageUrl?: string;
+  imageStorageId?: string;
   isActive: boolean;
   showInHeader: boolean;
   displayOrder: number;
@@ -86,6 +98,8 @@ function CategoryForm({
     name: string;
     slug: string;
     description?: string;
+    imageUrl?: string;
+    imageStorageId?: string;
     showInHeader: boolean;
     displayOrder: number;
   }) => Promise<void>;
@@ -93,14 +107,53 @@ function CategoryForm({
   existingCategories: Category[];
 }) {
   const [formData, setFormData] = useState({
-    name: category?.name || "",
-    slug: category?.slug || "",
-    description: category?.description || "",
-    showInHeader: category?.showInHeader ?? false,
-    displayOrder: category?.displayOrder || existingCategories.length + 1,
+    name: "",
+    slug: "",
+    description: "",
+    imageUrl: "",
+    imageStorageId: "",
+    showInHeader: false,
+    displayOrder: 1,
   });
 
-  const [autoSlug, setAutoSlug] = useState(!category);
+  const [autoSlug, setAutoSlug] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const generateUploadUrl = useMutation(api.fileStorage.generateAdminUploadUrl);
+
+  // Sync state when category prop changes (important for editing!)
+  useEffect(() => {
+    if (category) {
+      setFormData({
+        name: category.name || "",
+        slug: category.slug || "",
+        description: category.description || "",
+        imageUrl: category.imageUrl || "",
+        imageStorageId: category.imageStorageId || "",
+        showInHeader: category.showInHeader ?? false,
+        displayOrder: category.displayOrder || 1,
+      });
+      setAutoSlug(false);
+    } else {
+      // Auto-assign the next display order
+      const nextOrder = existingCategories.length > 0
+        ? Math.max(...existingCategories.map(c => c.displayOrder)) + 1
+        : 1;
+
+      setFormData({
+        name: "",
+        slug: "",
+        description: "",
+        imageUrl: "",
+        imageStorageId: "",
+        showInHeader: false,
+        displayOrder: nextOrder,
+      });
+      setAutoSlug(true);
+    }
+  }, [category, existingCategories.length, isOpen]);
 
   // Generate slug from name
   const generateSlug = (name: string) => {
@@ -125,6 +178,77 @@ function CategoryForm({
     setFormData((prev) => ({ ...prev, slug }));
   };
 
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (imageInputRef.current) {
+      imageInputRef.current.value = "";
+    }
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      toast.error(`File size exceeds ${MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB limit`);
+      return;
+    }
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type as typeof ALLOWED_IMAGE_TYPES[number])) {
+      toast.error("Only JPEG, PNG, and WebP images are allowed");
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(10);
+
+    try {
+      const uploadUrl = await generateUploadUrl();
+      setUploadProgress(30);
+
+      const response = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to upload image: ${response.statusText}`);
+      }
+
+      setUploadProgress(70);
+      const { storageId } = await response.json();
+
+      // We don't save to the category yet, just hold the storage ID in form state
+      // We'll only save it when the form is submitted
+
+      // Get a temporary URL to preview the image
+      // In a real app we might want to use a local blob URL for preview before save
+      // but Convex storage gives us an easy way to get a URL if we just create the category later
+      const blobUrl = URL.createObjectURL(file);
+
+      setFormData(prev => ({
+        ...prev,
+        imageUrl: blobUrl, // Temporary preview URL
+        imageStorageId: storageId, // Actual storage ID for backend
+      }));
+
+      toast.success("Image uploaded successfully");
+      setUploadProgress(100);
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to upload image");
+    } finally {
+      setIsUploading(false);
+      setTimeout(() => setUploadProgress(0), 1000);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setFormData(prev => ({
+      ...prev,
+      imageUrl: "",
+      imageStorageId: "",
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -145,10 +269,24 @@ function CategoryForm({
       return;
     }
 
+    // Validate display order uniqueness when creating a new category or changing order
+    if (!category || formData.displayOrder !== category.displayOrder) {
+      const orderExists = existingCategories.some(
+        c => c.displayOrder === formData.displayOrder && c._id !== category?._id
+      );
+
+      if (orderExists) {
+        toast.error(`Display order ${formData.displayOrder} is already in use by another category. Please choose a different number.`);
+        return;
+      }
+    }
+
     await onSave({
       name: formData.name.trim(),
       slug: formData.slug.trim(),
       description: formData.description.trim() || undefined,
+      imageUrl: formData.imageUrl || undefined,
+      imageStorageId: formData.imageStorageId || undefined,
       showInHeader: formData.showInHeader,
       displayOrder: formData.displayOrder,
     });
@@ -201,6 +339,59 @@ function CategoryForm({
           </div>
 
           <div className="space-y-2">
+            <Label>Category Image</Label>
+            <div className="flex flex-col gap-4">
+              {formData.imageUrl ? (
+                <div className="relative aspect-video w-full max-w-[300px] overflow-hidden rounded-md border">
+                  <img
+                    src={formData.imageUrl}
+                    alt="Category preview"
+                    className="h-full w-full object-cover"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute right-2 top-2 h-8 w-8"
+                    onClick={handleRemoveImage}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div
+                  className={`flex aspect-video w-full max-w-[300px] cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed transition-colors ${
+                    isUploading ? "border-muted bg-muted/50" : "hover:border-primary/50 hover:bg-muted/50"
+                  }`}
+                  onClick={() => !isUploading && imageInputRef.current?.click()}
+                >
+                  {isUploading ? (
+                    <div className="flex flex-col items-center gap-2 px-4 text-center">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                      <Progress value={uploadProgress} className="h-2 w-32" />
+                      <span className="text-xs text-muted-foreground">Uploading...</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <ImageIcon className="h-8 w-8" />
+                      <span className="text-sm font-medium">Click to upload image</span>
+                      <span className="text-xs">Used on homepage categories</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleImageUpload}
+                disabled={isUploading}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
@@ -211,25 +402,6 @@ function CategoryForm({
               placeholder="Optional description for this category"
               rows={3}
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="displayOrder">Display Order</Label>
-            <Input
-              id="displayOrder"
-              type="number"
-              min={1}
-              value={formData.displayOrder}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  displayOrder: parseInt(e.target.value) || 1,
-                }))
-              }
-            />
-            <p className="text-xs text-muted-foreground">
-              Lower numbers appear first in lists
-            </p>
           </div>
 
           <div className="flex items-center justify-between rounded-lg border p-3">
@@ -251,7 +423,7 @@ function CategoryForm({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading || isUploading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -305,8 +477,33 @@ export default function AdminCategories() {
   const createCategory = useMutation(api.categories.createCategory);
   const updateCategory = useMutation(api.categories.updateCategory);
   const deleteCategory = useMutation(api.categories.deleteCategory);
+  const reorderCategories = useMutation(api.categories.reorderCategories);
 
   const categories = categoriesData || [];
+
+  const handleDragEnd = async (result: DropResult) => {
+    if (!result.destination) return;
+
+    const sourceIndex = result.source.index;
+    const destinationIndex = result.destination.index;
+
+    if (sourceIndex === destinationIndex) return;
+
+    // Create a new array with the reordered categories
+    const reorderedCategories = Array.from(categories);
+    const [movedCategory] = reorderedCategories.splice(sourceIndex, 1);
+    reorderedCategories.splice(destinationIndex, 0, movedCategory);
+
+    // Get the new ordered array of IDs
+    const orderedIds = reorderedCategories.map((c) => c._id);
+
+    try {
+      await reorderCategories({ orderedIds });
+      toast.success("Categories reordered successfully");
+    } catch (_error) {
+      toast.error("Failed to reorder categories");
+    }
+  };
 
   const handleCreate = () => {
     setEditingCategory(null);
@@ -322,6 +519,8 @@ export default function AdminCategories() {
     name: string;
     slug: string;
     description?: string;
+    imageUrl?: string;
+    imageStorageId?: string;
     showInHeader: boolean;
     displayOrder: number;
   }) => {
@@ -484,6 +683,7 @@ export default function AdminCategories() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[50px]"></TableHead>
+                    <TableHead className="w-[60px]">Image</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Slug</TableHead>
                     <TableHead>Products</TableHead>
@@ -492,86 +692,121 @@ export default function AdminCategories() {
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {categories.map((category) => (
-                    <TableRow key={category._id}>
-                      <TableCell>
-                        <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {category.name}
-                      </TableCell>
-                      <TableCell>
-                        <code className="text-sm bg-muted px-1.5 py-0.5 rounded">
-                          {category.slug}
-                        </code>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Package className="h-4 w-4 text-muted-foreground" />
-                          <span>{category.productCount || 0}</span>
-                          {category.activeProductCount !== undefined &&
-                            category.activeProductCount !== category.productCount && (
-                              <span className="text-muted-foreground">
-                                ({category.activeProductCount} active)
-                              </span>
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Droppable droppableId="categories">
+                    {(provided) => (
+                      <TableBody
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                      >
+                        {categories.map((category, index) => (
+                          <Draggable
+                            key={category._id}
+                            draggableId={category._id}
+                            index={index}
+                          >
+                            {(provided) => (
+                              <TableRow
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                className="bg-background"
+                              >
+                                <TableCell {...provided.dragHandleProps}>
+                                  <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
+                                </TableCell>
+                                <TableCell>
+                                  {category.imageUrl ? (
+                                    <img
+                                      src={category.imageUrl}
+                                      alt={category.name}
+                                      className="h-10 w-10 rounded object-cover"
+                                    />
+                                  ) : (
+                                    <div className="flex h-10 w-10 items-center justify-center rounded bg-muted">
+                                      <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell className="font-medium">
+                                  {category.name}
+                                </TableCell>
+                                <TableCell>
+                                  <code className="text-sm bg-muted px-1.5 py-0.5 rounded">
+                                    {category.slug}
+                                  </code>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1">
+                                    <Package className="h-4 w-4 text-muted-foreground" />
+                                    <span>{category.productCount || 0}</span>
+                                    {category.activeProductCount !== undefined &&
+                                      category.activeProductCount !== category.productCount && (
+                                        <span className="text-muted-foreground">
+                                          ({category.activeProductCount} active)
+                                        </span>
+                                      )}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant={category.isActive ? "default" : "secondary"}
+                                    className="cursor-pointer"
+                                    onClick={() => handleToggleActive(category)}
+                                  >
+                                    {category.isActive ? "Active" : "Inactive"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleToggleHeader(category)}
+                                    className="gap-1"
+                                  >
+                                    {category.showInHeader ? (
+                                      <>
+                                        <Eye className="h-4 w-4" />
+                                        Visible
+                                      </>
+                                    ) : (
+                                      <>
+                                        <EyeOff className="h-4 w-4" />
+                                        Hidden
+                                      </>
+                                    )}
+                                  </Button>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleEdit(category)}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => setDeletingCategory(category)}
+                                      disabled={
+                                        category.productCount !== undefined &&
+                                        category.productCount > 0
+                                      }
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
                             )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={category.isActive ? "default" : "secondary"}
-                          className="cursor-pointer"
-                          onClick={() => handleToggleActive(category)}
-                        >
-                          {category.isActive ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleToggleHeader(category)}
-                          className="gap-1"
-                        >
-                          {category.showInHeader ? (
-                            <>
-                              <Eye className="h-4 w-4" />
-                              Visible
-                            </>
-                          ) : (
-                            <>
-                              <EyeOff className="h-4 w-4" />
-                              Hidden
-                            </>
-                          )}
-                        </Button>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(category)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeletingCategory(category)}
-                            disabled={
-                              category.productCount !== undefined &&
-                              category.productCount > 0
-                            }
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </TableBody>
+                    )}
+                  </Droppable>
+                </DragDropContext>
               </Table>
             )}
           </CardContent>

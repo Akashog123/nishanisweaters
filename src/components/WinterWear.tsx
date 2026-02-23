@@ -93,7 +93,7 @@ const WinterWear = () => {
             <div className="relative aspect-[3/4] bg-gray-200 rounded-lg overflow-hidden">
               <img
                 key={currentSlide}
-                src={currentProduct.images[0]?.url || placeholderUrl}
+                src={currentProduct.images.filter(img => img.url !== "/placeholder.svg")[0]?.url || placeholderUrl}
                 alt={currentProduct.name}
                 className="w-full h-full object-cover transition-opacity duration-300"
               />
@@ -126,7 +126,7 @@ const WinterWear = () => {
             >
               <div className="flex items-center gap-4">
                 <img
-                  src={currentProduct.images[0]?.url || placeholderUrl}
+                  src={currentProduct.images.filter(img => img.url !== "/placeholder.svg")[0]?.url || placeholderUrl}
                   alt={currentProduct.name}
                   className="w-20 h-20 object-cover rounded"
                 />

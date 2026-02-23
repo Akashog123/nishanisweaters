@@ -26,7 +26,9 @@ export function useProductMutations() {
             shortDescription: data.shortDescription,
             category: data.category,
             retailPrice: data.retailPrice,
+            compareAtPrice: data.compareAtPrice || undefined,
             wholesalePrice: data.wholesalePrice || undefined,
+            minOrderQuantity: data.minOrderQuantity || undefined,
             featured: data.featured,
             bestseller: data.bestseller,
             newArrival: data.newArrival,
@@ -56,7 +58,7 @@ export function useProductMutations() {
             category: data.category,
             retailPrice: data.retailPrice,
             wholesalePrice: data.wholesalePrice || undefined,
-            images: [{ url: "/placeholder.svg", alt: data.name, order: 0 }],
+            images: [], // Start with an empty array instead of placeholder
             variants,
             tags: [data.category],
             featured: data.featured,
@@ -79,8 +81,12 @@ export function useProductMutations() {
   const handleDeleteProduct = useCallback(
     async (productId: Id<"products">) => {
       try {
-        await deleteProduct({ productId });
-        toast.success("Product deleted successfully");
+        const result = await deleteProduct({ productId });
+        if (result && !result.deleted) {
+          toast.success("Product marked as inactive (has existing orders or reviews)");
+        } else {
+          toast.success("Product permanently deleted");
+        }
       } catch (_error) {
         toast.error("Failed to delete product");
       }

@@ -56,7 +56,7 @@ const CartItemRow = memo(function CartItemRow({
       <img
         src={item.image}
         alt={item.name}
-        className="w-24 h-24 object-cover rounded"
+        className={`w-24 h-24 object-cover rounded ${item.isAvailable === false ? 'opacity-50 grayscale' : ''}`}
         // Explicit dimensions to prevent CLS (Cumulative Layout Shift)
         // w-24 = 96px, h-24 = 96px in Tailwind default spacing
         width={96}
@@ -65,10 +65,17 @@ const CartItemRow = memo(function CartItemRow({
       />
       <div className="flex-1 space-y-2">
         <div>
-          <h3 className="font-medium">{item.name}</h3>
+          <h3 className={`font-medium ${item.isAvailable === false ? 'text-muted-foreground line-through' : ''}`}>
+            {item.name}
+          </h3>
           <p className="text-sm text-muted-foreground">
             {item.color} / {item.size}
           </p>
+          {item.isAvailable === false && (
+            <p className="text-sm font-medium text-destructive mt-1">
+              {item.unavailableReason || "Product no longer available"}
+            </p>
+          )}
         </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -81,7 +88,8 @@ const CartItemRow = memo(function CartItemRow({
                   item.quantity - 1
                 )
               }
-              className="p-1 border border-border hover:border-primary transition-colors"
+              disabled={item.isAvailable === false}
+              className={`p-1 border border-border transition-colors ${item.isAvailable === false ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary'}`}
             >
               <Minus className="h-3 w-3" />
             </button>
@@ -97,7 +105,8 @@ const CartItemRow = memo(function CartItemRow({
                   item.quantity + 1
                 )
               }
-              className="p-1 border border-border hover:border-primary transition-colors"
+              disabled={item.isAvailable === false}
+              className={`p-1 border border-border transition-colors ${item.isAvailable === false ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary'}`}
             >
               <Plus className="h-3 w-3" />
             </button>
@@ -111,16 +120,18 @@ const CartItemRow = memo(function CartItemRow({
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="font-bold">
-            {formatCurrency(item.price)}
-          </span>
-          {item.originalPrice && (
-            <span className="text-sm text-muted-foreground line-through">
-              {formatCurrency(item.originalPrice)}
+        {item.isAvailable !== false && (
+          <div className="flex items-center gap-2">
+            <span className="font-bold">
+              {formatCurrency(item.price)}
             </span>
-          )}
-        </div>
+            {item.originalPrice && (
+              <span className="text-sm text-muted-foreground line-through">
+                {formatCurrency(item.originalPrice)}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -206,10 +217,16 @@ const CartDrawer = ({ open, onOpenChange }: CartDrawerProps) => {
               </div>
               <Button
                 className="w-full h-12 text-base font-medium"
-                disabled={isLoading || items.length === 0}
+                disabled={isLoading || items.length === 0 || items.every(item => item.isAvailable === false)}
                 asChild
               >
-                <Link to="/checkout" onClick={() => onOpenChange(false)}>
+                <Link to="/checkout" onClick={(e) => {
+                  if (isLoading || items.length === 0 || items.every(item => item.isAvailable === false)) {
+                    e.preventDefault();
+                  } else {
+                    onOpenChange(false);
+                  }
+                }}>
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

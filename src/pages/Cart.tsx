@@ -14,6 +14,7 @@ import { useState } from "react";
 import { PromoCodeInput } from "@/components/PromoCodeInput";
 import { useImageSettings } from "@/hooks/useImageSettings";
 import { formatCurrency } from "@/lib/constants";
+import { SEO } from "@/components/SEO";
 import {
   Select,
   SelectContent,
@@ -86,6 +87,7 @@ function SavedItem({
       images: { url: string }[];
       retailPrice: number;
       variants: { sku: string; size: string; color: string; stockQuantity: number }[];
+      isActive?: boolean;
     } | null;
   };
   onMoveToCart: (productId: Id<"products">, variantSku: string) => void;
@@ -95,7 +97,7 @@ function SavedItem({
   const [selectedVariant, setSelectedVariant] = useState<string>("");
   const { placeholderUrl } = useImageSettings();
 
-  if (!item.product) {
+  if (!item.product || !("isActive" in item.product) || item.product.isActive === false) {
     return (
       <div className="flex gap-4 p-4 border rounded-lg bg-muted/50">
         <div className="w-20 h-20 bg-muted rounded flex items-center justify-center">
@@ -123,7 +125,7 @@ function SavedItem({
     <div className="flex gap-4 p-4 border rounded-lg">
       <Link to={`/product/${item.product.slug}`}>
         <img
-          src={item.product.images[0]?.url || placeholderUrl}
+          src={item.product.images.filter(img => img.url !== "/placeholder.svg")[0]?.url || placeholderUrl}
           alt={item.product.name}
           className="w-20 h-20 object-cover rounded"
         />
@@ -180,21 +182,23 @@ function SavedItem({
 
 export default function Cart() {
   const navigate = useNavigate();
-  const { items, removeFromCart, updateQuantity, getSubtotal, getTotalItems, isLoading, error, clearCart } = useCart();
+  const { items, removeFromCart, updateQuantity, getSubtotal, getTotalItems, isLoading, error, clearCart, promoDiscount, appliedPromoCode } = useCart();
   const { isSignedIn } = useUser();
 
-  // Wishlist queries and mutations (only for signed-in users)
+  // Wishlist: Check count first (lightweight), only fetch full data if non-empty
+  const wishlistCount = useQuery(
+    api.wishlist.getWishlistCount,
+    isSignedIn ? {} : "skip"
+  );
   const wishlist = useQuery(
     api.wishlist.getWishlist,
-    isSignedIn ? {} : "skip"
+    isSignedIn && wishlistCount && wishlistCount > 0 ? {} : "skip"
   );
   const saveForLaterMutation = useMutation(api.wishlist.saveForLater);
   const moveToCartMutation = useMutation(api.wishlist.moveToCart);
   const removeFromWishlistMutation = useMutation(api.wishlist.removeFromWishlist);
 
-  // Query cart for promo code data
-  const cartData = useQuery(api.cart.getCart, {});
-  const promoDiscount = cartData?.promoDiscount ?? 0;
+  // Promo discount comes from cart context (no separate query needed)
 
   const [savingItem, setSavingItem] = useState<string | null>(null);
 
@@ -292,6 +296,7 @@ export default function Cart() {
 
   return (
     <Layout showAnnouncement={false}>
+      <SEO title="Shopping Cart" noIndex={true} />
       <div className="container mx-auto px-4 py-8">
         <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4 -ml-2">
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -352,23 +357,32 @@ export default function Cart() {
                 <img
                   src={item.image}
                   alt={item.name}
-                  className="w-24 h-24 object-cover rounded"
+                  className={`w-24 h-24 object-cover rounded ${item.isAvailable === false ? 'opacity-50 grayscale' : ''}`}
                 />
                 <div className="flex-1">
-                  <h3 className="font-semibold">{item.name}</h3>
+                  <h3 className={`font-semibold ${item.isAvailable === false ? 'text-muted-foreground line-through' : ''}`}>
+                    {item.name}
+                  </h3>
                   <p className="text-sm text-muted-foreground">
                     Size: {item.size} | Color: {item.color}
                   </p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <p className="font-bold">
-                      {formatCurrency(item.price)}
-                    </p>
-                    {item.originalPrice && item.originalPrice !== item.price && (
-                      <p className="text-sm text-muted-foreground line-through">
-                        {formatCurrency(item.originalPrice)}
+
+                  {item.isAvailable === false ? (
+                    <div className="mt-2 text-sm font-medium text-destructive">
+                      {item.unavailableReason || "Item is no longer available"}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="font-bold">
+                        {formatCurrency(item.price)}
                       </p>
-                    )}
-                  </div>
+                      {item.originalPrice && item.originalPrice !== item.price && (
+                        <p className="text-sm text-muted-foreground line-through">
+                          {formatCurrency(item.originalPrice)}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-4 mt-2">
                     <div className="flex items-center border rounded">
@@ -377,7 +391,7 @@ export default function Cart() {
                         size="icon"
                         className="h-8 w-8"
                         onClick={() => updateQuantity(item.productId, item.size, item.color, Math.max(1, item.quantity - 1))}
-                        disabled={isLoading || item.quantity <= 1}
+                        disabled={isLoading || item.quantity <= 1 || item.isAvailable === false}
                       >
                         <Minus className="h-4 w-4" />
                       </Button>
@@ -387,16 +401,16 @@ export default function Cart() {
                         size="icon"
                         className="h-8 w-8"
                         onClick={() => updateQuantity(item.productId, item.size, item.color, item.quantity + 1)}
-                        disabled={isLoading}
+                        disabled={isLoading || item.isAvailable === false}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
-                    {isSignedIn && (
+                    {isSignedIn && item.isAvailable !== false && (
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-muted-foreground hover:text-primary"
+                        className="text-muted-foreground hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                         onClick={() => handleSaveForLater(
                           item._convexProductId || item.productId,
                           item._variantSku || `${item.size}-${item.color}`
@@ -510,8 +524,8 @@ export default function Cart() {
                 </p>
               )}
 
-              <Link to="/checkout" className="block mt-6">
-                <Button className="w-full" size="lg" disabled={isLoading || items.length === 0}>
+              <Link to="/checkout" className={`block mt-6 ${items.every(item => item.isAvailable === false) ? 'pointer-events-none' : ''}`}>
+                <Button className="w-full" size="lg" disabled={isLoading || items.length === 0 || items.every(item => item.isAvailable === false)}>
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

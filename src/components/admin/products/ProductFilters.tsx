@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select";
 import { Search, Filter } from "lucide-react";
 import { CategoryFilterType, StockFilterType } from "./types";
+import { useActiveCategories } from "../../../hooks/useCategories";
 
 interface ProductFiltersProps {
   searchQuery: string;
@@ -27,6 +28,9 @@ export function ProductFilters({
   stockFilter,
   onStockChange,
 }: ProductFiltersProps) {
+  const categoriesQuery = useActiveCategories();
+  const categories = categoriesQuery || [];
+
   return (
     <Card>
       <CardContent className="pt-6">
@@ -53,11 +57,11 @@ export function ProductFilters({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="mens">Mens</SelectItem>
-                <SelectItem value="womens">Womens</SelectItem>
-                <SelectItem value="kids">Kids</SelectItem>
-                <SelectItem value="winter">Winter</SelectItem>
-                <SelectItem value="accessories">Accessories</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat._id} value={cat.slug}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select

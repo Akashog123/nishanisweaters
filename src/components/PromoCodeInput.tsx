@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useConvexError } from "@/hooks/useConvexError";
 import { Loader2, Tag, X, Check } from "lucide-react";
+import { useCartItems } from "@/context/cart";
 
 interface PromoCodeInputProps {
   sessionId?: string;
@@ -25,12 +26,13 @@ export function PromoCodeInput({
   const [isApplying, setIsApplying] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
 
-  const cart = useQuery(api.cart.getCart, { sessionId });
+  // Use cart context instead of separate getCart query
+  const { appliedPromoCode, promoDiscount } = useCartItems();
   const validatePromoCode = useMutation(api.promoCodes.validatePromoCode);
   const removePromoCode = useMutation(api.promoCodes.removePromoCode);
 
-  const appliedCode = cart?.appliedPromoCode;
-  const appliedDiscount = cart?.promoDiscount;
+  const appliedCode = appliedPromoCode;
+  const appliedDiscount = promoDiscount;
 
   const handleApply = async () => {
     if (!code.trim()) {

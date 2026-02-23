@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Trash2, Plus } from "lucide-react";
 import { ProductVariant } from "./types";
@@ -70,6 +71,30 @@ export function VariantEditor({ variants, onVariantsChange, slug }: VariantEdito
       lowStockThreshold: 5,
       sku: "",
     });
+  };
+
+  const handleOpenAddDialog = () => {
+    if (variants.length > 0) {
+      const lastVariant = variants[variants.length - 1];
+      setNewVariant({
+        size: lastVariant.size,
+        color: lastVariant.color,
+        colorHex: lastVariant.colorHex,
+        stockQuantity: lastVariant.stockQuantity,
+        lowStockThreshold: lastVariant.lowStockThreshold,
+        sku: "",
+      });
+    } else {
+      setNewVariant({
+        size: "M",
+        color: "Black",
+        colorHex: "#000000",
+        stockQuantity: 10,
+        lowStockThreshold: 5,
+        sku: "",
+      });
+    }
+    setIsAddDialogOpen(true);
   };
 
   const handleDeleteVariant = (sku: string) => {
@@ -128,8 +153,8 @@ export function VariantEditor({ variants, onVariantsChange, slug }: VariantEdito
             </TableRow>
           </TableHeader>
           <TableBody>
-            {variants.map((variant) => (
-              <TableRow key={variant.sku}>
+            {variants.map((variant, index) => (
+              <TableRow key={index}>
                 <TableCell>
                   <select
                     value={variant.size}
@@ -201,7 +226,7 @@ export function VariantEditor({ variants, onVariantsChange, slug }: VariantEdito
       </div>
 
       {/* Add Variant Button */}
-      <Button variant="outline" onClick={() => setIsAddDialogOpen(true)} className="w-full">
+      <Button variant="outline" onClick={handleOpenAddDialog} className="w-full">
         <Plus className="h-4 w-4 mr-2" />
         Add Variant
       </Button>
@@ -211,6 +236,9 @@ export function VariantEditor({ variants, onVariantsChange, slug }: VariantEdito
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add New Variant</DialogTitle>
+            <DialogDescription>
+              Create a new product variant with size, color, and stock information.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">

@@ -2,11 +2,10 @@ import { ShoppingCart, Heart, Menu, Package, Settings, Phone, MapPin, Bell } fro
 import { useState, memo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/clerk-react";
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import CartDrawer from "@/components/CartDrawer";
 import CartBadge from "@/components/CartBadge";
+import WishlistBadge from "@/components/WishlistBadge";
 import SearchBar from "@/components/SearchBar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ContactInfoPage } from "@/components/account/ContactInfoPage";
@@ -14,6 +13,8 @@ import { ClerkAddressesPage } from "@/components/account/ClerkAddressesPage";
 import { ClerkNotificationsPage } from "@/components/account/ClerkNotificationsPage";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useHeaderCategories } from "@/hooks/useCategories";
+import { useCartUI } from "@/context/cart";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 // Navigation links - defined outside component to prevent recreation on each render
 // These are fallback defaults when dynamic categories are not enabled
@@ -32,7 +33,7 @@ const STATIC_LINKS = [
 ] as const;
 
 const Header = () => {
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  const { isCartOpen, setIsCartOpen } = useCartUI(); // Use global cart UI state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isSignedIn, isLoaded } = useUser();
   const { siteName, logoUrl, settings } = useSiteSettings();
@@ -44,6 +45,7 @@ const Header = () => {
   // Build navigation links based on settings
   const navLinks = enableDynamicCategories && headerCategories
     ? [
+        { name: "NEW ARRIVALS", href: "/shop/new-arrival" }, // Predefined category
         ...headerCategories.map((cat) => ({
           name: cat.name.toUpperCase(),
           href: `/shop/${cat.slug}`,
@@ -52,13 +54,7 @@ const Header = () => {
       ]
     : DEFAULT_navLinks;
 
-  // SECURITY: Use server-side identity verification - never pass client clerkId
-  const dbUser = useQuery(
-    api.users.getCurrentUser,
-    isSignedIn ? {} : "skip"
-  );
-
-  const isAdmin = dbUser?.role === "admin";
+  const { isAdmin } = useCurrentUser();
 
   // PERFORMANCE: Prefetch routes on hover for faster navigation
   const prefetchRoute = useCallback((href: string) => {
@@ -174,8 +170,9 @@ const Header = () => {
             {/* Wishlist - Only for signed in non-admin users */}
             {isSignedIn && !isAdmin && (
               <Link to="/wishlist">
-                <Button variant="ghost" size="icon" className="hover:bg-secondary hover:text-foreground">
+                <Button variant="ghost" size="icon" className="hover:bg-secondary hover:text-foreground relative">
                   <Heart className="h-5 w-5" />
+                  <WishlistBadge />
                 </Button>
               </Link>
             )}

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { SEO, getBreadcrumbSchema } from "@/components/SEO";
 
 // Company values data
 const values = [
@@ -68,6 +69,16 @@ const AboutUs = () => {
 
   return (
     <Layout>
+      <SEO
+        title="About Us - Our Story & Values"
+        description="Nidhi Clothing Co. - India's trusted knitwear brand since 2013. Premium quality sweaters, hoodies & winter wear crafted in Sikandarpur, UP. Sustainable, affordable & aesthetic clothing."
+        canonicalPath="/about-us"
+        keywords="about Nidhi Clothing, knitwear brand India, sustainable clothing, artisan knitwear, premium wool clothing, affordable winter wear, Indian clothing brand"
+        jsonLd={getBreadcrumbSchema([
+          { name: "Home", path: "/" },
+          { name: "About Us", path: "/about-us" },
+        ])}
+      />
       <div className="container mx-auto px-4 pt-4 lg:px-8">
         <BackButton />
       </div>

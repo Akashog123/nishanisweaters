@@ -1,6 +1,8 @@
-import { useState, useMemo, memo, useCallback } from "react";
-import { Play } from "lucide-react";
+import { useState, useMemo, memo, useCallback, useEffect } from "react";
+import { Play, Maximize2, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { YouTubePlayer } from "./YouTubePlayer";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface ProductVideo {
   youtubeId: string;
@@ -18,46 +20,14 @@ type GalleryItem =
   | { type: "image"; src: string; index: number }
   | { type: "video"; video: ProductVideo; index: number };
 
-/**
- * Generates a WebP URL from an image source
- *
- * For Convex storage URLs or external URLs, returns null as they
- * should handle format conversion at the CDN/storage level.
- * For local assets, appends format=webp query parameter for Vite imagetools.
- */
-function _getWebPUrl(src: string): string | null {
-  // If already WebP, return as-is
-  if (src.endsWith(".webp")) {
-    return src;
-  }
 
-  // External URLs and Convex storage - let the CDN handle format negotiation
-  if (src.includes("convex.cloud") || src.startsWith("http")) {
-    return null;
-  }
-
-  // For local assets, use Vite imagetools query parameter
-  if (src.includes("?")) {
-    return `${src}&format=webp`;
-  }
-
-  return `${src}?format=webp`;
-}
-
-/**
- * Loading skeleton for gallery images
- */
-const _GalleryImageSkeleton = memo(function GalleryImageSkeleton() {
-  return (
-    <div className="absolute inset-0 bg-secondary animate-pulse flex items-center justify-center">
-      <div className="h-8 w-8 border-2 border-muted-foreground/20 border-t-muted-foreground rounded-full animate-spin" />
-    </div>
-  );
-});
 
 const ProductGallery = ({ images, videos = [], productName }: ProductGalleryProps) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [_mainImageLoaded, _setMainImageLoaded] = useState(false);
+  const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
   // Reset loading state when selected image changes
   const handleImageChange = useCallback((index: number) => {
@@ -65,26 +35,65 @@ const ProductGallery = ({ images, videos = [], productName }: ProductGalleryProp
     _setMainImageLoaded(false);
   }, []);
 
-  const _handleMainImageLoad = useCallback(() => {
-    _setMainImageLoaded(true);
-  }, []);
 
   // Create unified gallery items array (images first, then videos)
   const galleryItems = useMemo<GalleryItem[]>(() => {
     const items: GalleryItem[] = [];
-
-    // Add images
     images.forEach((src, idx) => {
       items.push({ type: "image", src, index: idx });
     });
-
-    // Add videos
     videos.forEach((video, idx) => {
       items.push({ type: "video", video, index: images.length + idx });
     });
-
     return items;
   }, [images, videos]);
+
+  // Only image items for fullscreen navigation
+  const imageItems = useMemo(() => galleryItems.filter((i) => i.type === "image"), [galleryItems]);
+
+  const goToPrevious = useCallback(() => {
+    setSelectedIndex((prev) => (prev > 0 ? prev - 1 : imageItems.length - 1));
+  }, [imageItems.length]);
+
+  const goToNext = useCallback(() => {
+    setSelectedIndex((prev) => (prev < imageItems.length - 1 ? prev + 1 : 0));
+  }, [imageItems.length]);
+
+  // Touch swipe handlers
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  }, []);
+
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  }, []);
+
+  const onTouchEnd = useCallback(() => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    if (Math.abs(distance) > 50) {
+      if (distance > 0) goToNext();
+      else goToPrevious();
+    }
+    setTouchStart(null);
+    setTouchEnd(null);
+  }, [touchStart, touchEnd, goToNext, goToPrevious]);
+
+  const handleFullscreenKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "ArrowLeft") { e.preventDefault(); goToPrevious(); }
+    else if (e.key === "ArrowRight") { e.preventDefault(); goToNext(); }
+    else if (e.key === "Escape") { setIsFullscreenOpen(false); }
+  }, [goToPrevious, goToNext]);
+
+  useEffect(() => {
+    if (isFullscreenOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [isFullscreenOpen]);
 
   const selectedItem = galleryItems[selectedIndex];
 
@@ -167,16 +176,27 @@ const ProductGallery = ({ images, videos = [], productName }: ProductGalleryProp
       </div>
 
       {/* Main Display Area */}
-      <div className="flex-1 bg-secondary order-1 lg:order-2">
+      <div className="flex-1 bg-secondary order-1 lg:order-2 relative group cursor-pointer" onClick={() => {
+        if (selectedItem?.type === 'image') {
+          setIsFullscreenOpen(true);
+        }
+      }}>
         {selectedItem?.type === "image" ? (
-          // PERFORMANCE: Explicit dimensions prevent CLS (3:4 aspect ratio)
-          <img
-            src={selectedItem.src}
-            alt={productName}
-            className="w-full h-auto object-cover"
-            width={800}
-            height={1067}
-          />
+          <>
+            {/* PERFORMANCE: Explicit dimensions prevent CLS (3:4 aspect ratio) */}
+            <img
+              src={selectedItem.src}
+              alt={productName}
+              className="w-full h-auto object-cover"
+              width={800}
+              height={1067}
+            />
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center pointer-events-none">
+              <div className="opacity-0 group-hover:opacity-100 bg-white/80 rounded-full p-3 shadow-lg transform scale-95 group-hover:scale-100 transition-all">
+                <Maximize2 className="h-6 w-6 text-black" />
+              </div>
+            </div>
+          </>
         ) : selectedItem?.type === "video" ? (
           <YouTubePlayer
             videoId={selectedItem.video.youtubeId}
@@ -185,6 +205,87 @@ const ProductGallery = ({ images, videos = [], productName }: ProductGalleryProp
           />
         ) : null}
       </div>
+
+      <Dialog open={isFullscreenOpen} onOpenChange={setIsFullscreenOpen}>
+        <VisuallyHidden>
+          <DialogTitle>Fullscreen Product Image</DialogTitle>
+          <DialogDescription>A full screen view of the product {productName}</DialogDescription>
+        </VisuallyHidden>
+        <DialogContent
+          hideClose
+          className="max-w-[100vw] w-[100vw] max-h-[100vh] h-[100vh] p-0 bg-transparent border-none shadow-none rounded-none focus-visible:outline-none overflow-hidden"
+          onKeyDown={handleFullscreenKeyDown}
+        >
+          {/* Full viewport container */}
+          <div
+            className="relative w-full h-full flex items-center justify-center select-none"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
+            {/* Close button — glass morphism */}
+            <button
+              onClick={() => setIsFullscreenOpen(false)}
+              className="absolute top-4 right-4 z-50 p-2.5 rounded-full text-white/90 hover:text-white backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/10 transition-all duration-200"
+              aria-label="Close fullscreen"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            {/* Navigation arrows — visible on all screens when multiple images */}
+            {imageItems.length > 1 && (
+              <>
+                <button
+                  onClick={(e) => { e.stopPropagation(); goToPrevious(); }}
+                  className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 z-50 p-2.5 md:p-3 rounded-full text-white/80 hover:text-white backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/10 transition-all duration-200 hover:scale-105 active:scale-95"
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft className="h-5 w-5 md:h-6 md:w-6" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); goToNext(); }}
+                  className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 z-50 p-2.5 md:p-3 rounded-full text-white/80 hover:text-white backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/10 transition-all duration-200 hover:scale-105 active:scale-95"
+                  aria-label="Next image"
+                >
+                  <ChevronRight className="h-5 w-5 md:h-6 md:w-6" />
+                </button>
+              </>
+            )}
+
+            {/* Image */}
+            {selectedItem?.type === "image" && (
+              <img
+                src={selectedItem.src}
+                alt={`${productName} fullscreen view`}
+                className="max-w-[92vw] md:max-w-[85vw] max-h-[88vh] object-contain select-none pointer-events-none"
+                draggable={false}
+              />
+            )}
+
+            {/* Bottom bar — pagination + counter */}
+            {imageItems.length > 1 && (
+              <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-md bg-white/10 border border-white/10">
+                {imageItems.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={(e) => { e.stopPropagation(); setSelectedIndex(index); }}
+                    className={`rounded-full transition-all duration-300 ${
+                      selectedIndex === index
+                        ? "w-6 h-2 bg-white"
+                        : "w-2 h-2 bg-white/40 hover:bg-white/70"
+                    }`}
+                    aria-label={`Go to image ${index + 1}`}
+                    aria-current={selectedIndex === index ? "true" : "false"}
+                  />
+                ))}
+                <span className="text-white/60 text-xs font-medium ml-1 tabular-nums">
+                  {selectedIndex + 1}/{imageItems.length}
+                </span>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

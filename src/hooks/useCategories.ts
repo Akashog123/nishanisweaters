@@ -1,20 +1,29 @@
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
 /**
- * Hook to get categories for header navigation
- * Returns only active categories marked to show in header
- */
-export function useHeaderCategories() {
-  return useQuery(api.categories.getHeaderCategories);
-}
-
-/**
- * Hook to get all active categories
- * Used for product filters, dropdowns, etc.
+ * Hook to get all active categories.
+ * This is the single source of truth — other hooks derive from this.
+ * Convex deduplicates identical queries, so multiple components
+ * using this hook share a single WebSocket subscription.
  */
 export function useActiveCategories() {
   return useQuery(api.categories.getActiveCategories);
+}
+
+/**
+ * Hook to get categories for header navigation.
+ * Filters from the shared getActiveCategories subscription
+ * instead of making a separate query — saves one WebSocket subscription.
+ */
+export function useHeaderCategories() {
+  const allCategories = useActiveCategories();
+
+  return useMemo(() => {
+    if (!allCategories) return undefined;
+    return allCategories.filter((cat) => cat.showInHeader);
+  }, [allCategories]);
 }
 
 /**

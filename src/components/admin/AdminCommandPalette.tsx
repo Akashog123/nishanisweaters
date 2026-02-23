@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, startTransition } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -40,7 +40,9 @@ export function AdminCommandPalette({ open, onOpenChange }: AdminCommandPaletteP
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        onOpenChange(!open);
+        startTransition(() => {
+          onOpenChange(!open);
+        });
       }
     };
     document.addEventListener("keydown", down);
@@ -54,38 +56,22 @@ export function AdminCommandPalette({ open, onOpenChange }: AdminCommandPaletteP
     }
   }, [open]);
 
-  // Fetch products for search (only when searching)
+  // Search products server-side (uses searchProducts which filters by name on the server)
   const products = useQuery(
-    api.products.listProducts,
-    search.length >= 2 ? { limit: 5 } : "skip"
+    api.products.searchProducts,
+    search.length >= 2 ? { searchTerm: search, limit: 5 } : "skip"
   );
 
-  // Fetch orders for search (only when searching)
+  // Search orders server-side (passes searchTerm to filter by orderNumber/email)
   const orders = useQuery(
     api.orders.listAllOrders,
-    search.length >= 2 ? { limit: 5 } : "skip"
+    search.length >= 2 ? { searchTerm: search, limit: 5 } : "skip"
   );
 
-  // Filter products and orders based on search term
-  const filteredProducts = useMemo(() => {
-    if (!products?.products || search.length < 2) return [];
-    const searchLower = search.toLowerCase();
-    return products.products
-      .filter((p) => p.name.toLowerCase().includes(searchLower))
-      .slice(0, 5);
-  }, [products, search]);
+  // Results come pre-filtered from the server — no client-side filtering needed
+  const filteredProducts = products ?? [];
 
-  const filteredOrders = useMemo(() => {
-    if (!orders?.orders || search.length < 2) return [];
-    const searchLower = search.toLowerCase();
-    return orders.orders
-      .filter(
-        (o) =>
-          o.orderNumber?.toLowerCase().includes(searchLower) ||
-          o.shippingAddress?.name?.toLowerCase().includes(searchLower)
-      )
-      .slice(0, 5);
-  }, [orders, search]);
+  const filteredOrders = orders?.orders ?? [];
 
   const handleSelect = (path: string) => {
     navigate(path);

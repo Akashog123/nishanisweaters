@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useState, useMemo, useCallback } from "react";
-import { Minus, Plus } from "lucide-react";
-import { useQuery } from "convex/react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { Minus, Plus, Heart, Loader2 } from "lucide-react";
+import { useQuery, useMutation } from "convex/react";
 import { useUser } from "@clerk/clerk-react";
 import { api } from "../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -15,11 +15,14 @@ import ProductSkeleton from "@/components/ProductSkeleton";
 import { ProductReviews } from "@/components/ProductReviews";
 import { SizeGuide } from "@/components/SizeGuide";
 import { useCart } from "@/context/CartContext";
+import { useCartUI } from "@/context/cart";
 import NotFoundError from "@/components/NotFoundError";
 import { useConvexError } from "@/hooks/useConvexError";
 import { ValidationError } from "@/lib/errors";
 import { useImageSettings } from "@/hooks/useImageSettings";
 import { CURRENCY_SYMBOL } from "@/lib/constants";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { SEO, getProductSchema, getBreadcrumbSchema } from "@/components/SEO";
 
 const ProductDetailSkeleton = () => {
   return (
@@ -84,38 +87,82 @@ const ProductDetail = () => {
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { openCart } = useCartUI();
+  const [showGoToCart, setShowGoToCart] = useState(false);
   const { handleError } = useConvexError();
   const { isSignedIn } = useUser();
   const { placeholderUrl } = useImageSettings();
+  const [isTogglingWishlist, setIsTogglingWishlist] = useState(false);
 
   // Use slug to fetch product from Convex
   const product = useQuery(api.products.getProductBySlug, { slug: productId || "" });
 
-  // Check if current user is admin (to hide purchase buttons)
-  const dbUser = useQuery(api.users.getCurrentUser, isSignedIn ? {} : "skip");
-  const isAdmin = dbUser?.role === "admin";
+  // Check if product is in wishlist
+  const isInWishlist = useQuery(
+    api.wishlist.isInWishlist,
+    isSignedIn && product ? { productId: product._id } : "skip"
+  );
 
-  // Fetch related products (limit to 6)
-  const allProducts = useQuery(api.products.listProducts, { limit: 6 });
+  // Wishlist mutations
+  const addToWishlist = useMutation(api.wishlist.addToWishlist);
+  const removeFromWishlist = useMutation(api.wishlist.removeFromWishlist);
+
+  // Check if current user is admin (to hide purchase buttons)
+  const { isAdmin } = useCurrentUser();
+
+  // Fetch related products from the same category
+  const relatedProducts = useQuery(
+    api.products.getRelatedProducts,
+    product ? { productId: product._id, category: product.category, limit: 3 } : "skip"
+  );
 
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
   const [quantity, setQuantity] = useState(1);
 
+  // Set default size and color when product loads (only once)
+  const defaultsSet = useRef(false);
+  useEffect(() => {
+    if (product && product.variants.length > 0 && !defaultsSet.current) {
+      defaultsSet.current = true;
+      // Find first variant with stock
+      const firstAvailableVariant = product.variants.find((v) => v.stockQuantity > 0);
+      if (firstAvailableVariant) {
+        setSelectedSize(firstAvailableVariant.size);
+        setSelectedColor(firstAvailableVariant.color);
+      }
+    }
+  }, [product]);
+
+  // Size order for sorting (small to large)
+  const SIZE_ORDER = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL", "6XL"];
+
   // Extract unique sizes and colors from variants (memoized)
   // Must be called before any early returns to follow Rules of Hooks
   const sizes = useMemo(
-    () => (product ? [...new Set(product.variants.map((v) => v.size))] : []),
+    () => {
+      if (!product) return [];
+      const uniqueSizes = [...new Set(product.variants.map((v) => v.size))];
+      return uniqueSizes.sort((a, b) => {
+        const indexA = SIZE_ORDER.indexOf(a.toUpperCase());
+        const indexB = SIZE_ORDER.indexOf(b.toUpperCase());
+        // If size not in our order list, put it at the end
+        if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+        if (indexA === -1) return 1;
+        if (indexB === -1) return -1;
+        return indexA - indexB;
+      });
+    },
     [product]
   );
   const colors = useMemo(
-    () => (product ? [...new Set(product.variants.map((v) => v.color))] : []),
+    () => (product ? [...new Set(product.variants.map((v) => v.color))].sort((a, b) => a.localeCompare(b)) : []),
     [product]
   );
 
-  // Get product images URLs (memoized)
+  // Get product images URLs (memoized) - filter out placeholder
   const productImages = useMemo(
-    () => (product ? product.images.map((img) => img.url) : []),
+    () => (product ? product.images.filter(img => img.url !== "/placeholder.svg").map((img) => img.url) : []),
     [product]
   );
 
@@ -128,14 +175,6 @@ const ProductDetail = () => {
         thumbnail: video.thumbnail,
       })) || [],
     [product]
-  );
-
-  // Filter related products - excluding current product (memoized)
-  const relatedProducts = useMemo(
-    () => (allProducts?.products || [])
-      .filter((p) => product && p._id !== product._id)
-      .slice(0, 3),
-    [allProducts?.products, product]
   );
 
   const handleAddToCart = useCallback(() => {
@@ -172,13 +211,15 @@ const ProductDetail = () => {
         name: product.name,
         price: product.retailPrice,
         originalPrice: product.compareAtPrice,
-        image: product.images[0]?.url || placeholderUrl,
+        image: product.images.filter(img => img.url !== "/placeholder.svg")[0]?.url || placeholderUrl,
         size: selectedSize,
         color: selectedColor,
         quantity: quantity,
         _convexProductId: product._id,
         _variantSku: variant.sku,
       });
+      // Show "Go to Cart" option in button
+      setShowGoToCart(true);
       // Toast is handled by CartContext
     } catch (error) {
       if (error instanceof ValidationError) {
@@ -187,7 +228,7 @@ const ProductDetail = () => {
         handleError(error, "ProductDetail.handleAddToCart");
       }
     }
-  }, [selectedSize, selectedColor, quantity, product, addToCart, handleError, placeholderUrl]);
+  }, [selectedSize, selectedColor, quantity, product, addToCart, setShowGoToCart, openCart, handleError, placeholderUrl]);
 
   const handleBuyNow = useCallback(() => {
     try {
@@ -238,6 +279,31 @@ const ProductDetail = () => {
     }
   }, [selectedSize, selectedColor, product]);
 
+  const handleToggleWishlist = useCallback(async () => {
+    if (!product) return;
+
+    if (!isSignedIn) {
+      toast.error("Please sign in to save items to your wishlist");
+      navigate("/sign-in");
+      return;
+    }
+
+    setIsTogglingWishlist(true);
+    try {
+      if (isInWishlist) {
+        await removeFromWishlist({ productId: product._id });
+        toast.success("Removed from wishlist");
+      } else {
+        await addToWishlist({ productId: product._id });
+        toast.success("Added to wishlist");
+      }
+    } catch (error) {
+      toast.error("Failed to update wishlist");
+    } finally {
+      setIsTogglingWishlist(false);
+    }
+  }, [product, isSignedIn, isInWishlist, addToWishlist, removeFromWishlist, navigate]);
+
   // Loading state - must be after all hooks
   if (product === undefined) {
     return <ProductDetailSkeleton />;
@@ -258,6 +324,34 @@ const ProductDetail = () => {
 
   return (
     <Layout>
+      <SEO
+        title={`${product.name} - Buy Online`}
+        description={`Buy ${product.name} at ₹${product.retailPrice}${product.compareAtPrice ? ` (Save ₹${(product.compareAtPrice - product.retailPrice).toFixed(0)})` : ""}. Premium knitwear from Nidhi Clothing Co. Free shipping across India.`}
+        canonicalPath={`/product/${product.slug}`}
+        ogType="product"
+        ogImage={productImages[0] || undefined}
+        keywords={`${product.name}, ${product.category || "knitwear"}, buy ${product.name} online, Nidhi Clothing`}
+        jsonLd={[
+          getProductSchema({
+            name: product.name,
+            description: product.description,
+            price: product.retailPrice,
+            originalPrice: product.compareAtPrice,
+            image: productImages[0],
+            images: productImages,
+            slug: product.slug,
+            category: product.category,
+            inStock: product.variants.some(v => v.stockQuantity > 0),
+            sku: product.variants[0]?.sku,
+          }),
+          getBreadcrumbSchema([
+            { name: "Home", path: "/" },
+            { name: "Shop", path: "/shop" },
+            ...(product.category ? [{ name: product.category, path: `/shop/${product.category}` }] : []),
+            { name: product.name, path: `/product/${product.slug}` },
+          ]),
+        ]}
+      />
       <PageContainer className="py-8 lg:py-16">
         {/* Product Detail */}
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 mb-20">
@@ -354,10 +448,10 @@ const ProductDetail = () => {
             {!isAdmin && (
               <div className="flex gap-4 pt-4">
                 <Button
-                  onClick={handleAddToCart}
+                  onClick={showGoToCart ? openCart : handleAddToCart}
                   className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground h-14 text-base font-medium"
                 >
-                  Add to Cart
+                  {showGoToCart ? "Go to Cart" : "Add to Cart"}
                 </Button>
                 <Button
                   onClick={handleBuyNow}
@@ -365,6 +459,22 @@ const ProductDetail = () => {
                   className="flex-1 border-2 h-14 text-base font-medium"
                 >
                   Buy Now
+                </Button>
+                <Button
+                  onClick={handleToggleWishlist}
+                  variant="outline"
+                  size="icon"
+                  className="h-14 w-14 border-2"
+                  disabled={isTogglingWishlist}
+                  title={isInWishlist ? "Remove from wishlist" : "Add to wishlist"}
+                >
+                  {isTogglingWishlist ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Heart
+                      className={`h-5 w-5 ${isInWishlist ? "fill-red-500 text-red-500" : ""}`}
+                    />
+                  )}
                 </Button>
               </div>
             )}
@@ -376,22 +486,25 @@ const ProductDetail = () => {
 
         {/* Related Products */}
         <section>
-          <h2 className="text-2xl lg:text-3xl font-bold mb-8">more products</h2>
+          <h2 className="text-2xl lg:text-3xl font-bold mb-8">More Products</h2>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-8">
-            {allProducts === undefined ? (
+            {relatedProducts === undefined ? (
               <ProductSkeleton count={3} />
             ) : (
-              relatedProducts.map((relatedProduct) => (
-                <ProductCard
-                  key={relatedProduct._id}
-                  id={relatedProduct.slug}
-                  image={relatedProduct.images[0]?.url || placeholderUrl}
-                  hoverImage={relatedProduct.images[1]?.url}
-                  name={relatedProduct.name}
-                  price={relatedProduct.retailPrice.toFixed(2)}
-                  originalPrice={relatedProduct.compareAtPrice?.toFixed(2)}
-                />
-              ))
+              relatedProducts.map((relatedProduct) => {
+                const realImages = relatedProduct.images.filter(img => img.url !== "/placeholder.svg");
+                return (
+                  <ProductCard
+                    key={relatedProduct._id}
+                    id={relatedProduct.slug}
+                    image={realImages[0]?.url || placeholderUrl}
+                    hoverImage={realImages[1]?.url}
+                    name={relatedProduct.name}
+                    price={relatedProduct.retailPrice.toFixed(2)}
+                    originalPrice={relatedProduct.compareAtPrice?.toFixed(2)}
+                  />
+                );
+              })
             )}
           </div>
         </section>

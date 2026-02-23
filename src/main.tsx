@@ -1,5 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { HelmetProvider } from "react-helmet-async";
 import { ClerkProvider, useAuth } from "@clerk/clerk-react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { ConvexReactClient } from "convex/react";
@@ -17,10 +18,12 @@ const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string;
 // Render React app immediately
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ClerkProvider publishableKey={clerkPubKey}>
-      <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-        <App />
-      </ConvexProviderWithClerk>
-    </ClerkProvider>
+    <HelmetProvider>
+      <ClerkProvider publishableKey={clerkPubKey}>
+        <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+          <App />
+        </ConvexProviderWithClerk>
+      </ClerkProvider>
+    </HelmetProvider>
   </StrictMode>
 );

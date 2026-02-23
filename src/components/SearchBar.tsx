@@ -169,7 +169,7 @@ const SearchBar = () => {
                     className="w-full flex items-center gap-3 px-3 py-2 hover:bg-secondary/50 transition-colors text-left"
                   >
                     <img
-                      src={product.images[0]?.url || placeholderUrl}
+                      src={product.images.filter(img => img.url !== "/placeholder.svg")[0]?.url || placeholderUrl}
                       alt={product.name}
                       className="w-12 h-12 object-cover rounded"
                     />

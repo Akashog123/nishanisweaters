@@ -69,6 +69,7 @@ import type * as rateLimitInternal from "../rateLimitInternal.js";
 import type * as reviews from "../reviews.js";
 import type * as seed from "../seed.js";
 import type * as settings from "../settings.js";
+import type * as testimonials from "../testimonials.js";
 import type * as users from "../users.js";
 import type * as webhookEventsInternal from "../webhookEventsInternal.js";
 import type * as wishlist from "../wishlist.js";
@@ -141,6 +142,7 @@ declare const fullApi: ApiFromModules<{
   reviews: typeof reviews;
   seed: typeof seed;
   settings: typeof settings;
+  testimonials: typeof testimonials;
   users: typeof users;
   webhookEventsInternal: typeof webhookEventsInternal;
   wishlist: typeof wishlist;

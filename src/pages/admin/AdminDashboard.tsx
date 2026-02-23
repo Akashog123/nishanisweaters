@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
+import { PageLoader } from "@/components/routes/PageLoader";
 import {
   Card,
   CardContent,
@@ -62,9 +63,7 @@ const AdminDashboard = () => {
   if (isLoading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center h-64">
-          <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+        <PageLoader />
       </AdminLayout>
     );
   }

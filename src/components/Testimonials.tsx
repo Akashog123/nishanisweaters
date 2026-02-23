@@ -7,40 +7,69 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+
+// Indian-themed fallback testimonials
+const FALLBACK_TESTIMONIALS = [
+  {
+    _id: "fallback-1",
+    quote: "बहुत बढ़िया क्वालिटी हमने 5 पीस खरीदे और सभी परफेक्ट हैं",
+    author: "Priya Sharma",
+    role: "Verified Buyer",
+    rating: 5,
+    displayOrder: 1,
+  },
+  {
+    _id: "fallback-2",
+    quote: "GOOD QUALITY AND FIT. HIGHLY RECOMMEND FOR INDIAN WEAR",
+    author: "Rajesh Kumar",
+    role: "Fashion Enthusiast",
+    rating: 4,
+    displayOrder: 2,
+  },
+  {
+    _id: "fallback-3",
+    quote: "THE FABRIC IS PERFECT FOR INDIAN CLIMATE AND STYLE. WOULD RECOMMEND TO BUY.",
+    author: "Ananya Patel",
+    role: "Loyal Customer",
+    rating: 5,
+    displayOrder: 3,
+  },
+  {
+    _id: "fallback-4",
+    quote: "LOVE THE DETAILS IN THE PRODUCT. WILL BUY AGAIN FOR SURE!",
+    author: "Vikram Singh",
+    role: "Designer",
+    rating: 5,
+    displayOrder: 4,
+  },
+  {
+    _id: "fallback-5",
+    quote: "FAST DELIVERY TO BENGALURU! GOOD PACKAGING AND EXCELLENT SERVICE.",
+    author: "Meera Reddy",
+    role: "Verified Buyer",
+    rating: 5,
+    displayOrder: 5,
+  },
+  {
+    _id: "fallback-6",
+    quote: "EXCELLENT VALUE FOR MONEY! PREMIUM QUALITY AT AFFORDABLE PRICES. BEST DEAL I'VE FOUND!",
+    author: "Arjun Mehta",
+    role: "Budget Shopper",
+    rating: 5,
+    displayOrder: 6,
+  },
+];
 
 const Testimonials = () => {
-  const testimonials = [
-    {
-      id: 1,
-      quote: "WE BOUGHT 10 PIECES AND IT IS THE BEST PURCHASE EVER!",
-      author: "Jeanice Woodley",
-      role: "Verified Buyer",
-    },
-    {
-      id: 2,
-      quote: "AMAZING QUALITY AND PERFECT FIT. HIGHLY RECOMMEND!",
-      author: "Marcus Johnson",
-      role: "Fashion Enthusiast",
-    },
-    {
-      id: 3,
-      quote: "THE FABRIC IS INCREDIBLE AND THE STYLE IS UNMATCHED!",
-      author: "Sarah Williams",
-      role: "Loyal Customer",
-    },
-    {
-      id: 4,
-      quote: "ABSOLUTELY LOVE THE ATTENTION TO DETAIL. WILL BUY AGAIN!",
-      author: "Emily Chen",
-      role: "Designer",
-    },
-    {
-      id: 5,
-      quote: "FAST SHIPPING AND BEAUTIFUL PACKAGING. A+ EXPERIENCE!",
-      author: "David Miller",
-      role: "Verified Buyer",
-    },
-  ];
+  // Fetch testimonials from database
+  const dbTestimonials = useQuery(api.testimonials.getActiveTestimonials);
+
+  // Use database testimonials if available, otherwise use fallbacks
+  const testimonials = dbTestimonials && dbTestimonials.length > 0
+    ? dbTestimonials
+    : FALLBACK_TESTIMONIALS;
 
   return (
     <section className="py-20 lg:py-32 bg-secondary/20 relative overflow-hidden">
@@ -62,13 +91,13 @@ const Testimonials = () => {
           >
             <CarouselContent className="-ml-2 md:-ml-4">
               {testimonials.map((testimonial) => (
-                <CarouselItem key={testimonial.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3">
+                <CarouselItem key={testimonial._id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3">
                   <div className="p-1 h-full">
                     <Card className="h-full border-none shadow-md bg-background/60 backdrop-blur-sm hover:bg-background/80 transition-colors duration-300">
                       <CardContent className="flex flex-col justify-between p-8 h-full">
                         <div>
                           <div className="flex gap-1 mb-6">
-                            {[...Array(5)].map((_, i) => (
+                            {[...Array(testimonial.rating)].map((_, i) => (
                               <Star
                                 key={i}
                                 className="w-5 h-5 fill-primary text-primary"

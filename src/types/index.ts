@@ -107,7 +107,7 @@ export interface LocalProduct {
   description: string;
   sizes: string[];
   colors: string[];
-  category: "new-arrival" | "mens" | "womens";
+  category: string;
   gender: "men" | "women" | "unisex";
 }
 

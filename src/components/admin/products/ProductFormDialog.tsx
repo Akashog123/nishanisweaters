@@ -26,6 +26,7 @@ import { ProductFormData, initialFormData, ProductImage, ProductVideo } from "./
 import { generateSlug } from "./utils";
 import { ProductMediaUpload } from "../ProductMediaUpload";
 import { VariantEditor } from "./VariantEditor";
+import { useActiveCategories } from "../../../hooks/useCategories";
 
 interface ProductFormDialogProps {
   product?: ProductFormData & {
@@ -44,12 +45,17 @@ export function ProductFormDialog({
   onOpenChange,
   onSubmit,
 }: ProductFormDialogProps) {
+  const categoriesQuery = useActiveCategories();
+  const categories = categoriesQuery || [];
+
   const [formData, setFormData] = useState<ProductFormData>(
     product || initialFormData
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
   const [createdProductId, setCreatedProductId] = useState<Id<"products"> | null>(null);
+
+  const isEditing = !!product?._id || !!createdProductId;
 
   // Determine which product ID to use for media queries
   const effectiveProductId = createdProductId || product?._id;
@@ -70,6 +76,8 @@ export function ProductFormDialog({
     setActiveTab("details");
     setCreatedProductId(null);
   }, [product, open]);
+
+  // Category name resolution is handled by the Select component directly
 
   // Handle product creation + media upload flow
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
@@ -102,8 +110,6 @@ export function ProductFormDialog({
     setFormData(initialFormData);
   }, [onOpenChange]);
 
-  const isEditing = !!product?._id || !!createdProductId;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
@@ -134,6 +140,7 @@ export function ProductFormDialog({
               isSubmitting={isSubmitting}
               isEditing={isEditing}
               showDoneButton={!!createdProductId}
+              categories={categories}
             />
           </TabsContent>
 
@@ -194,6 +201,7 @@ function ProductDetailsForm({
   isSubmitting,
   isEditing,
   showDoneButton = false,
+  categories,
 }: {
   formData: ProductFormData;
   setFormData: (data: ProductFormData) => void;
@@ -202,6 +210,7 @@ function ProductDetailsForm({
   isSubmitting: boolean;
   isEditing: boolean;
   showDoneButton?: boolean;
+  categories: any[]; // Using any[] here as a quick fix, better to import the type if available
 }) {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -275,11 +284,15 @@ function ProductDetailsForm({
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="mens">Mens</SelectItem>
-              <SelectItem value="womens">Womens</SelectItem>
-              <SelectItem value="kids">Kids</SelectItem>
-              <SelectItem value="winter">Winter</SelectItem>
-              <SelectItem value="accessories">Accessories</SelectItem>
+              {categories.length > 0 ? (
+                categories.map((cat) => (
+                  <SelectItem key={cat._id} value={cat.slug}>
+                    {cat.name}
+                  </SelectItem>
+                ))
+              ) : (
+                <div className="p-2 text-sm text-muted-foreground text-center">Loading categories...</div>
+              )}
             </SelectContent>
           </Select>
         </div>

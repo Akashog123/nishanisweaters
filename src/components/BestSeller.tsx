@@ -22,17 +22,20 @@ const BestSeller = () => {
               <p className="text-muted-foreground">No bestsellers at the moment.</p>
             </div>
           ) : (
-            products.map((product) => (
-              <ProductCard
-                key={product._id}
-                id={product.slug}
-                image={product.images[0]?.url || placeholderUrl}
-                hoverImage={product.images[1]?.url}
-                name={product.name}
-                price={product.retailPrice.toFixed(2)}
-                originalPrice={product.compareAtPrice?.toFixed(2)}
-              />
-            ))
+            products.map((product) => {
+              const realImages = product.images.filter(img => img.url !== "/placeholder.svg");
+              return (
+                <ProductCard
+                  key={product._id}
+                  id={product.slug}
+                  image={realImages[0]?.url || placeholderUrl}
+                  hoverImage={realImages[1]?.url}
+                  name={product.name}
+                  price={product.retailPrice.toFixed(2)}
+                  originalPrice={product.compareAtPrice?.toFixed(2)}
+                />
+              );
+            })
           )}
         </div>
       </div>

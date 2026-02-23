@@ -1,6 +1,4 @@
 import { Link } from "react-router-dom";
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useActiveCategories } from "@/hooks/useCategories";
 
@@ -15,9 +13,8 @@ const isSafeUrl = (url: string): boolean => {
 };
 
 const Footer = () => {
-  // Fetch dynamic social links from settings
-  const socialLinks = useQuery(api.settings.getSocialLinks);
-  const { siteName, logoUrl, footerTagline, footerBackgroundText, copyrightYear, settings } = useSiteSettings();
+  // Social links now come from the unified settings query (no separate subscription)
+  const { siteName, logoUrl, footerTagline, footerBackgroundText, copyrightYear, settings, socialLinks } = useSiteSettings();
   const activeCategories = useActiveCategories();
 
   // Check if dynamic categories are enabled

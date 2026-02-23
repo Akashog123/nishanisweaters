@@ -5,7 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { lazy } from 'react';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 const NotFound = lazy(() => import("./pages/NotFound"));
-import { CartProvider } from "@/context/CartContext";
+import { CartProvider, CartUIProvider } from "@/context/CartContext";
 import { useSmoothScroll } from "@/hooks/use-smooth-scroll";
 import { useUserSync } from "@/components/auth/useUserSync";
 import { useAuthObservability } from "@/hooks/useAuthObservability";
@@ -54,11 +54,13 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <CartProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-            <AppContent />
-          </BrowserRouter>
+          <CartUIProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+              <AppContent />
+            </BrowserRouter>
+          </CartUIProvider>
         </CartProvider>
       </TooltipProvider>
     </QueryClientProvider>

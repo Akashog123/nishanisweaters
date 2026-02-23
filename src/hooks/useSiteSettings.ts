@@ -57,6 +57,16 @@ export function useSiteSettings() {
       winterWearCategory: "winter",
     },
 
+    // Image settings (consolidated — no separate query needed)
+    images: settings?.images ?? {
+      heroUrl: "",
+      placeholderUrl: "/placeholder.svg",
+      categoryBannerUrl: "",
+    },
+
+    // Social links (consolidated — no separate query needed)
+    socialLinks: settings?.socialLinks ?? [],
+
     // Loading state
     isLoading: settings === undefined,
   };

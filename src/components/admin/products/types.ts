@@ -46,7 +46,7 @@ export const initialFormData: ProductFormData = {
   slug: "",
   description: "",
   shortDescription: "",
-  category: "mens",
+  category: "",
   retailPrice: 0,
   compareAtPrice: 0,
   wholesalePrice: 0,
@@ -66,4 +66,4 @@ export const initialFormData: ProductFormData = {
 };
 
 export type StockFilterType = "all" | "in_stock" | "low_stock" | "out_of_stock";
-export type CategoryFilterType = "all" | "mens" | "womens" | "kids" | "winter" | "accessories";
+export type CategoryFilterType = string;
