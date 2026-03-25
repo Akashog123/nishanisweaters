@@ -10,6 +10,7 @@ import { useSmoothScroll } from "@/hooks/use-smooth-scroll";
 import { useUserSync } from "@/components/auth/useUserSync";
 import { useAuthObservability } from "@/hooks/useAuthObservability";
 import { queryClient } from "@/lib/queryClient";
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 // Import route configurations
 import {
@@ -60,6 +61,7 @@ const App = () => {
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <AppContent />
             </BrowserRouter>
+            <SpeedInsights />
           </CartUIProvider>
         </CartProvider>
       </TooltipProvider>
